@@ -18,7 +18,7 @@ The application includes both on-campus and online/part-time MS programs, includ
 - **Program**: Master of Science (M.S.), Electrical Engineering  
 - **University**: National Taiwan University (NTU), Taipei  
 - **Student ID**: R13921031
-- **E-mail**: (r13921031@ntu.edu.tw)[r13921031@ntu.edu.tw]  
+- **E-mail**: r13921031@ntu.edu.tw   
 - **Name**: James  
 
 ## Contents
