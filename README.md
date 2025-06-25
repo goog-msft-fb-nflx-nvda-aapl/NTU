@@ -6,7 +6,7 @@ This repository is used to store assignments, projects, and other coursework com
 
 This repository serves as a portfolio of my academic work, showcasing my experience in data science, machine learning, and related fields. It is primarily intended for reference during my applications to various Master of Science (MS) programs in the United States for Autumn 2025.
 
-The application includes both on-campus and online/part-time MS programs, including:
+The application includes both on-campus/full-time and online/part-time MS programs, including:
 
 - [**Computer Science (AI Specialization)** – Stanford University, Stanford, CA](https://online.stanford.edu/programs/computer-science-ms-degree)  
 - [**Computational Linguistics** – University of Washington, Seattle, WA](https://www.compling.uw.edu/)  
