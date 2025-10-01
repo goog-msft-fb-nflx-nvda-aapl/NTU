@@ -1,0 +1,8 @@
+torch>=2.0.0
+transformers==4.50.0
+datasets==2.21.0
+accelerate==0.34.2
+pandas
+numpy
+tqdm
+gdown
