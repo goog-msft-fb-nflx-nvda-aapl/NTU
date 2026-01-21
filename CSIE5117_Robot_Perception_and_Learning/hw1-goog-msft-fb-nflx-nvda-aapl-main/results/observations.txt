@@ -1,0 +1,19 @@
+KEY OBSERVATIONS
+================================================================================
+
+1. Overall Success Rate: 39.4% of all trials reached the target of 1000 steps.
+
+2. Best Performing Controller: CONT-LQR achieved the highest success rate of 45.5%.
+
+3. CONT-LQR: Performance degrades with larger initial angles (100% success at small angles vs 0% at large angles).
+
+3. DISC-LQR: Performance degrades with larger initial angles (100% success at small angles vs 0% at large angles).
+
+3. ILQR: Performance degrades with larger initial angles (100% success at small angles vs 0% at large angles).
+
+4. CONT-LQR: Shows symmetric behavior (positive angles: 40%, negative angles: 40% success rate).
+
+4. DISC-LQR: Shows symmetric behavior (positive angles: 40%, negative angles: 40% success rate).
+
+4. ILQR: Shows symmetric behavior (positive angles: 20%, negative angles: 20% success rate).
+
