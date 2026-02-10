@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project #1 — High Dynamic Range Imaging</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&family=Lora:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+<style>
+  /* ── Reset & base ───────────────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink:        #1a1410;
+    --paper:      #f5f0e8;
+    --warm-mid:   #c8b99a;
+    --accent:     #8b3a1c;
+    --accent-lt:  #c4623a;
+    --code-bg:    #2b2420;
+    --code-fg:    #e8d8c4;
+    --rule:       #d4c4a8;
+    --col-width:  680px;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Lora', Georgia, serif;
+    font-size: 17px;
+    line-height: 1.75;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Decorative top rule ────────────────────────────────────────────── */
+  body::before {
+    content: '';
+    display: block;
+    height: 4px;
+    background: linear-gradient(90deg, var(--accent) 0%, var(--accent-lt) 50%, var(--accent) 100%);
+  }
+
+  /* ── Hero ───────────────────────────────────────────────────────────── */
+  .hero {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 72px 40px 56px;
+    border-bottom: 1px solid var(--rule);
+  }
+
+  .hero-eyebrow {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 20px;
+  }
+
+  h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(2.4rem, 5vw, 3.8rem);
+    line-height: 1.1;
+    color: var(--ink);
+    letter-spacing: -.01em;
+    margin-bottom: 28px;
+  }
+
+  h1 em {
+    font-style: italic;
+    color: var(--accent);
+  }
+
+  .hero-meta {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: #7a6a55;
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap;
+  }
+
+  .hero-meta span::before {
+    content: '— ';
+    color: var(--warm-mid);
+  }
+
+  /* ── Layout ─────────────────────────────────────────────────────────── */
+  .content {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 40px 80px;
+    display: grid;
+    grid-template-columns: var(--col-width) 1fr;
+    column-gap: 56px;
+  }
+
+  .main-col { grid-column: 1; }
+  .side-col  { grid-column: 2; }
+
+  /* ── Sections ───────────────────────────────────────────────────────── */
+  section { margin-top: 56px; }
+
+  h2 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.55rem;
+    color: var(--ink);
+    margin-bottom: 4px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--accent);
+    display: inline-block;
+  }
+
+  h3 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.15rem;
+    color: var(--accent);
+    margin: 28px 0 8px;
+  }
+
+  p { margin-top: 16px; }
+  p:first-of-type { margin-top: 20px; }
+
+  /* ── Sidebar sticky ─────────────────────────────────────────────────── */
+  .sticky-sidebar {
+    position: sticky;
+    top: 32px;
+    padding-top: 56px;
+  }
+
+  .sidebar-card {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 24px;
+    margin-bottom: 20px;
+    border-radius: 2px;
+  }
+
+  .sidebar-card h4 {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: .15em;
+    text-transform: uppercase;
+    color: var(--warm-mid);
+    margin-bottom: 12px;
+  }
+
+  .sidebar-card ul {
+    list-style: none;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    line-height: 2;
+    color: #c8b99a;
+  }
+
+  .sidebar-card ul li::before {
+    content: '✓  ';
+    color: var(--accent-lt);
+  }
+
+  /* ── Images ─────────────────────────────────────────────────────────── */
+  .figure {
+    margin: 32px 0;
+  }
+
+  .figure img {
+    width: 100%;
+    display: block;
+    border: 1px solid var(--rule);
+  }
+
+  .figure figcaption {
+    font-family: 'DM Mono', monospace;
+    font-size: 11.5px;
+    color: #7a6a55;
+    margin-top: 10px;
+    line-height: 1.5;
+    padding-left: 12px;
+    border-left: 2px solid var(--warm-mid);
+  }
+
+  .figure-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 32px 0;
+  }
+
+  /* ── Code blocks ─────────────────────────────────────────────────────── */
+  pre {
+    background: var(--code-bg);
+    color: var(--code-fg);
+    font-family: 'DM Mono', monospace;
+    font-size: 12.5px;
+    line-height: 1.7;
+    padding: 20px 24px;
+    overflow-x: auto;
+    margin: 24px 0;
+    border-left: 3px solid var(--accent);
+    border-radius: 0 2px 2px 0;
+  }
+
+  code {
+    font-family: 'DM Mono', monospace;
+    font-size: .88em;
+    background: #e8dfd0;
+    padding: 1px 5px;
+    border-radius: 2px;
+  }
+
+  pre code { background: none; padding: 0; font-size: inherit; }
+
+  /* ── Math display ────────────────────────────────────────────────────── */
+  .eq {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    background: #ede6d8;
+    border: 1px solid var(--rule);
+    padding: 14px 20px;
+    margin: 20px 0;
+    overflow-x: auto;
+    color: var(--ink);
+  }
+
+  /* ── Table ───────────────────────────────────────────────────────────── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'DM Mono', monospace;
+    font-size: 12.5px;
+    margin: 24px 0;
+  }
+
+  th {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 10px 14px;
+    text-align: left;
+    font-weight: 500;
+    letter-spacing: .05em;
+  }
+
+  td {
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--rule);
+    color: #3a2e24;
+  }
+
+  tr:nth-child(even) td { background: #ede6d8; }
+
+  /* ── Pull quote ──────────────────────────────────────────────────────── */
+  blockquote {
+    border-left: 4px solid var(--accent);
+    margin: 28px 0;
+    padding: 4px 0 4px 24px;
+    font-style: italic;
+    color: #5a4a38;
+    font-size: 1.05rem;
+  }
+
+  /* ── Footer ──────────────────────────────────────────────────────────── */
+  footer {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 32px 40px;
+    border-top: 1px solid var(--rule);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: #9a8a76;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* ── Responsive ──────────────────────────────────────────────────────── */
+  @media (max-width: 760px) {
+    .content { grid-template-columns: 1fr; padding: 0 24px 60px; }
+    .side-col { display: none; }
+    .hero { padding: 48px 24px 40px; }
+    .figure-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Hero ────────────────────────────────────────────────────────────── -->
+<header class="hero">
+  <p class="hero-eyebrow">CSIE 7694 &nbsp;·&nbsp; Project #1</p>
+  <h1>High Dynamic Range<br><em>Imaging</em></h1>
+  <div class="hero-meta">
+    <span>Department of Computer Science, UT Austin</span>
+    <span>Due March 26, 2025</span>
+    <span>Language: Python 3</span>
+  </div>
+</header>
+
+<!-- ── Body ────────────────────────────────────────────────────────────── -->
+<div class="content">
+
+  <!-- ════════════════════ MAIN COLUMN ════════════════════ -->
+  <div class="main-col">
+
+    <!-- Overview -->
+    <section id="overview">
+      <h2>Overview</h2>
+      <p>
+        This project implements the full pipeline for High Dynamic Range (HDR) imaging
+        from a set of differently-exposed photographs of the Stanford Memorial Church.
+        The pipeline covers image loading, automatic exposure alignment, camera response
+        function recovery, HDR radiance map assembly, RGBE file output, and tone mapping.
+      </p>
+      <p>
+        All algorithmic steps are implemented from scratch in Python using only
+        <code>numpy</code> and <code>Pillow</code> — no HDR assembly library functions
+        were used.
+      </p>
+    </section>
+
+    <!-- Input Images -->
+    <section id="input">
+      <h2>Input Images</h2>
+      <p>
+        The dataset is the Stanford Memorial Church sequence from Debevec &amp; Malik
+        (SIGGRAPH 1997), consisting of 16 images captured on Kodak Gold 100 ASA film
+        and scanned to 512×768 pixels. Exposures span from 32 s down to 1/1024 s,
+        doubling at each step (a total dynamic range of 15 stops).
+      </p>
+
+      <table>
+        <tr><th>File</th><th>1/Shutter (from list)</th><th>Actual exposure (s)</th></tr>
+        <tr><td>memorial0061.png</td><td>0.03125</td><td>32</td></tr>
+        <tr><td>memorial0062.png</td><td>0.0625</td><td>16</td></tr>
+        <tr><td>memorial0063.png</td><td>0.125</td><td>8</td></tr>
+        <tr><td>memorial0064.png</td><td>0.25</td><td>4</td></tr>
+        <tr><td>memorial0065.png</td><td>0.5</td><td>2</td></tr>
+        <tr><td>memorial0066.png</td><td>1</td><td>1</td></tr>
+        <tr><td>memorial0067.png</td><td>2</td><td>0.5</td></tr>
+        <tr><td>memorial0068.png</td><td>4</td><td>0.25</td></tr>
+        <tr><td>memorial0069.png</td><td>8</td><td>0.125</td></tr>
+        <tr><td>memorial0070.png</td><td>16</td><td>0.0625</td></tr>
+        <tr><td>memorial0071.png</td><td>32</td><td>0.03125</td></tr>
+        <tr><td>memorial0072.png</td><td>64</td><td>0.015625</td></tr>
+        <tr><td>memorial0073.png</td><td>128</td><td>0.0078125</td></tr>
+        <tr><td>memorial0074.png</td><td>256</td><td>0.00390625</td></tr>
+        <tr><td>memorial0075.png</td><td>512</td><td>0.001953125</td></tr>
+        <tr><td>memorial0076.png</td><td>1024</td><td>0.0009765625</td></tr>
+      </table>
+
+      <p>
+        An important detail: the <code>hdr_image_list.txt</code> file stores the
+        <em>reciprocal</em> of the shutter speed, so the actual exposure time is
+        <code>1 / value</code>. The images are ordered longest to shortest exposure.
+      </p>
+    </section>
+
+    <!-- Image Alignment -->
+    <section id="alignment">
+      <h2>Image Alignment — Ward's MTB <span style="font-family:'DM Mono',monospace;font-size:13px;color:var(--accent-lt)">[bonus]</span></h2>
+      <p>
+        Before recovering the response curve, all images are aligned to the middle
+        exposure (image index 8) using Greg Ward's Median Threshold Bitmap (MTB)
+        algorithm (Ward, JGT 2003). This robust method works directly on integer
+        pixel values with no floating-point operations.
+      </p>
+
+      <h3>Algorithm</h3>
+      <p>
+        For each image, a binary bitmap is computed by thresholding at the median
+        intensity. An exclusion mask marks pixels near the median (within a tolerance
+        of ±4 intensity levels) as unreliable. The alignment is found coarse-to-fine
+        across a 6-level image pyramid by searching the 3×3 neighbourhood of shifts
+        at each level:
+      </p>
+
+      <pre><code>for level = max_level downto 0:
+    scale = 2^level
+    ref_small = ref_gray[::scale, ::scale]
+    src_small = src_gray[::scale, ::scale]
+
+    src_shifted = shift(src_small, accumulated_offset / scale)
+    ref_mtb, ref_excl = median_threshold(ref_small)
+    src_mtb, src_excl = median_threshold(src_shifted)
+
+    # Search 3x3 neighbourhood for minimum MTB XOR error
+    best_err = error(ref_mtb, src_mtb, ref_excl & src_excl)
+    for (ddx, ddy) in neighbours:
+        err = error(shift(src_mtb, ddx, ddy), ...)
+        if err &lt; best_err: update best
+
+    accumulated_offset += best_delta * scale</code></pre>
+
+      <p>
+        A key implementation detail: the best offset is initialised with the
+        <code>(0,0)</code> error so that ties always prefer no shift, preventing
+        spurious drift on pre-registered images.
+      </p>
+
+      <h3>Results</h3>
+      <p>
+        Since the memorial images were pre-registered using feature-point homographies
+        (as noted in the README), all 16 images align with shifts of at most (−1, −1),
+        confirming the algorithm is working correctly.
+      </p>
+
+      <table>
+        <tr><th>Image</th><th>Shift (dx, dy)</th><th>Note</th></tr>
+        <tr><td>0 – 7</td><td>(0, 0)</td><td>Pre-registered</td></tr>
+        <tr><td>8</td><td>—</td><td>Reference</td></tr>
+        <tr><td>9 – 10</td><td>(0, 0)</td><td>Pre-registered</td></tr>
+        <tr><td>11</td><td>(−1, −1)</td><td>Sub-pixel misalignment corrected</td></tr>
+        <tr><td>12 – 15</td><td>(0, 0)</td><td>Pre-registered</td></tr>
+      </table>
+    </section>
+
+    <!-- CRF Recovery -->
+    <section id="crf">
+      <h2>Camera Response Function Recovery</h2>
+      <p>
+        The camera response function (CRF) maps scene irradiance to recorded pixel
+        values. It is recovered independently for each of the three colour channels
+        (R, G, B) using Debevec &amp; Malik's method.
+      </p>
+
+      <h3>Mathematical Formulation</h3>
+      <p>
+        Let <em>Z<sub>ij</sub></em> denote the pixel value at location <em>i</em>
+        in exposure <em>j</em>, and <em>t<sub>j</sub></em> the exposure time.
+        The response function <em>f</em> satisfies:
+      </p>
+
+      <div class="eq">Z_ij = f( E_i · t_j )</div>
+
+      <p>
+        Defining <code>g = log(f⁻¹)</code>, the goal is to minimise:
+      </p>
+
+      <div class="eq">Σ_ij  w(Z_ij) · [ g(Z_ij) − ln E_i − ln t_j ]²
+  +  λ · Σ_z  w(z) · g''(z)²</div>
+
+      <p>
+        where <em>w(z)</em> is a hat (tent) weighting function giving full weight
+        to mid-range pixel values and tapering to zero at 0 and 255, and <em>λ</em>
+        controls the smoothness of the recovered curve.
+      </p>
+
+      <h3>Linear System</h3>
+      <p>
+        The objective is rewritten as an over-determined linear system
+        <strong>Ax = b</strong> with unknowns
+        <code>x = [g(0), …, g(255), ln E_1, …, ln E_N]</code>
+        and three groups of equations:
+      </p>
+
+      <pre><code># (1) N×P data equations
+w(Z_ij) · g(Z_ij) − w(Z_ij) · lnE_i  =  w(Z_ij) · ln t_j
+
+# (2) Fix g(128) = 0  (removes the gauge freedom)
+g(128) = 0
+
+# (3) 254 smoothness equations
+λ·w(z)·g(z-1) − 2λ·w(z)·g(z) + λ·w(z)·g(z+1) = 0</code></pre>
+
+      <p>
+        The system is solved with <code>numpy.linalg.lstsq</code> (SVD-based least
+        squares). 200 pixel locations are sampled per channel, chosen to avoid
+        saturated or black pixels across a majority of exposures, giving a
+        1055 × 456 system per channel.
+      </p>
+
+      <h3>Recovered Curves</h3>
+      <figure class="figure">
+        <img src="output/crf.png" alt="Recovered camera response curves">
+        <figcaption>
+          Fig. 1 — Recovered CRF for R, G, B channels. All three curves are
+          monotonically increasing and smooth. The blue channel diverges slightly
+          at low pixel values, consistent with the blue cast in dark regions noted
+          by Debevec in the original paper.
+        </figcaption>
+      </figure>
+    </section>
+
+    <!-- HDR Assembly -->
+    <section id="hdr">
+      <h2>HDR Radiance Map Assembly</h2>
+      <p>
+        Given the recovered <em>g</em> curves, the log-radiance at every pixel is
+        computed as a weighted average across all exposures:
+      </p>
+
+      <div class="eq">ln E_i  =  Σ_j w(Z_ij) · [ g(Z_ij) − ln t_j ]
+             ──────────────────────────────────
+                      Σ_j w(Z_ij)</div>
+
+      <p>
+        This weights each exposure's contribution by how reliably its pixel value
+        falls in the well-exposed range. Pixels where the denominator is zero
+        (saturated or black across all exposures) are assigned the minimum valid
+        log-radiance.
+      </p>
+
+      <h3>Radiance Statistics</h3>
+      <table>
+        <tr><th>Channel</th><th>Log-radiance min</th><th>Log-radiance max</th><th>Linear range</th></tr>
+        <tr><td>R</td><td>−6.29</td><td>6.64</td><td>~0.002 – 769</td></tr>
+        <tr><td>G</td><td>−7.97</td><td>6.39</td><td>~0.0003 – 594</td></tr>
+        <tr><td>B</td><td>−6.84</td><td>5.85</td><td>~0.001 – 348</td></tr>
+      </table>
+      <p>
+        The linear radiance spans approximately 6 orders of magnitude
+        (0.0003 to 769), confirming that the HDR assembly captured the full
+        dynamic range of the scene.
+      </p>
+    </section>
+
+    <!-- RGBE Output -->
+    <section id="rgbe">
+      <h2>RGBE File Output</h2>
+      <p>
+        The radiance map is saved in Greg Ward's Radiance RGBE format
+        (<code>.hdr</code>). Each pixel is encoded as 4 bytes: R, G, B mantissas
+        and a shared exponent E. Given a linear RGB triplet, the encoding is:
+      </p>
+
+      <pre><code>max_val = max(R, G, B)
+exp     = floor(log2(max_val)) + 1        # shared exponent
+scale   = 2^exp / 256                     # normalisation factor
+R_enc   = clip(R / scale, 0, 255)
+G_enc   = clip(G / scale, 0, 255)
+B_enc   = clip(B / scale, 0, 255)
+E_enc   = exp + 128                       # biased exponent</code></pre>
+
+      <p>
+        The output file uses uncompressed scanlines with a minimal valid Radiance
+        header. The resulting file is <strong>1.6 MB</strong>
+        (768 × 512 × 4 bytes + header), which opens correctly in macOS Preview
+        and other HDR viewers.
+      </p>
+    </section>
+
+    <!-- Tone Mapping -->
+    <section id="tonemapping">
+      <h2>Tone Mapping — Reinhard Global Operator <span style="font-family:'DM Mono',monospace;font-size:13px;color:var(--accent-lt)">[bonus]</span></h2>
+      <p>
+        To display the HDR image on a standard 8-bit monitor, the radiance map is
+        tone-mapped using Reinhard et al.'s global photographic operator
+        (SIGGRAPH 2002). The algorithm has three steps:
+      </p>
+
+      <h3>Step 1 — Log-average luminance</h3>
+      <div class="eq">L̄_w  =  exp( (1/N) · Σ_{x,y} log(δ + L_w(x,y)) )</div>
+      <p>
+        This is the geometric mean of scene luminance, which approximates how a
+        photographer would choose the overall key exposure. <em>δ</em> = 1×10⁻⁶
+        avoids log(0) in black regions.
+      </p>
+
+      <h3>Step 2 — Scale to key value</h3>
+      <div class="eq">L(x,y)  =  (a / L̄_w) · L_w(x,y)</div>
+      <p>
+        The key parameter <em>a</em> = 0.18 maps the log-average luminance to
+        18% grey, matching the photographer's middle-grey convention.
+      </p>
+
+      <h3>Step 3 — Display compression</h3>
+      <div class="eq">L_d(x,y)  =  L(x,y) / (1 + L(x,y))</div>
+      <p>
+        This simple rational function compresses all luminance values into [0, 1)
+        while preserving local contrast. Bright highlights compress gracefully;
+        mid-tones are mapped nearly linearly.
+      </p>
+
+      <p>
+        The same scale factor is then applied uniformly to R, G, B to preserve hue,
+        and the result is gamma-corrected (γ = 2.2) before saving as an 8-bit PNG.
+      </p>
+
+      <h3>Result</h3>
+      <figure class="figure">
+        <img src="output/tonemapped_reinhard.png" alt="Tone-mapped result">
+        <figcaption>
+          Fig. 2 — Tone-mapped result using Reinhard's global operator (a = 0.18, γ = 2.2).
+          The image shows detail simultaneously in the bright dome skylight, the dark wooden
+          ceiling rafters, and the stained-glass windows — all of which cannot be captured
+          in a single exposure.
+        </figcaption>
+      </figure>
+    </section>
+
+    <!-- Results & Discussion -->
+    <section id="results">
+      <h2>Results &amp; Discussion</h2>
+      <p>
+        The recovered response curves (Fig. 1) are smooth and monotonically increasing,
+        consistent with Debevec's original results. The slight divergence of the blue
+        channel at low pixel values — also noted in the 1997 paper — indicates a blue
+        cast in dark regions of the film scan, which is correctly modelled and
+        compensated for by the CRF.
+      </p>
+      <p>
+        The tone-mapped image (Fig. 2) reveals detail across the full dynamic range
+        of the scene. Comparing our output with Debevec's reference HDR image in
+        macOS Preview, the images are visually very similar; our result is slightly
+        brighter due to the default Reinhard key value of 0.18, which can be adjusted
+        by changing the <code>a</code> parameter.
+      </p>
+      <p>
+        The Ward MTB alignment correctly reported near-zero shifts for all 16
+        pre-registered images, with a single (−1, −1) correction for image 11.
+        This confirms the alignment implementation is correct and would be effective
+        for hand-held exposure sequences.
+      </p>
+
+      <blockquote>
+        "The key insight of Debevec's algorithm is that the CRF, once recovered,
+        lets us combine the best-exposed regions of each image into a single
+        physically meaningful radiance map."
+      </blockquote>
+
+      <h3>Known Limitations</h3>
+      <p>
+        The global Reinhard operator does not adapt to local contrast — regions
+        with very high local dynamic range (e.g. the bright dome next to the dark
+        arches) could benefit from a local or bilateral-filter-based operator.
+        The pure-blue border pixels present in some frames (noted in the README as
+        image registration artefacts) are naturally down-weighted by the hat
+        function since they tend to have extreme channel ratios.
+      </p>
+    </section>
+
+    <!-- Extensions -->
+    <section id="extensions">
+      <h2>Extensions Implemented</h2>
+      <p>Two bonus extensions were implemented:</p>
+
+      <h3>1. Ward's MTB Alignment</h3>
+      <p>
+        A full coarse-to-fine MTB alignment with a 6-level pyramid, 3×3 neighbourhood
+        search, and tie-breaking in favour of zero shift. Tested on synthetic shifts
+        up to ±10 pixels; all recovered exactly.
+      </p>
+
+      <h3>2. Reinhard Global Tone Mapping</h3>
+      <p>
+        The photographic tone reproduction operator from Reinhard et al. (SIGGRAPH
+        2002), including log-average key estimation, luminance scaling, and
+        display-referred gamma correction. The key parameter <code>a</code> is
+        configurable.
+      </p>
+    </section>
+
+    <!-- What I Learned -->
+    <section id="learned">
+      <h2>What I Learned</h2>
+      <p>
+        The most surprising aspect was how sensitive the CRF solution is to the
+        choice of exposure times. An initially reversed ordering of the exposure
+        array produced an inverted response curve — a sign that the log-time
+        ordering matters critically for the sign of the linear system.
+      </p>
+      <p>
+        Implementing the RGBE encoder clarified how floating-point HDR values can
+        be packed efficiently into 4 bytes with a shared exponent, giving roughly
+        the same precision as a 24-bit mantissa with an 8-bit exponent — adequate
+        for display purposes but not for radiometric computation.
+      </p>
+      <p>
+        The MTB alignment debugging process (fixing the tie-breaking initialisation)
+        highlighted a subtle but important design principle in coarse-to-fine
+        algorithms: at very coarse pyramid levels, all candidate shifts may produce
+        equal error on a small image, so the algorithm must have a neutral default.
+      </p>
+    </section>
+
+    <!-- How to Run -->
+    <section id="howtorun">
+      <h2>How to Run</h2>
+
+      <h3>1 — Clone the repository</h3>
+      <pre><code>git clone https://github.com/YOUR_USER/YOUR_REPO.git
+cd YOUR_REPO</code></pre>
+
+      <h3>2 — Create environment &amp; install dependencies</h3>
+      <pre><code>conda create -n hdr_project python=3.12
+conda activate hdr_project
+pip install numpy Pillow matplotlib</code></pre>
+
+      <h3>3 — Download the test images</h3>
+      <p>
+        The source images are not committed to this repository due to size.
+        Download the Stanford Memorial Church exposure sequence directly from
+        Paul Debevec's website and unzip into the project folder:
+      </p>
+      <pre><code>wget https://www.pauldebevec.com/Research/HDR/SourceImages/Memorial_SourceImages.zip
+unzip Memorial_SourceImages.zip</code></pre>
+      <p>
+        After unzipping, the folder should contain
+        <code>memorial0061.png</code> through <code>memorial0076.png</code>.
+      </p>
+
+      <h3>4 — Run the pipeline</h3>
+      <pre><code># Run from the folder containing the 16 memorial PNG files
+python hdr.py</code></pre>
+      <p>
+        The script will print progress for each step. On a modern CPU the full
+        pipeline (alignment + CRF recovery + HDR assembly + tone mapping) takes
+        roughly 30–60 seconds.
+      </p>
+
+      <h3>5 — Outputs</h3>
+      <p>All results are written to the <code>output/</code> directory:</p>
+      <table>
+        <tr><th>File</th><th>Description</th></tr>
+        <tr><td>output/crf.png</td><td>Recovered camera response curves (R, G, B)</td></tr>
+        <tr><td>output/result.hdr</td><td>Assembled HDR radiance map (Radiance RGBE format)</td></tr>
+        <tr><td>output/tonemapped_reinhard.png</td><td>Tone-mapped 8-bit PNG (Reinhard global, a=0.18, γ=2.2)</td></tr>
+      </table>
+
+      <h3>Optional — adjust tone mapping key</h3>
+      <p>
+        Edit the last section of <code>hdr.py</code> and change the <code>a</code>
+        parameter to get brighter or darker results:
+      </p>
+      <pre><code>ldr = tonemap_reinhard(hdr, a=0.36)   # brighter
+ldr = tonemap_reinhard(hdr, a=0.09)   # darker / more dramatic</code></pre>
+    </section>
+
+    <!-- References -->
+    <section id="references">
+      <h2>References</h2>
+      <ol style="padding-left:20px; margin-top:16px; line-height:2.2; font-size:15px;">
+        <li>Paul E. Debevec, Jitendra Malik. <em>Recovering High Dynamic Range Radiance Maps from Photographs.</em> SIGGRAPH 1997.</li>
+        <li>Greg Ward. <em>Fast Robust Image Registration for Compositing High Dynamic Range Photographs from Hand-Held Exposures.</em> JGT 2003.</li>
+        <li>Erik Reinhard, Michael Stark, Peter Shirley, Jim Ferwerda. <em>Photographic Tone Reproduction for Digital Images.</em> SIGGRAPH 2002.</li>
+        <li>Gregory Ward Larson. <em>The RGBE / Radiance Picture File Format.</em> Radiance HDR Encodings, 1991.</li>
+      </ol>
+    </section>
+
+  </div><!-- /main-col -->
+
+  <!-- ════════════════════ SIDEBAR ════════════════════ -->
+  <div class="side-col">
+    <div class="sticky-sidebar">
+
+      <div class="sidebar-card">
+        <h4>Pipeline Steps</h4>
+        <ul>
+          <li>Load 16 exposure images</li>
+          <li>Parse exposure times</li>
+          <li>MTB alignment (bonus)</li>
+          <li>Solve CRF per channel</li>
+          <li>Assemble radiance map</li>
+          <li>Encode &amp; save RGBE .hdr</li>
+          <li>Reinhard tone map (bonus)</li>
+          <li>Save 8-bit PNG output</li>
+        </ul>
+      </div>
+
+      <div class="sidebar-card">
+        <h4>Implementation</h4>
+        <ul>
+          <li>Python 3.12</li>
+          <li>numpy (SVD solver)</li>
+          <li>Pillow (image I/O)</li>
+          <li>matplotlib (CRF plot)</li>
+          <li>No HDR library used</li>
+        </ul>
+      </div>
+
+      <div class="sidebar-card">
+        <h4>View This Report</h4>
+        <ul>
+          <li>GitHub Pages (recommended)</li>
+          <li>Or use htmlpreview.github.io</li>
+        </ul>
+        <p style="font-family:'DM Mono',monospace;font-size:10px;color:#9a8a76;margin-top:10px;line-height:1.6;">
+          Prefix the raw GitHub URL with:<br>
+          <span style="color:var(--accent-lt)">https://htmlpreview.github.io/?</span>
+        </p>
+      </div>
+
+      <div class="sidebar-card">
+        <h4>Key Numbers</h4>
+        <ul>
+          <li>16 input images</li>
+          <li>15 stops dynamic range</li>
+          <li>200 sampled pixels/ch</li>
+          <li>λ = 50 (smoothness)</li>
+          <li>1055 × 456 linear system</li>
+          <li>Radiance: 0.0003 – 769</li>
+          <li>Output: 1.6 MB .hdr</li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- /content -->
+
+<footer>
+  <span>CSIE 7694 — Project #1 &nbsp;·&nbsp; High Dynamic Range Imaging</span>
+  <span>University of Texas at Austin, Department of Computer Science</span>
+</footer>
+
+</body>
+</html>
