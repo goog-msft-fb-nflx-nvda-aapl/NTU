@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSIE5098: pbrt-v4 Installation Report - James Christian</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Crimson+Pro:wght@400;600;700&display=swap');
+        
+        :root {
+            --bg-primary: #0a0e14;
+            --bg-secondary: #14191f;
+            --bg-tertiary: #1a2128;
+            --accent-primary: #00d4aa;
+            --accent-secondary: #00a8ff;
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
+            --border-color: #30363d;
+            --success: #3fb950;
+            --warning: #d29922;
+            --code-bg: #161b22;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Crimson Pro', Georgia, serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.7;
+            font-size: 18px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 60px 40px;
+        }
+        
+        /* Header */
+        header {
+            border-bottom: 3px solid var(--accent-primary);
+            padding-bottom: 40px;
+            margin-bottom: 60px;
+            position: relative;
+        }
+        
+        header::after {
+            content: '';
+            position: absolute;
+            bottom: -3px;
+            left: 0;
+            width: 200px;
+            height: 3px;
+            background: var(--accent-secondary);
+        }
+        
+        h1 {
+            font-size: 3.5em;
+            font-weight: 700;
+            margin-bottom: 15px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -0.02em;
+        }
+        
+        .subtitle {
+            font-size: 1.3em;
+            color: var(--text-secondary);
+            margin-bottom: 25px;
+        }
+        
+        .meta-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            background: var(--bg-secondary);
+            padding: 25px;
+            border-radius: 8px;
+            border-left: 4px solid var(--accent-primary);
+        }
+        
+        .meta-item {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .meta-label {
+            font-size: 0.85em;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 5px;
+        }
+        
+        .meta-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.95em;
+            color: var(--accent-primary);
+        }
+        
+        /* Sections */
+        section {
+            margin-bottom: 70px;
+        }
+        
+        h2 {
+            font-size: 2.2em;
+            font-weight: 700;
+            margin-bottom: 30px;
+            color: var(--accent-primary);
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 15px;
+        }
+        
+        h3 {
+            font-size: 1.6em;
+            font-weight: 600;
+            margin: 35px 0 20px 0;
+            color: var(--accent-secondary);
+        }
+        
+        h4 {
+            font-size: 1.3em;
+            font-weight: 600;
+            margin: 25px 0 15px 0;
+            color: var(--text-primary);
+        }
+        
+        p {
+            margin-bottom: 20px;
+            color: var(--text-secondary);
+        }
+        
+        /* Code blocks */
+        pre {
+            background: var(--code-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 25px;
+            overflow-x: auto;
+            margin: 25px 0;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85em;
+            line-height: 1.6;
+            position: relative;
+        }
+        
+        pre::before {
+            content: attr(data-lang);
+            position: absolute;
+            top: 8px;
+            right: 15px;
+            font-size: 0.75em;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            background: var(--code-bg);
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            color: var(--accent-primary);
+        }
+        
+        pre code {
+            background: none;
+            padding: 0;
+            color: var(--text-primary);
+        }
+        
+        /* Lists */
+        ul, ol {
+            margin: 20px 0 20px 30px;
+        }
+        
+        li {
+            margin-bottom: 12px;
+            color: var(--text-secondary);
+        }
+        
+        /* Info boxes */
+        .info-box {
+            background: var(--bg-secondary);
+            border-left: 4px solid var(--accent-secondary);
+            padding: 25px;
+            margin: 30px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .success-box {
+            background: rgba(63, 185, 80, 0.1);
+            border-left: 4px solid var(--success);
+            padding: 25px;
+            margin: 30px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        .warning-box {
+            background: rgba(210, 153, 34, 0.1);
+            border-left: 4px solid var(--warning);
+            padding: 25px;
+            margin: 30px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 30px 0;
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        thead {
+            background: var(--bg-tertiary);
+        }
+        
+        th {
+            padding: 18px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--accent-primary);
+            border-bottom: 2px solid var(--border-color);
+        }
+        
+        td {
+            padding: 15px 18px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-secondary);
+        }
+        
+        tr:last-child td {
+            border-bottom: none;
+        }
+        
+        tbody tr:hover {
+            background: var(--bg-tertiary);
+        }
+        
+        /* Step numbering */
+        .step {
+            background: var(--bg-secondary);
+            padding: 30px;
+            margin: 30px 0;
+            border-radius: 8px;
+            border-left: 4px solid var(--accent-primary);
+            position: relative;
+        }
+        
+        .step-number {
+            position: absolute;
+            top: -15px;
+            left: 20px;
+            background: var(--accent-primary);
+            color: var(--bg-primary);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 1.2em;
+        }
+        
+        .step-title {
+            font-size: 1.4em;
+            font-weight: 600;
+            margin-bottom: 20px;
+            padding-top: 10px;
+            color: var(--text-primary);
+        }
+        
+        /* Challenge boxes */
+        .challenge {
+            background: var(--bg-tertiary);
+            padding: 25px;
+            margin: 25px 0;
+            border-radius: 8px;
+            border-left: 4px solid var(--warning);
+        }
+        
+        .challenge-title {
+            font-weight: 600;
+            color: var(--warning);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .challenge-title::before {
+            content: '⚠';
+            font-size: 1.2em;
+        }
+        
+        .solution {
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid var(--border-color);
+        }
+        
+        .solution-title {
+            font-weight: 600;
+            color: var(--success);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .solution-title::before {
+            content: '✓';
+            font-size: 1.2em;
+        }
+        
+        /* Footer */
+        footer {
+            margin-top: 80px;
+            padding-top: 40px;
+            border-top: 2px solid var(--border-color);
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 0.9em;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 40px 20px;
+            }
+            
+            h1 {
+                font-size: 2.5em;
+            }
+            
+            h2 {
+                font-size: 1.8em;
+            }
+            
+            pre {
+                padding: 20px;
+                font-size: 0.8em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>pbrt-v4 Installation Report</h1>
+            <p class="subtitle">CSIE5098 Digital Image Synthesis — Homework Assignment</p>
+            
+            <div class="meta-info">
+                <div class="meta-item">
+                    <span class="meta-label">Student</span>
+                    <span class="meta-value">James Christian</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Student ID</span>
+                    <span class="meta-value">R13921031</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Date</span>
+                    <span class="meta-value">February 11, 2026</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">Status</span>
+                    <span class="meta-value">✓ Complete</span>
+                </div>
+            </div>
+        </header>
+
+        <section id="objectives">
+            <h2>Objectives</h2>
+            <ul>
+                <li>Install pbrt-v4 from <a href="https://github.com/mmp/pbrt-v4" style="color: var(--accent-secondary);">https://github.com/mmp/pbrt-v4</a></li>
+                <li>Set up debugging environment for development</li>
+                <li>Run example scenes from pbrt-v4-scenes repository</li>
+                <li>Create comprehensive HTML report documenting the installation process</li>
+            </ul>
+        </section>
+
+        <section id="system-config">
+            <h2>Hardware & Software Configuration</h2>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>Component</th>
+                        <th>Specification</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>GPU</td>
+                        <td>8x NVIDIA H200 (143GB VRAM each)</td>
+                    </tr>
+                    <tr>
+                        <td>CUDA Version</td>
+                        <td>12.4</td>
+                    </tr>
+                    <tr>
+                        <td>Driver Version</td>
+                        <td>550.163.01</td>
+                    </tr>
+                    <tr>
+                        <td>Operating System</td>
+                        <td>Ubuntu Linux</td>
+                    </tr>
+                    <tr>
+                        <td>System Python</td>
+                        <td>3.10.12</td>
+                    </tr>
+                    <tr>
+                        <td>Conda Python</td>
+                        <td>3.12</td>
+                    </tr>
+                    <tr>
+                        <td>Compiler Suite</td>
+                        <td>gcc, cmake, make (via /usr/bin)</td>
+                    </tr>
+                    <tr>
+                        <td>Working Directory</td>
+                        <td>/home/jtan/CSIE5098</td>
+                    </tr>
+                    <tr>
+                        <td>User Account</td>
+                        <td>jtan (no sudo access)</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <div class="warning-box">
+                <strong>Important Constraint:</strong> No sudo/root access available. All dependencies must be installed via Conda or user-level package managers.
+            </div>
+        </section>
+
+        <section id="installation">
+            <h2>Installation Process</h2>
+            
+            <div class="step">
+                <div class="step-number">1</div>
+                <div class="step-title">Clone pbrt-v4 Repository</div>
+                <p>Clone the official pbrt-v4 repository with all submodules:</p>
+                <pre data-lang="bash"><code>cd /home/jtan/CSIE5098
+git clone --recursive https://github.com/mmp/pbrt-v4.git
+cd pbrt-v4</code></pre>
+                <p>The <code>--recursive</code> flag ensures all Git submodules are cloned, which is essential for pbrt's dependencies.</p>
+            </div>
+
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-title">Create Conda Environment</div>
+                <p>Create an isolated Python 3.12 environment for the project:</p>
+                <pre data-lang="bash"><code>conda create -n pbrt_project python=3.12
+conda activate pbrt_project</code></pre>
+                <p>Using a dedicated Conda environment prevents conflicts with system packages and allows precise version control.</p>
+            </div>
+
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-title">Install Dependencies via Conda</div>
+                <p>Install all required libraries through conda-forge channel:</p>
+                
+                <h4>OpenGL and Mesa Libraries</h4>
+                <pre data-lang="bash"><code>conda install -c conda-forge cmake mesa-libgl-devel-cos7-x86_64 mesa-dri-drivers-cos7-x86_64</code></pre>
+                
+                <h4>X11 Libraries</h4>
+                <pre data-lang="bash"><code>conda install -c conda-forge xorg-libx11 xorg-libxext xorg-libxrender \
+    mesa-libgl-cos7-x86_64 libglvnd-glx-cos7-x86_64</code></pre>
+                
+                <h4>Image Processing and Documentation</h4>
+                <pre data-lang="bash"><code>conda install -c conda-forge openexr doxygen</code></pre>
+                
+                <h4>Additional X11 Extensions</h4>
+                <pre data-lang="bash"><code>conda install -c conda-forge xorg-libxrandr xorg-libxinerama \
+    xorg-libxcursor xorg-libxi</code></pre>
+                
+                <h4>C++ Compiler Toolchain</h4>
+                <pre data-lang="bash"><code>conda install -c conda-forge gxx_linux-64</code></pre>
+                <p><strong>Critical:</strong> Installing the Conda C++ compiler toolchain prevents ABI compatibility issues between system compilers and Conda libraries.</p>
+            </div>
+
+            <div class="step">
+                <div class="step-number">4</div>
+                <div class="step-title">Configure CMake Build</div>
+                <p>Set up the build directory and configure CMake with appropriate flags:</p>
+                <pre data-lang="bash"><code>mkdir build
+cd build
+
+# Clear any previous configuration attempts
+rm -rf *
+
+# Configure with proper compiler and library flags
+CC=$CONDA_PREFIX/bin/x86_64-conda-linux-gnu-gcc \
+CXX=$CONDA_PREFIX/bin/x86_64-conda-linux-gnu-g++ \
+CFLAGS="-D_POSIX_C_SOURCE=200809L -D_GNU_SOURCE" \
+cmake -D OpenGL_GL_PREFERENCE=LEGACY \
+      -D OPENGL_INCLUDE_DIR=/usr/include \
+      -D OPENGL_gl_LIBRARY=/usr/lib/x86_64-linux-gnu/libGL.so.1 \
+      -D GLFW_BUILD_WAYLAND=OFF ..</code></pre>
+                
+                <h4>Configuration Flags Explanation:</h4>
+                <ul>
+                    <li><code>CC/CXX</code>: Use Conda's GCC/G++ to ensure ABI compatibility</li>
+                    <li><code>CFLAGS</code>: Define POSIX and GNU standards for proper system calls</li>
+                    <li><code>OpenGL_GL_PREFERENCE=LEGACY</code>: Use legacy OpenGL (required for compatibility)</li>
+                    <li><code>OPENGL_INCLUDE_DIR</code>: Point to system OpenGL headers</li>
+                    <li><code>OPENGL_gl_LIBRARY</code>: Direct path to libGL.so.1 (symlink workaround)</li>
+                    <li><code>GLFW_BUILD_WAYLAND=OFF</code>: Disable Wayland (not available in Conda)</li>
+                </ul>
+            </div>
+
+            <div class="step">
+                <div class="step-number">5</div>
+                <div class="step-title">Build pbrt-v4</div>
+                <p>Compile pbrt using parallel build jobs:</p>
+                <pre data-lang="bash"><code>make -j8</code></pre>
+                <p>The <code>-j8</code> flag enables parallel compilation using 8 threads, significantly reducing build time.</p>
+                
+                <div class="success-box">
+                    <strong>Build Status:</strong> Completed successfully with expected warnings (see Challenges section for details).
+                </div>
+            </div>
+
+            <div class="step">
+                <div class="step-number">6</div>
+                <div class="step-title">Verify Installation</div>
+                <p>Confirm all executables were built correctly:</p>
+                <pre data-lang="bash"><code>ls -lh pbrt imgtool pbrt_test</code></pre>
+                
+                <p><strong>Output:</strong></p>
+                <pre data-lang="text"><code>-rwxrwxr-x 1 jtan jtan 49M Feb 11 19:41 imgtool
+-rwxrwxr-x 1 jtan jtan 49M Feb 11 19:41 pbrt
+-rwxrwxr-x 1 jtan jtan 51M Feb 11 19:41 pbrt_test</code></pre>
+                
+                <p>Test the main executable:</p>
+                <pre data-lang="bash"><code>./pbrt --help</code></pre>
+                <p>Successfully displays help menu with all rendering options and flags.</p>
+            </div>
+        </section>
+
+        <section id="challenges">
+            <h2>Challenges & Solutions</h2>
+            <p>Several technical challenges were encountered during installation. Each was systematically resolved:</p>
+            
+            <div class="challenge">
+                <div class="challenge-title">Challenge 1: Missing OpenGL Development Headers</div>
+                <p><strong>Problem:</strong> System lacks OpenGL development headers (<code>GL/gl.h</code>, <code>GL/glx.h</code>), and no sudo access to install them via apt.</p>
+                
+                <div class="solution">
+                    <div class="solution-title">Solution</div>
+                    <p>Installed OpenGL libraries via Conda (<code>mesa-libgl-devel-cos7-x86_64</code>) and configured CMake to use system headers in <code>/usr/include</code>. Combined Conda libraries with system headers for successful compilation.</p>
+                </div>
+            </div>
+
+            <div class="challenge">
+                <div class="challenge-title">Challenge 2: C++ ABI Compatibility Issue</div>
+                <p><strong>Problem:</strong> Conda's OpenEXR library compiled with Conda's GCC, but system compiler (GCC 11.4) uses different C++ ABI, causing linking errors:</p>
+                <pre data-lang="text"><code>undefined reference to `std::__throw_bad_array_new_length()'</code></pre>
+                
+                <div class="solution">
+                    <div class="solution-title">Solution</div>
+                    <p>Installed complete Conda compiler toolchain using <code>gxx_linux-64</code>. This ensures all components (compiler, standard library, and dependencies) use the same ABI version.</p>
+                </div>
+            </div>
+
+            <div class="challenge">
+                <div class="challenge-title">Challenge 3: GLFW Compilation Errors</div>
+                <p><strong>Problem:</strong> GLFW compilation failed with undefined symbols:</p>
+                <pre data-lang="text"><code>error: 'CLOCK_REALTIME' was not declared
+error: 'O_CLOEXEC' was not declared</code></pre>
+                
+                <div class="solution">
+                    <div class="solution-title">Solution</div>
+                    <p>Added POSIX and GNU source definitions to CFLAGS:</p>
+                    <pre data-lang="bash"><code>CFLAGS="-D_POSIX_C_SOURCE=200809L -D_GNU_SOURCE"</code></pre>
+                    <p>This enables POSIX.1-2008 features and GNU extensions required by GLFW.</p>
+                </div>
+            </div>
+
+            <div class="challenge">
+                <div class="challenge-title">Challenge 4: Missing libGL.so Symlink</div>
+                <p><strong>Problem:</strong> CMake's FindOpenGL module searches for <code>libGL.so</code>, but only <code>libGL.so.1</code> and <code>libGL.so.1.7.0</code> exist in the system.</p>
+                
+                <div class="solution">
+                    <div class="solution-title">Solution</div>
+                    <p>Explicitly specified the full library path in CMake configuration:</p>
+                    <pre data-lang="bash"><code>-D OPENGL_gl_LIBRARY=/usr/lib/x86_64-linux-gnu/libGL.so.1</code></pre>
+                    <p>This bypasses the automatic search and uses the versioned library directly.</p>
+                </div>
+            </div>
+
+            <div class="challenge">
+                <div class="challenge-title">Challenge 5: Wayland Scanner Missing</div>
+                <p><strong>Problem:</strong> GLFW's CMake configuration requires <code>wayland-scanner</code> for Wayland support, but it's not available in Conda packages.</p>
+                
+                <div class="solution">
+                    <div class="solution-title">Solution</div>
+                    <p>Disabled Wayland support in GLFW build:</p>
+                    <pre data-lang="bash"><code>-D GLFW_BUILD_WAYLAND=OFF</code></pre>
+                    <p>X11 support remains functional and sufficient for pbrt's display needs.</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="executables">
+            <h2>Build Artifacts</h2>
+            <p><strong>Location:</strong> <code>/home/jtan/CSIE5098/pbrt-v4/build/</code></p>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>Executable</th>
+                        <th>Size</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><code>pbrt</code></td>
+                        <td>49 MB</td>
+                        <td>Main renderer executable — parses scene files and renders images</td>
+                    </tr>
+                    <tr>
+                        <td><code>imgtool</code></td>
+                        <td>49 MB</td>
+                        <td>Image manipulation tool — convert, tonemap, and process rendered images</td>
+                    </tr>
+                    <tr>
+                        <td><code>pbrt_test</code></td>
+                        <td>51 MB</td>
+                        <td>Testing suite — unit and integration tests for pbrt components</td>
+                    </tr>
+                    <tr>
+                        <td><code>pspec</code></td>
+                        <td>—</td>
+                        <td>Spectral processing utility</td>
+                    </tr>
+                    <tr>
+                        <td><code>plytool</code></td>
+                        <td>—</td>
+                        <td>PLY mesh file manipulation</td>
+                    </tr>
+                    <tr>
+                        <td><code>nanovdb2pbrt</code></td>
+                        <td>—</td>
+                        <td>NanoVDB to pbrt volume converter</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section id="testing">
+            <h2>Scene Rendering Tests</h2>
+            
+            <div class="info-box" style="margin-bottom: 40px;">
+                <strong>📸 Rendered Images Gallery</strong>
+                <p style="margin-top: 10px;">Below are the successfully rendered test scenes, converted from OpenEXR to PNG format with tonemapping applied.</p>
+            </div>
+            
+            <h3>Download Example Scenes</h3>
+            <p>Clone the official pbrt-v4 scene repository (7.05 GB):</p>
+            <pre data-lang="bash"><code>cd /home/jtan/CSIE5098
+git clone https://github.com/mmp/pbrt-v4-scenes.git</code></pre>
+            
+            <p><strong>Download Output:</strong></p>
+            <pre data-lang="text"><code>Cloning into 'pbrt-v4-scenes'...
+remote: Enumerating objects: 8879, done.
+remote: Counting objects: 100% (13/13), done.
+remote: Compressing objects: 100% (11/11), done.
+remote: Total 8879 (delta 2), reused 12 (delta 2), pack-reused 8866
+Receiving objects: 100% (8879/8879), 7.05 GiB | 24.01 MiB/s, done.
+Resolving deltas: 100% (919/919), done.
+Updating files: 100% (11140/11140), done.</code></pre>
+
+            <h3>Available Scene Collections</h3>
+            <p>The repository includes diverse scenes demonstrating pbrt's capabilities:</p>
+            <ul>
+                <li><strong>barcelona-pavilion</strong> — Architectural visualization</li>
+                <li><strong>bistro</strong> — Complex restaurant scene</li>
+                <li><strong>bunny-cloud, bunny-fur</strong> — Volume and fur rendering</li>
+                <li><strong>contemporary-bathroom</strong> — Interior scene with glass and water</li>
+                <li><strong>crown</strong> — Jewelry with complex materials</li>
+                <li><strong>dambreak, smoke-plume</strong> — Fluid simulation rendering</li>
+                <li><strong>ganesha</strong> — Subsurface scattering demonstration</li>
+                <li><strong>killeroos</strong> — Simple test scenes with various materials</li>
+                <li><strong>landscape</strong> — Outdoor environment</li>
+                <li><strong>lte-orb</strong> — Light transport equation validation</li>
+                <li><strong>sanmiguel</strong> — Complex architectural scene</li>
+                <li><strong>sssdragon</strong> — Subsurface scattering dragon</li>
+                <li><strong>villa, zero-day</strong> — Architectural interiors</li>
+            </ul>
+
+            <h3>Test Render 1: Killeroo Simple</h3>
+            <pre data-lang="bash"><code>cd /home/jtan/CSIE5098/pbrt-v4-scenes/killeroos
+/home/jtan/CSIE5098/pbrt-v4/build/pbrt killeroo-simple.pbrt</code></pre>
+            
+            <p><strong>Render Output:</strong></p>
+            <pre data-lang="text"><code>pbrt version 4 (built Feb 11 2026 at 19:41:42)
+Copyright (c)1998-2021 Matt Pharr, Wenzel Jakob, and Greg Humphreys.
+The source code to pbrt (but *not* the book contents) is covered by the Apache 2.0 License.
+See the file LICENSE.txt for the conditions of the license.
+Rendering: [++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++]  (2.9s)</code></pre>
+            
+            <div class="success-box">
+                <strong>Result:</strong> Successfully rendered <code>killeroo-simple.exr</code> (1.6 MB) in 2.9 seconds
+            </div>
+            
+            <div style="margin: 30px 0; text-align: center; background: var(--bg-secondary); padding: 30px; border-radius: 8px;">
+                <img src="./images/killeroo-simple.png" 
+                     alt="Killeroo Simple Render" 
+                     style="max-width: 100%; height: auto; border-radius: 4px; box-shadow: 0 4px 20px rgba(0, 212, 170, 0.2);">
+                <p style="margin-top: 15px; color: var(--text-secondary); font-size: 0.9em;">
+                    <strong>Figure 1:</strong> killeroo-simple.pbrt render (597 KB PNG, tonemapped from 1.6 MB EXR)
+                </p>
+            </div>
+
+            <h3>Test Render 2: LTE Orb Simple Ball</h3>
+            <pre data-lang="bash"><code>cd /home/jtan/CSIE5098/pbrt-v4-scenes/lte-orb
+/home/jtan/CSIE5098/pbrt-v4/build/pbrt lte-orb-simple-ball.pbrt</code></pre>
+            
+            <p><strong>Render Output:</strong></p>
+            <pre data-lang="text"><code>pbrt version 4 (built Feb 11 2026 at 19:41:42)
+Copyright (c)1998-2021 Matt Pharr, Wenzel Jakob, and Greg Humphreys.
+The source code to pbrt (but *not* the book contents) is covered by the Apache 2.0 License.
+See the file LICENSE.txt for the conditions of the license.
+Rendering: [++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++]  (65.6s)</code></pre>
+            
+            <div class="success-box">
+                <strong>Result:</strong> Successfully rendered <code>lte-orb-simple-ball.exr</code> (23 MB) in 65.6 seconds
+            </div>
+            
+            <div style="margin: 30px 0; text-align: center; background: var(--bg-secondary); padding: 30px; border-radius: 8px;">
+                <img src="./images/lte-orb-simple-ball.png" 
+                     alt="LTE Orb Simple Ball Render" 
+                     style="max-width: 100%; height: auto; border-radius: 4px; box-shadow: 0 4px 20px rgba(0, 168, 255, 0.2);">
+                <p style="margin-top: 15px; color: var(--text-secondary); font-size: 0.9em;">
+                    <strong>Figure 2:</strong> lte-orb-simple-ball.pbrt render (1.6 MB PNG, tonemapped from 23 MB EXR)
+                </p>
+            </div>
+
+            <h3>General Rendering Workflow</h3>
+            <p>To render any scene from the repository:</p>
+            <pre data-lang="bash"><code># Activate conda environment
+conda activate pbrt_project
+
+# Navigate to scene directory
+cd /home/jtan/CSIE5098/pbrt-v4-scenes/[scene-name]
+
+# Render the scene
+/home/jtan/CSIE5098/pbrt-v4/build/pbrt [scene-file.pbrt]</code></pre>
+            
+            <p>Output files are generated in the same directory as the scene file, typically in OpenEXR format (.exr).</p>
+        </section>
+
+        <section id="debugging">
+            <h2>Debugging Environment Setup</h2>
+            
+            <h3>Method 1: GDB Debugging</h3>
+            <p>Use GDB (GNU Debugger) for interactive debugging sessions:</p>
+            <pre data-lang="bash"><code># Start GDB with pbrt executable
+conda activate pbrt_project
+cd /home/jtan/CSIE5098/pbrt-v4/build
+gdb ./pbrt</code></pre>
+            
+            <p><strong>Common GDB Commands:</strong></p>
+            <pre data-lang="gdb"><code>(gdb) run /path/to/scene.pbrt          # Run with scene file
+(gdb) break main                       # Set breakpoint at main()
+(gdb) break pbrt::Render               # Set breakpoint at function
+(gdb) continue                         # Continue execution
+(gdb) next                             # Step over (next line)
+(gdb) step                             # Step into (follow calls)
+(gdb) print variable_name              # Print variable value
+(gdb) backtrace                        # Show call stack
+(gdb) quit                             # Exit GDB</code></pre>
+
+            <h3>Method 2: Verify Debug Symbols</h3>
+            <p>Check that executables contain debugging information:</p>
+            <pre data-lang="bash"><code>file ./pbrt</code></pre>
+            <p>Output should include "not stripped", confirming debug symbols are present.</p>
+
+            <h3>Method 3: Rebuild with Debug Flags (Optional)</h3>
+            <p>For enhanced debugging with full symbol information and no optimizations:</p>
+            <pre data-lang="bash"><code>cd /home/jtan/CSIE5098/pbrt-v4/build
+rm -rf *
+
+CC=$CONDA_PREFIX/bin/x86_64-conda-linux-gnu-gcc \
+CXX=$CONDA_PREFIX/bin/x86_64-conda-linux-gnu-g++ \
+CFLAGS="-D_POSIX_C_SOURCE=200809L -D_GNU_SOURCE" \
+cmake -DCMAKE_BUILD_TYPE=Debug \
+      -D OpenGL_GL_PREFERENCE=LEGACY \
+      -D OPENGL_INCLUDE_DIR=/usr/include \
+      -D OPENGL_gl_LIBRARY=/usr/lib/x86_64-linux-gnu/libGL.so.1 \
+      -D GLFW_BUILD_WAYLAND=OFF ..
+
+make -j8</code></pre>
+            
+            <div class="info-box">
+                <strong>Note:</strong> Debug builds are significantly slower at runtime but provide better debugging information. The default RelWithDebInfo build (used in this installation) provides a good balance between performance and debuggability.
+            </div>
+
+            <h3>Method 4: VSCode Integration</h3>
+            <p>For IDE-based debugging, create <code>.vscode/launch.json</code>:</p>
+            <pre data-lang="json"><code>{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug pbrt",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/build/pbrt",
+            "args": ["/path/to/scene.pbrt"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/build",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        }
+    ]
+}</code></pre>
+        </section>
+
+        <section id="usage">
+            <h2>Usage Instructions</h2>
+            
+            <h3>Environment Activation</h3>
+            <p>Always activate the Conda environment before using pbrt:</p>
+            <pre data-lang="bash"><code>conda activate pbrt_project</code></pre>
+
+            <h3>Basic Rendering</h3>
+            <pre data-lang="bash"><code>cd /home/jtan/CSIE5098/pbrt-v4/build
+./pbrt /path/to/scene.pbrt</code></pre>
+
+            <h3>Common Command-Line Options</h3>
+            <pre data-lang="bash"><code># Render with specific number of threads
+./pbrt --nthreads 16 scene.pbrt
+
+# Display help and all options
+./pbrt --help
+
+# Render with GPU acceleration (if available)
+./pbrt --gpu scene.pbrt
+
+# Quick preview render (lower quality)
+./pbrt --quick scene.pbrt
+
+# Disable display window
+./pbrt --display-server localhost:0 scene.pbrt</code></pre>
+
+            <h3>Image Tool Usage</h3>
+            <p>Convert and manipulate rendered images:</p>
+            <pre data-lang="bash"><code># Convert EXR to PNG with tonemapping
+./imgtool convert input.exr output.png
+
+# Display image information
+./imgtool info rendered.exr
+
+# Apply gamma correction
+./imgtool --gamma 2.2 input.exr output.png</code></pre>
+        </section>
+
+        <section id="conclusion">
+            <h2>Conclusion</h2>
+            <p>Successfully completed all homework objectives:</p>
+            
+            <div class="success-box">
+                <ul>
+                    <li>✓ Installed pbrt-v4 from source with all dependencies</li>
+                    <li>✓ Resolved 5 major technical challenges related to compiler compatibility, library dependencies, and system constraints</li>
+                    <li>✓ Built all executables (pbrt, imgtool, pbrt_test, and utility tools)</li>
+                    <li>✓ Downloaded 7.05 GB of example scenes (11,140 files)</li>
+                    <li>✓ Successfully rendered test scenes (killeroo-simple: 2.9s, lte-orb-simple-ball: 65.6s)</li>
+                    <li>✓ Configured debugging environment with GDB integration</li>
+                    <li>✓ Created comprehensive HTML documentation</li>
+                </ul>
+            </div>
+
+            <h3>Key Achievements</h3>
+            <ul>
+                <li><strong>Zero-sudo installation:</strong> Successfully installed complex graphics software without root privileges using Conda package manager</li>
+                <li><strong>ABI compatibility resolution:</strong> Solved C++ ABI mismatch by using unified Conda compiler toolchain</li>
+                <li><strong>POSIX compliance:</strong> Configured proper preprocessor definitions for system call compatibility</li>
+                <li><strong>Library path management:</strong> Navigated complex library dependencies between Conda and system installations</li>
+            </ul>
+
+            <h3>Technical Insights</h3>
+            <p>This installation demonstrated several important software engineering principles:</p>
+            <ul>
+                <li>Importance of ABI compatibility in C++ library linking</li>
+                <li>Role of preprocessor definitions in platform-specific compilation</li>
+                <li>Conda's capability as a comprehensive development environment without system administration rights</li>
+                <li>CMake's flexibility in handling non-standard library locations</li>
+                <li>Debugging symbol preservation for development workflows</li>
+            </ul>
+        </section>
+
+        <section id="references">
+            <h2>References & Resources</h2>
+            <ul>
+                <li><a href="https://github.com/mmp/pbrt-v4" style="color: var(--accent-secondary);">pbrt-v4 GitHub Repository</a></li>
+                <li><a href="https://github.com/mmp/pbrt-v4-scenes" style="color: var(--accent-secondary);">pbrt-v4-scenes Repository</a></li>
+                <li><a href="https://www.pbrt.org/" style="color: var(--accent-secondary);">Physically Based Rendering Book & Website</a></li>
+                <li><a href="https://benedikt-bitterli.me/resources/" style="color: var(--accent-secondary);">Benedikt Bitterli's Rendering Resources</a></li>
+                <li><a href="https://docs.conda.io/en/latest/" style="color: var(--accent-secondary);">Conda Documentation</a></li>
+                <li><a href="https://cmake.org/documentation/" style="color: var(--accent-secondary);">CMake Documentation</a></li>
+            </ul>
+        </section>
+
+        <footer>
+            <p>CSIE5098 Digital Image Synthesis — National Taiwan University</p>
+            <p>Report generated February 11, 2026</p>
+            <p style="margin-top: 20px; color: var(--text-secondary);">
+                This report documents the complete installation and configuration of pbrt-v4 rendering system.
+            </p>
+        </footer>
+    </div>
+</body>
+</html>
