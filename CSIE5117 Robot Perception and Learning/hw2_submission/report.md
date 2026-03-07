@@ -92,7 +92,7 @@ https://github.com/user-attachments/assets/55c4dd0b-375c-4809-92ed-f2e9748612fa
 
 
 **Seed 100001:**  
-<div><video controls src="<!---[動画のURL](https://github.com/user-attachments/assets/ec3f6c24-6833-403e-b7bc-4e14cb7314e4)--->" muted="false"></video></div>
+https://github.com/user-attachments/assets/ec3f6c24-6833-403e-b7bc-4e14cb7314e4
 
 
 
@@ -100,12 +100,12 @@ https://github.com/user-attachments/assets/55c4dd0b-375c-4809-92ed-f2e9748612fa
 #### Regression Policy
 
 **Seed 100000:**  
-<div><video controls src="<!---[動画のURL](https://github.com/user-attachments/assets/1a8ae4f0-2ac1-4aa5-bceb-bd896f6fac12)--->" muted="false"></video></div>
+https://github.com/user-attachments/assets/1a8ae4f0-2ac1-4aa5-bceb-bd896f6fac12
 
 
 
 **Seed 100001:**  
-<div><video controls src="<!---[動画のURL](https://github.com/user-attachments/assets/ea7aa95b-0747-49c5-9f96-9446fcb47cac)--->" muted="false"></video></div>
+https://github.com/user-attachments/assets/ea7aa95b-0747-49c5-9f96-9446fcb47cac
 
 
 
