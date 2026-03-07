@@ -1,15 +1,11 @@
-# RPL HW2 - Success Rates
+# RPL HW2 - Final Success Rates (Epoch 1999)
 
-## Intermediate Results (Undertrained)
+Diffusion Policy:
+- Test Success Rate: 93.87%
+- Train Success Rate: 98.01%
 
-Diffusion Policy (Epoch 250):
-- Test Success Rate: 93.3%
-- Train Success Rate: 100.0%
+Regression Policy:
+- Test Success Rate: 83.08%
+- Train Success Rate: 75.62%
 
-Regression Policy (Epoch 1200):
-- Test Success Rate: 79.9%
-- Train Success Rate: 74.8%
-
-## Final Results (After 2000 epochs)
-[To be updated after training completes]
-
+Performance Gap: 10.79 percentage points (Diffusion > Regression)

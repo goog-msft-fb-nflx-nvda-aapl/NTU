@@ -1,6 +1,6 @@
 # RPL HW2 Report: Imitation Learning and Flow Matching
 
-**Student:** James Christian  
+**Student:** jtan  
 **Date:** March 7, 2026
 
 ---
@@ -78,7 +78,7 @@ python eval.py \
 **Performance Gap:** Diffusion outperforms Regression by **13.41 percentage points**
 
 **Final Results (After 2000 epochs):**  
-*[To be updated after training completes]*
+
 
 ---
 
@@ -86,32 +86,21 @@ python eval.py \
 
 #### Diffusion Policy
 
-**Seed 100000:** ![Diffusion Policy Seed 100000](report/videos/diffusion/diffusion_seed100000.gif)
+**Seed 100000:**  
+![Diffusion Seed 100000](report/videos/diffusion/diffusion_seed100000.mp4)
 
-
-https://github.com/user-attachments/assets/b97426da-171e-4b51-8711-c8bac4a7607c
-
-
-**Seed 100001:** ![Diffusion Policy Seed 100001](report/videos/diffusion/diffusion_seed100001.gif)
-
-
-https://github.com/user-attachments/assets/18327bc2-a1b8-4580-91cd-9b52bea33ca3
-
+**Seed 100001:**  
+![Diffusion Seed 100001](report/videos/diffusion/diffusion_seed100001.mp4)
 
 #### Regression Policy
 
-**Seed 100000:** ![Regression Policy Seed 100000](report/videos/regression/regression_seed100000.gif)
+**Seed 100000:**  
+![Regression Seed 100000](report/videos/regression/regression_seed100000.mp4)
 
-https://github.com/user-attachments/assets/18cbf827-03ee-4749-be9b-2315e090fdbc
+**Seed 100001:**  
+![Regression Seed 100001](report/videos/regression/regression_seed100001.mp4)
 
-
-**Seed 100001:** ![Regression Policy Seed 100001](report/videos/regression/regression_seed100001.gif)
-
-
-https://github.com/user-attachments/assets/e82f3e06-f8ec-4c2f-bfa4-4cc5e31a7504
-
-
-*Note: Visualizations are provided as GIFs for compatibility. Original videos are located in `report/videos/`.*
+*Note: Videos are located in `report/videos/diffusion/` and `report/videos/regression/`*
 
 ---
 
