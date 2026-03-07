@@ -88,6 +88,7 @@ python eval.py \
 
 **Seed 100000:**  
 ![Rollout video of Diffusion Policy model successfully completing Push-T manipulation task with random seed 100000, showing robotic arm approach and push execution sequence](report/videos/diffusion/diffusion_seed100000.mp4)
+<video src="https://raw.githubusercontent.com/goog-msft-fb-nflx-nvda-aapl/NTU/main/CSIE5117%20Robot%20Perception%20and%20Learning/hw2_submission/report/videos/diffusion/diffusion_seed100000.mp4" width="100%" controls muted autoplay loop></video>
 
 **Seed 100001:**  
 ![Rollout video of Diffusion Policy model successfully completing Push-T manipulation task with random seed 100001, demonstrating alternative valid trajectory and execution approach](report/videos/diffusion/diffusion_seed100001.mp4)
