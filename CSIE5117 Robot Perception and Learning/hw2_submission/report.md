@@ -86,21 +86,17 @@ python eval.py \
 
 #### Diffusion Policy
 
-**Seed 100000:**  
-![Rollout video of Diffusion Policy model successfully completing Push-T manipulation task with random seed 100000, showing robotic arm approach and push execution sequence](report/videos/diffusion/diffusion_seed100000.mp4)
+**Seed 100000:** ![Diffusion Policy Seed 100000](report/videos/diffusion/diffusion_seed100000.gif)
 
-**Seed 100001:**  
-![Rollout video of Diffusion Policy model successfully completing Push-T manipulation task with random seed 100001, demonstrating alternative valid trajectory and execution approach](report/videos/diffusion/diffusion_seed100001.mp4)
+**Seed 100001:** ![Diffusion Policy Seed 100001](report/videos/diffusion/diffusion_seed100001.gif)
 
 #### Regression Policy
 
-**Seed 100000:**  
-![Rollout video of Regression Policy model executing Push-T manipulation task with random seed 100000, showing deterministic single-trajectory robotic control and push outcome](report/videos/regression/regression_seed100000.mp4)
+**Seed 100000:** ![Regression Policy Seed 100000](report/videos/regression/regression_seed100000.gif)
 
-**Seed 100001:**  
-![Rollout video of Regression Policy model executing Push-T manipulation task with random seed 100001, displaying consistent behavioral pattern with deterministic action selection](report/videos/regression/regression_seed100001.mp4)
+**Seed 100001:** ![Regression Policy Seed 100001](report/videos/regression/regression_seed100001.gif)
 
-*Note: Videos are located in `report/videos/diffusion/` and `report/videos/regression/`*
+*Note: Visualizations are provided as GIFs for compatibility. Original videos are located in `report/videos/`.*
 
 ---
 
