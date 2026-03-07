@@ -1,6 +1,6 @@
 # RPL HW2 Report: Imitation Learning and Flow Matching
 
-**Student:** jtan  
+**Student:** James Christian  
 **Date:** March 7, 2026
 
 ---
