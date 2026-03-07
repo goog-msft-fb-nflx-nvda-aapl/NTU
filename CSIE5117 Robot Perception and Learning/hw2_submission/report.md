@@ -86,15 +86,19 @@ python eval.py \
 
 #### Diffusion Policy
 
-**Seed 100000:** <video src="https://raw.githubusercontent.com/goog-msft-fb-nflx-nvda-aapl/NTU/main/CSIE5117%20Robot%20Perception%20and%20Learning/hw2_submission/report/videos/diffusion/diffusion_seed100000.mp4" width="100%" controls muted autoplay loop></video>
+**Seed 100000:**
+<video src="https://raw.githubusercontent.com/goog-msft-fb-nflx-nvda-aapl/NTU/main/CSIE5117%20Robot%20Perception%20and%20Learning/hw2_submission/report/videos/diffusion/diffusion_seed100000.mp4" type="video/mp4" width="100%" controls muted autoplay loop></video>
 
-**Seed 100001:** <video src="https://raw.githubusercontent.com/goog-msft-fb-nflx-nvda-aapl/NTU/main/CSIE5117%20Robot%20Perception%20and%20Learning/hw2_submission/report/videos/diffusion/diffusion_seed100001.mp4" width="100%" controls muted autoplay loop></video>
+**Seed 100001:**
+<video src="https://raw.githubusercontent.com/goog-msft-fb-nflx-nvda-aapl/NTU/main/CSIE5117%20Robot%20Perception%20and%20Learning/hw2_submission/report/videos/diffusion/diffusion_seed100001.mp4" type="video/mp4" width="100%" controls muted autoplay loop></video>
 
 #### Regression Policy
 
-**Seed 100000:** <video src="https://raw.githubusercontent.com/goog-msft-fb-nflx-nvda-aapl/NTU/main/CSIE5117%20Robot%20Perception%20and%20Learning/hw2_submission/report/videos/regression/regression_seed100000.mp4" width="100%" controls muted autoplay loop></video>
+**Seed 100000:**
+<video src="https://raw.githubusercontent.com/goog-msft-fb-nflx-nvda-aapl/NTU/main/CSIE5117%20Robot%20Perception%20and%20Learning/hw2_submission/report/videos/regression/regression_seed100000.mp4" type="video/mp4" width="100%" controls muted autoplay loop></video>
 
-**Seed 100001:** <video src="https://raw.githubusercontent.com/goog-msft-fb-nflx-nvda-aapl/NTU/main/CSIE5117%20Robot%20Perception%20and%20Learning/hw2_submission/report/videos/regression/regression_seed100001.mp4" width="100%" controls muted autoplay loop></video>
+**Seed 100001:**
+<video src="https://raw.githubusercontent.com/goog-msft-fb-nflx-nvda-aapl/NTU/main/CSIE5117%20Robot%20Perception%20and%20Learning/hw2_submission/report/videos/regression/regression_seed100001.mp4" type="video/mp4" width="100%" controls muted autoplay loop></video>
 
 *Note: Videos are located in `report/videos/diffusion/` and `report/videos/regression/`*
 
