@@ -87,10 +87,8 @@ python eval.py \
 #### Diffusion Policy
 
 **Seed 100000:**  
-<div><video controls src="<[!---video URL---](https://github.com/user-attachments/assets/55c4dd0b-375c-4809-92ed-f2e9748612fa)>" muted="false"></video></div>
-<div><video controls src="<!---https://github.com/user-attachments/assets/55c4dd0b-375c-4809-92ed-f2e9748612fa--->" muted="false"></video></div>
 
-
+https://github.com/user-attachments/assets/55c4dd0b-375c-4809-92ed-f2e9748612fa
 
 
 **Seed 100001:**  
