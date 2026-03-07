@@ -87,23 +87,27 @@ python eval.py \
 #### Diffusion Policy
 
 **Seed 100000:**  
-https://github.com/user-attachments/assets/55c4dd0b-375c-4809-92ed-f2e9748612fa
+<div><video controls src="<!---[動画のURL](https://github.com/user-attachments/assets/55c4dd0b-375c-4809-92ed-f2e9748612fa)--->" muted="false"></video></div>
+
 
 
 
 **Seed 100001:**  
-https://github.com/user-attachments/assets/ec3f6c24-6833-403e-b7bc-4e14cb7314e4
+<div><video controls src="<!---[動画のURL](https://github.com/user-attachments/assets/ec3f6c24-6833-403e-b7bc-4e14cb7314e4)--->" muted="false"></video></div>
+
 
 
 
 #### Regression Policy
 
 **Seed 100000:**  
-https://github.com/user-attachments/assets/1a8ae4f0-2ac1-4aa5-bceb-bd896f6fac12
+<div><video controls src="<!---[動画のURL](https://github.com/user-attachments/assets/1a8ae4f0-2ac1-4aa5-bceb-bd896f6fac12)--->" muted="false"></video></div>
+
 
 
 **Seed 100001:**  
-https://github.com/user-attachments/assets/ea7aa95b-0747-49c5-9f96-9446fcb47cac
+<div><video controls src="<!---[動画のURL](https://github.com/user-attachments/assets/ea7aa95b-0747-49c5-9f96-9446fcb47cac)--->" muted="false"></video></div>
+
 
 
 *Note: Videos are located in `report/videos/diffusion/` and `report/videos/regression/`*
