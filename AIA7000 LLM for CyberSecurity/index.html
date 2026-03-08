@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CyberSec LLM — AIA7000</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Syne:wght@400;700;800&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #060910;
+    --surface: #0d1117;
+    --border: #1a2535;
+    --accent: #00ffe0;
+    --accent2: #ff4d6d;
+    --text: #c9d8e8;
+    --muted: #4a6070;
+    --mono: 'Share Tech Mono', monospace;
+    --sans: 'Syne', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    overflow-x: hidden;
+    cursor: crosshair;
+  }
+
+  /* GRID BACKGROUND */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,255,224,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,255,224,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* SCANLINES */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.07) 2px,
+      rgba(0,0,0,0.07) 4px
+    );
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .wrap { position: relative; z-index: 2; max-width: 1100px; margin: 0 auto; padding: 0 2rem; }
+
+  /* ── HERO ── */
+  header {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 4rem 0;
+    position: relative;
+  }
+
+  .badge {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    display: inline-block;
+    padding: 0.3rem 0.8rem;
+    letter-spacing: 0.15em;
+    margin-bottom: 2rem;
+    animation: fadeUp 0.6s ease both;
+  }
+
+  h1 {
+    font-family: var(--sans);
+    font-size: clamp(2.8rem, 7vw, 6rem);
+    font-weight: 800;
+    line-height: 1.0;
+    letter-spacing: -0.02em;
+    margin-bottom: 1.5rem;
+    animation: fadeUp 0.6s 0.1s ease both;
+  }
+
+  h1 span.hl { color: var(--accent); }
+  h1 span.hl2 { color: var(--accent2); }
+
+  .subtitle {
+    font-family: var(--mono);
+    font-size: 1rem;
+    color: var(--muted);
+    max-width: 580px;
+    line-height: 1.7;
+    margin-bottom: 2.5rem;
+    animation: fadeUp 0.6s 0.2s ease both;
+  }
+
+  .meta-row {
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+    margin-bottom: 3rem;
+    animation: fadeUp 0.6s 0.3s ease both;
+  }
+
+  .meta-item { font-family: var(--mono); font-size: 0.78rem; }
+  .meta-item .label { color: var(--muted); display: block; margin-bottom: 0.2rem; }
+  .meta-item .val { color: var(--accent); }
+
+  .btn-row { display: flex; gap: 1rem; flex-wrap: wrap; animation: fadeUp 0.6s 0.4s ease both; }
+
+  .btn {
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    letter-spacing: 0.1em;
+    padding: 0.75rem 1.6rem;
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    text-decoration: none;
+    background: transparent;
+    transition: background 0.2s, color 0.2s;
+    cursor: pointer;
+  }
+  .btn:hover { background: var(--accent); color: var(--bg); }
+  .btn.filled { background: var(--accent); color: var(--bg); }
+  .btn.filled:hover { background: transparent; color: var(--accent); }
+
+  /* TERMINAL DECORATION */
+  .terminal-deco {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 380px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 1.2rem;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: #4a7a6a;
+    display: none;
+    animation: fadeUp 0.8s 0.5s ease both;
+  }
+  @media(min-width: 900px) { .terminal-deco { display: block; } }
+
+  .term-bar {
+    display: flex; gap: 0.4rem; margin-bottom: 0.8rem;
+  }
+  .term-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .term-dot.r { background: #ff4d6d; }
+  .term-dot.y { background: #ffd166; }
+  .term-dot.g { background: #06d6a0; }
+
+  .term-line { line-height: 1.9; }
+  .term-line .cmd { color: var(--accent); }
+  .term-line .out { color: #3a6060; }
+  .term-line .ok  { color: #06d6a0; }
+  .cursor { display: inline-block; width: 7px; height: 13px; background: var(--accent); animation: blink 1s infinite; vertical-align: middle; }
+
+  /* ── SECTIONS ── */
+  section { padding: 5rem 0; border-top: 1px solid var(--border); }
+
+  .section-label {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--accent);
+    letter-spacing: 0.2em;
+    margin-bottom: 1.5rem;
+  }
+
+  h2 {
+    font-size: clamp(1.8rem, 4vw, 3rem);
+    font-weight: 800;
+    margin-bottom: 1rem;
+    letter-spacing: -0.02em;
+  }
+
+  p { color: var(--muted); line-height: 1.8; margin-bottom: 1rem; }
+
+  /* PIPELINE */
+  .pipeline {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0;
+    margin-top: 3rem;
+    border: 1px solid var(--border);
+  }
+
+  .pipe-step {
+    padding: 2rem 1.5rem;
+    border-right: 1px solid var(--border);
+    position: relative;
+    transition: background 0.2s;
+  }
+  .pipe-step:last-child { border-right: none; }
+  .pipe-step:hover { background: rgba(0,255,224,0.03); }
+
+  .pipe-num {
+    font-family: var(--mono);
+    font-size: 2rem;
+    color: var(--border);
+    font-weight: 700;
+    margin-bottom: 0.8rem;
+  }
+  .pipe-step:hover .pipe-num { color: var(--accent); }
+
+  .pipe-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: #fff;
+  }
+
+  .pipe-desc {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  /* STATS */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    margin-top: 3rem;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    padding: 2rem;
+    text-align: center;
+  }
+
+  .stat-val {
+    font-family: var(--mono);
+    font-size: 2.5rem;
+    color: var(--accent);
+    display: block;
+    margin-bottom: 0.4rem;
+  }
+
+  .stat-label {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+
+  /* TECH STACK */
+  .stack-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-top: 2rem;
+  }
+
+  .tag {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    padding: 0.4rem 1rem;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .tag:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* WEEKS */
+  .weeks-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1rem;
+    margin-top: 2rem;
+  }
+
+  .week-card {
+    border: 1px solid var(--border);
+    padding: 1.5rem;
+    transition: border-color 0.2s;
+  }
+  .week-card:hover { border-color: var(--accent); }
+
+  .week-num {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--accent2);
+    letter-spacing: 0.15em;
+    margin-bottom: 0.6rem;
+  }
+
+  .week-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 0.5rem;
+  }
+
+  .week-desc {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  /* LINKS */
+  .links-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+    margin-top: 2rem;
+  }
+
+  .link-card {
+    border: 1px solid var(--border);
+    padding: 1.8rem;
+    text-decoration: none;
+    display: block;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .link-card:hover { border-color: var(--accent); background: rgba(0,255,224,0.03); }
+
+  .link-icon { font-size: 1.5rem; margin-bottom: 0.8rem; }
+  .link-title { font-size: 1rem; font-weight: 700; color: #fff; margin-bottom: 0.3rem; }
+  .link-url { font-family: var(--mono); font-size: 0.7rem; color: var(--accent); word-break: break-all; margin: 0; }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 2rem 0;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  /* ANIMATIONS */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+
+  .reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  .reveal.visible {
+    opacity: 1;
+    transform: none;
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <!-- HERO -->
+  <header>
+    <div class="badge">AIA7000 · NTUST · PBL PROJECT</div>
+    <h1>
+      <span class="hl">CyberSec</span><br>
+      <span class="hl2">LLM</span><br>
+      Assistant
+    </h1>
+    <p class="subtitle">
+      A fine-tuned large language model for cybersecurity Q&amp;A,<br>
+      built with Qwen2.5-7B + LoRA on the MMLU computer security benchmark.
+    </p>
+    <div class="meta-row">
+      <div class="meta-item">
+        <span class="label">COURSE</span>
+        <span class="val">AIA7000</span>
+      </div>
+      <div class="meta-item">
+        <span class="label">STUDENT</span>
+        <span class="val">James Christian</span>
+      </div>
+      <div class="meta-item">
+        <span class="label">INSTITUTION</span>
+        <span class="val">NTUST</span>
+      </div>
+      <div class="meta-item">
+        <span class="label">STATUS</span>
+        <span class="val">✓ DEPLOYED</span>
+      </div>
+    </div>
+    <div class="btn-row">
+      <a href="https://huggingface.co/spaces/jameswatanabegoogle2024/cybersec-llm-demo" target="_blank" class="btn filled">🌐 Live Demo</a>
+      <a href="https://huggingface.co/jameswatanabegoogle2024/cybersec-qwen" target="_blank" class="btn">🤗 Model</a>
+    </div>
+
+    <div class="terminal-deco">
+      <div class="term-bar">
+        <div class="term-dot r"></div>
+        <div class="term-dot y"></div>
+        <div class="term-dot g"></div>
+      </div>
+      <div class="term-line"><span class="cmd">$ python finetune.py</span></div>
+      <div class="term-line"><span class="out">Loading Qwen2.5-7B-Instruct...</span></div>
+      <div class="term-line"><span class="out">Applying LoRA adapters...</span></div>
+      <div class="term-line"><span class="out">Training epoch 1/5 — loss: 3.638</span></div>
+      <div class="term-line"><span class="out">Training epoch 5/5 — loss: 2.979</span></div>
+      <div class="term-line"><span class="ok">✓ Training complete! (42s)</span></div>
+      <div class="term-line"><span class="ok">✓ Model saved.</span></div>
+      <div class="term-line"><span class="cmd">$ _</span><span class="cursor"></span></div>
+    </div>
+  </header>
+
+  <!-- OVERVIEW -->
+  <section class="reveal">
+    <div class="section-label">// 01 — OVERVIEW</div>
+    <h2>What is this project?</h2>
+    <p>
+      This project explores whether a fine-tuned LLM can serve as a reliable cybersecurity knowledge assistant.
+      Using parameter-efficient fine-tuning (LoRA), a Qwen2.5-7B-Instruct model was adapted to answer
+      cybersecurity questions drawn from the MMLU Computer Security benchmark.
+    </p>
+    <p>
+      The result is a chatbot capable of explaining attack types, defense mechanisms, encryption concepts,
+      and security protocols — deployable on HuggingFace Spaces with zero infrastructure cost.
+    </p>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <span class="stat-val">7B</span>
+        <span class="stat-label">MODEL PARAMS</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-val">116</span>
+        <span class="stat-label">TRAINING EXAMPLES</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-val">42s</span>
+        <span class="stat-label">TRAINING TIME</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-val">2.97</span>
+        <span class="stat-label">FINAL LOSS</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- PIPELINE -->
+  <section class="reveal">
+    <div class="section-label">// 02 — PIPELINE</div>
+    <h2>How it was built</h2>
+    <p>A four-stage pipeline from raw dataset to deployed demo.</p>
+
+    <div class="pipeline">
+      <div class="pipe-step">
+        <div class="pipe-num">01</div>
+        <div class="pipe-title">Data Curation</div>
+        <p class="pipe-desc">MMLU Computer Security dataset loaded from HuggingFace. 116 Q&amp;A pairs converted to instruction-following format.</p>
+      </div>
+      <div class="pipe-step">
+        <div class="pipe-num">02</div>
+        <div class="pipe-title">Fine-tuning</div>
+        <p class="pipe-desc">Qwen2.5-7B-Instruct fine-tuned with LoRA (r=16) using TRL SFTTrainer on NVIDIA H200 GPU.</p>
+      </div>
+      <div class="pipe-step">
+        <div class="pipe-num">03</div>
+        <div class="pipe-title">Evaluation</div>
+        <p class="pipe-desc">Inference tested on unseen cybersecurity questions. Loss: 3.638 → 2.979 over 5 epochs.</p>
+      </div>
+      <div class="pipe-step">
+        <div class="pipe-num">04</div>
+        <div class="pipe-title">Deployment</div>
+        <p class="pipe-desc">Gradio chat interface deployed to HuggingFace Spaces. LoRA adapter hosted on HuggingFace Hub.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- TECH STACK -->
+  <section class="reveal">
+    <div class="section-label">// 03 — TECH STACK</div>
+    <h2>Technologies used</h2>
+    <p>Built entirely on open-source tooling with HuggingFace ecosystem.</p>
+    <div class="stack-list">
+      <span class="tag">Python 3.10</span>
+      <span class="tag">PyTorch</span>
+      <span class="tag">Transformers</span>
+      <span class="tag">PEFT / LoRA</span>
+      <span class="tag">TRL SFTTrainer</span>
+      <span class="tag">Accelerate</span>
+      <span class="tag">BitsAndBytes</span>
+      <span class="tag">Gradio</span>
+      <span class="tag">HuggingFace Hub</span>
+      <span class="tag">Qwen2.5-7B-Instruct</span>
+      <span class="tag">MMLU Dataset</span>
+      <span class="tag">NVIDIA H200</span>
+      <span class="tag">Conda</span>
+    </div>
+  </section>
+
+  <!-- PBL WEEKS -->
+  <section class="reveal">
+    <div class="section-label">// 04 — PBL MILESTONES</div>
+    <h2>Project timeline</h2>
+    <p>Four-week project-based learning track from requirements to solution.</p>
+
+    <div class="weeks-grid">
+      <div class="week-card">
+        <div class="week-num">WEEK 13 — REQUIREMENTS</div>
+        <div class="week-title">Scope & Dataset</div>
+        <p class="week-desc">Defined project scope: cybersecurity Q&amp;A chatbot. Selected MMLU Computer Security dataset and Qwen2.5-7B as base model.</p>
+      </div>
+      <div class="week-card">
+        <div class="week-num">WEEK 14 — DESIGN</div>
+        <div class="week-title">Architecture & Pipeline</div>
+        <p class="week-desc">Designed LoRA fine-tuning pipeline, instruction prompt format using Qwen chat template, and data preprocessing strategy.</p>
+      </div>
+      <div class="week-card">
+        <div class="week-num">WEEK 15 — POC</div>
+        <div class="week-title">Fine-tuning & Inference</div>
+        <p class="week-desc">Trained LoRA adapter on H200. Verified inference on unseen questions about buffer overflows, SQL injection, and encryption.</p>
+      </div>
+      <div class="week-card">
+        <div class="week-num">WEEK 16 — SOLUTION</div>
+        <div class="week-title">Deployment & Demo</div>
+        <p class="week-desc">Deployed Gradio chat interface on HuggingFace Spaces. Published LoRA adapter to HuggingFace Hub for reproducibility.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- LINKS -->
+  <section class="reveal">
+    <div class="section-label">// 05 — RESOURCES</div>
+    <h2>Links</h2>
+    <p>All project artifacts are publicly available.</p>
+
+    <div class="links-grid">
+      <a href="https://huggingface.co/spaces/jameswatanabegoogle2024/cybersec-llm-demo" target="_blank" class="link-card">
+        <div class="link-icon">🌐</div>
+        <div class="link-title">Live Demo</div>
+        <p class="link-url">huggingface.co/spaces/jameswatanabegoogle2024/cybersec-llm-demo</p>
+      </a>
+      <a href="https://huggingface.co/jameswatanabegoogle2024/cybersec-qwen" target="_blank" class="link-card">
+        <div class="link-icon">🤗</div>
+        <div class="link-title">Fine-tuned Model</div>
+        <p class="link-url">huggingface.co/jameswatanabegoogle2024/cybersec-qwen</p>
+      </a>
+      <a href="https://huggingface.co/datasets/cais/mmlu" target="_blank" class="link-card">
+        <div class="link-icon">📊</div>
+        <div class="link-title">Training Dataset</div>
+        <p class="link-url">huggingface.co/datasets/cais/mmlu (computer_security)</p>
+      </a>
+      <a href="https://huggingface.co/Qwen/Qwen2.5-7B-Instruct" target="_blank" class="link-card">
+        <div class="link-icon">🧠</div>
+        <div class="link-title">Base Model</div>
+        <p class="link-url">huggingface.co/Qwen/Qwen2.5-7B-Instruct</p>
+      </a>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="reveal">
+    <span>AIA7000 — Applying Large Language Models in Cybersecurity Systems</span>
+    <span>James Christian · NTUST · 2026</span>
+  </footer>
+
+</div>
+
+<script>
+  const reveals = document.querySelectorAll('.reveal');
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('visible');
+        io.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.1 });
+  reveals.forEach(r => io.observe(r));
+</script>
+</body>
+</html>

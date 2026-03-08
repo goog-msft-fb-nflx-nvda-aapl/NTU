@@ -1,0 +1,466 @@
+[
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nWhich of the following styles of fuzzer is more likely to explore paths covering every line of code in the following program?\n\nA. Generational\nB. Blackbox\nC. Whitebox\nD. Mutation-based",
+    "output": "C. Whitebox"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nAssume that a TLS connection has been established successfully between a client and a server. Establishing the session included checking the server certificate and executing a DiffieHelmann exchange, but the client did not provide a client certificate. Further, assume that the client and server are honest, that the client and server don\u2019t leak their keys, and that the cryptography is good. Which of the following attacks does TLS protect against?\n1. An attacker replaying bytes that a client sent earlier.\n2. An attacker impersonating the server.\n\nA. True, True\nB. False, False\nC. True, False\nD. False, True",
+    "output": "A. True, True"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nMIT\u2019s Kerberos KDC server has a maximum ticket lifetime of 24 hours (for most user principals). What ensures that an expired Kerberos ticket can no longer be used?\n\nA. The Kerberos server (KDC) refuses to establish new connections between clients and servers for expired tickets.\nB. When a client connects to a server, the server sets a 24-hour timer to terminate the connection, which ensures a client cannot remain connected past the ticket\u2019s maximum lifetime.\nC. When a client connects to a server, the server compares the ticket\u2019s expiration time to the server\u2019s current clock, and refuses to authenticate the user if the ticket expiration time is in the past.\nD. When a client connects to a server, the server sends a query to the KDC to check if the ticket is still valid with respect to the KDC\u2019s clock, and refuses to authenticate the user if the KDC reports that the ticket is expired.",
+    "output": "C. When a client connects to a server, the server compares the ticket\u2019s expiration time to the server\u2019s current clock, and refuses to authenticate the user if the ticket expiration time is in the past."
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nIn Message Condentiality, the transmitted message must make sense to only intended\n\nA. Receiver\nB. Sender\nC. Modulor\nD. Translator",
+    "output": "A. Receiver"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nWhich of the following is a remote Trojan?\n\nA. Troya\nB. DaCryptic\nC. BankerA\nD. Game-Troj",
+    "output": "A. Troya"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\n______________ is a widespread app\u2019s coding mistake made by developers which could be exploited by an attacker for gaining access or malfunctioning your system.\n\nA. Memory leakage\nB. Buffer-overrun\nC. Less processing power\nD. Inefficient programming",
+    "output": "B. Buffer-overrun"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nConsider the paper Native Client: A Sandbox for Portable, Untrusted x86 Native Code by Yee et al. Ben Bitdiddle notes that NaCl uses Intel x86 segmentation to ensure that the sandboxed module does not read or write memory outside its own data area, and does not execute instructions outside its own code. Ben thinks that with these restrictions alone, executing the sandboxed module must be safe; that is, he thinks validation is not needed. Ben is wrong. Circle the types of x86 machine instructions that the validator always forbids in sandboxed code. Please ignore trampoline and springboard code.\n\nA. all instructions that modify segment state\nB. all loads or stores to addresses that are not 0 mod 32\nC. all indirect loads or stores (via an address in a register or variable)\nD. all indirect jumps (via an address in a register or variable)",
+    "output": "A. all instructions that modify segment state"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\n____________ is also a part of darknet that is employed for transferring files anonymously.\n\nA. Freenet\nB. ARPANET\nC. Stuxnet\nD. Internet",
+    "output": "A. Freenet"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nWhy apps developed in languages like C, C++ is prone to Buffer-overflow?\n\nA. No string boundary checks in predefined functions\nB. No storage check in the external memory\nC. No processing power check\nD. No database check",
+    "output": "A. No string boundary checks in predefined functions"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nMan in the middle attack can endanger the security of Diffie Hellman method if two parties are not\n\nA. Joined\nB. Authenticated\nC. Submitted\nD. Shared",
+    "output": "B. Authenticated"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nAn integer overflow occurs when\n\nA. an integer expression's result \"wraps around\"; instead of creating a very large number, a very small (or negative) number ends up getting created\nB. an integer is used as if it was a pointer\nC. an integer is used to access a buffer outside of the buffer's bounds\nD. there is no more space to hold integers in the program",
+    "output": "D. there is no more space to hold integers in the program"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nLet HH be a Merkle-Damgard hash function is H:X^{\\leq L} \\to TH:X^\u2264L  \u2192T. Construct a MAC from this HH as follows: \\ \\ S(k,m) = H(k \\| m)  S(k,m)=H(k\u2225m). This mac is insecure because:\n\nA. Given H(k \\| m)H(k\u2225m) anyone can compute H(w \\| k \\| m \\| \\text{PB})H(w\u2225k\u2225m\u2225PB) for any ww\nB. Given H(k \\| m)H(k\u2225m) anyone can compute H(k \\| m \\| w)H(k\u2225m\u2225w) for any ww\nC. Given H(k \\| m)H(k\u2225m) anyone can compute H(k \\| m \\| \\text{PB} \\| w)H(k\u2225m\u2225PB\u2225w) for any ww\nD. Anyone can compute H( k \\| m )H(k\u2225m) for any mm",
+    "output": "C. Given H(k \\| m)H(k\u2225m) anyone can compute H(k \\| m \\| \\text{PB} \\| w)H(k\u2225m\u2225PB\u2225w) for any ww"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nSuppose that Alice and Bob sent confidential text messages to one another last month through an encrypted messaging system. Alice and Bob are worried that an adversary might compromise one of their computers today, while they are taking the 6.858 final exam, and would then be able to decrypt those messages. Which of the following security properties can address Alice and Bob\u2019s concern?\n\nA. Authentication.\nB. Deniability.\nC. Forward secrecy\nD. Backward secrecy.",
+    "output": "C. Forward secrecy"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nThe AH Protocol provides source authentication and data integrity, but not\n\nA. Integrity\nB. Privacy\nC. Nonrepudiation\nD. Both A & C",
+    "output": "B. Privacy"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nWhich of the following is not a security exploit?\n\nA. Eavesdropping\nB. Cross-site scripting\nC. Authentication\nD. SQL Injection",
+    "output": "C. Authentication"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\n_______________ is the central node of 802.11 wireless operations.\n\nA. WPA\nB. Access Point\nC. WAP\nD. Access Port",
+    "output": "B. Access Point"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nIn MD-5 the length of the message digest is\n\nA. 160\nB. 128\nC. 64\nD. 54",
+    "output": "B. 128"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nWhat is Nmap?\n\nA. It is a scanner which works by injecting packets to a range of addresses, and inferring what hosts and services might be at those addresses, based on the responses\nB. It is a network fuzz testing tool\nC. It is a map of the Internet\nD. It is a suite of tools for scripting attacks: probe, construct, encode, inject, wait for response",
+    "output": "A. It is a scanner which works by injecting packets to a range of addresses, and inferring what hosts and services might be at those addresses, based on the responses"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nHow do you prevent SQL injection?\n\nA. Escape queries\nB. Interrupt requests\nC. Merge tables\nD. All of the above",
+    "output": "A. Escape queries"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nWhat does it mean to \"be stealthy\" during a penetration test?\n\nA. Performing the tests from an undisclosed location\nB. Using encryption during tests to make the source of attacks impossible to determine\nC. Performing penetration testing without the target organization knowing\nD. Taking care to avoid activities during a penetration test that might attract attention, e.g., by operators or IDS services",
+    "output": "D. Taking care to avoid activities during a penetration test that might attract attention, e.g., by operators or IDS services"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nWhich of the following is not a transport layer vulnerability?\n\nA. Mishandling of undefined, poorly defined variables\nB. The Vulnerability that allows \u201cfingerprinting\u201d & other enumeration of host information\nC. Overloading of transport-layer mechanisms\nD. Unauthorized network access",
+    "output": "D. Unauthorized network access"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nIn Brumley and Boneh\u2019s paper on side-channel attacks, why does blinding prevent the timing attack from working?\n\nA. Blinding prevents the server from using the CRT optimization, which is essential to the timing attack.\nB. Blinding changes the p and q primes that are used, so an adversary cannot learn the server\u2019s true p and q values.\nC. Blinding randomizes the ciphertext being decrypted, thus obscuring the correlation between an adversary\u2019s input and the timing differences.\nD. Blinding adds a random amount of time to the decryption due to the multiplication and division by the blinding random value r, which obscures the timing differences used in the attack.",
+    "output": "C. Blinding randomizes the ciphertext being decrypted, thus obscuring the correlation between an adversary\u2019s input and the timing differences."
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nThe openSSL implementation described in \u201cRemote Timing Attacks are Practical\u201d (by Brumley and Boneh) uses the following performance optimizations: Chinese Remainder (CR), Montgomery Representation (MR), Karatsuba Multiplication (KM), and Repeated squaring and Sliding windows (RS). Which of the following options would close the timing channel attack described in the paper if you turned the listed optimizations off?\n1. RS and KM\n2. RS and MR\n\nA. True, True\nB. False, False\nC. True, False\nD. False, True",
+    "output": "D. False, True"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nPublic key encryption is advantageous over Symmetric key Cryptography because of\n\nA. Speed\nB. Space\nC. Key exchange\nD. Key length",
+    "output": "C. Key exchange"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nThe __________ was a huge marketplace of Dark Web specifically famous for selling of illegal drugs & narcotics as well as you can find a wide range of other goods for sale.\n\nA. Silk Road\nB. Cotton Road\nC. Dark Road\nD. Drug Road",
+    "output": "A. Silk Road"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nThe ______________ is categorized as an unknown segment of the Deep Web which has been purposely kept hidden & is inaccessible using standard web browsers.\n\nA. Haunted web\nB. World Wide Web\nC. Dark web\nD. Surface web",
+    "output": "C. Dark web"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nWhat does EXE do when the STP solver times out on a constraint query for a particular path?\n\nA. Assume that the query is satisfiable and continue executing the path.\nB. Assume that the query is not satisfiable and stop executing the path\nC. Restart STP and retry the query, up to a limited number of retries.\nD. Remove a subset of the constraints and retry the query.",
+    "output": "B. Assume that the query is not satisfiable and stop executing the path"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nTo verify a digital signature we need the\n\nA. Sender\u2019s Private key\nB. Sender\u2019s Public key\nC. Receiver\u2019s Private key\nD. Receiver\u2019s Public key",
+    "output": "B. Sender\u2019s Public key"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nSuppose you want to use fuzzing on a program to try to find memory errors; which of the following statements is true?\n\nA. You should not use a grammar-based fuzzer, because its adherence to the grammar means it will not find memory errors\nB. Compiling the program with address sanitizer (ASAN) will make errors harder to reproduce\nC. Compiling the program with address sanitizer (ASAN) will make the source of a memory error easier to find\nD. Fuzzing doesn't find memory errors, it finds crashes and hangs",
+    "output": "C. Compiling the program with address sanitizer (ASAN) will make the source of a memory error easier to find"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nBased on the paper \u201cSoK: SSL and HTTPS: Revisiting past challenges and evaluating certificates trust model enhancements\u201d, which of the following statements are false?\n\nA. Valid DV certificates provide more confidence to a user that she is connecting to the intended party than valid EV certificates.\nB. OCSP stapling allows a server to prove to a browser that its certificate hasn\u2019t been revoked.\nC. DANE makes it difficult for an adversary to launch a SSL stripping attack.\nD. Server key-pinning makes it harder for an adversary to convince a CA to mint a certificate for a site and launch an MITM attack on that site.",
+    "output": "A. Valid DV certificates provide more confidence to a user that she is connecting to the intended party than valid EV certificates."
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nWhat tool can be used to perform SNMP enumeration?\n\nA. DNSlookup\nB. Whois\nC. Nslookup\nD. IP Network Browser",
+    "output": "D. IP Network Browser"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nWhich among them has the strongest wireless security?\n\nA. WEP\nB. WPA\nC. WPA2\nD. WPA3",
+    "output": "D. WPA3"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nSuppose Unix did not provide a way of passing file descriptors between processes, but still allowed inheriting file descriptors from a parent on fork and exec. What aspects of the OKWS design would break without file descriptor passing?\n1. It would be impossible for services to get a TCP connection to the client web browser.\n2. It would be impossible for okd to run as a non-root user.\n\nA. True, True\nB. False, False\nC. True, False\nD. False, True",
+    "output": "C. True, False"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nFailed sessions allow brute-force attacks on access credentials. This type of attacks are done in which layer of the OSI model?\n\nA. Physical layer\nB. Data-link Layer\nC. Session layer\nD. Presentation layer",
+    "output": "C. Session layer"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nWhich of the following is an authentication method?\n\nA. Secret question\nB. Biometric\nC. SMS code\nD. All of the above",
+    "output": "D. All of the above"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nWhen does a buffer overflow occur, generally speaking?\n\nA. when writing to a pointer that has been freed\nB. when copying a buffer from the stack to the heap\nC. when a pointer is used to access memory not allocated to it\nD. when the program notices a buffer has filled up, and so starts to reject requests",
+    "output": "C. when a pointer is used to access memory not allocated to it"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nA digital signature needs a\n\nA. Private-key system\nB. Shared-key system\nC. Public-key system\nD. All of them",
+    "output": "C. Public-key system"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nA packet filter firewall filters at the\n\nA. Application or transport\nB. Data link layer\nC. Physical Layer\nD. Network or transport layer",
+    "output": "D. Network or transport layer"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nLet I = (S,V)I=(S,V) be a MAC. Suppose S(k,m)S(k,m) is always 5 bits long. Can this MAC be secure?\n\nA. No, an attacker can simply guess the tag for messages\nB. It depends on the details of the MAC\nC. Yes, the attacker cannot generate a valid tag for any message\nD. Yes, the PRG is pseudorandom",
+    "output": "A. No, an attacker can simply guess the tag for messages"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nWhich of the following deals with network intrusion detection and real-time traffic analysis?\n\nA. John the Ripper\nB. L0phtCrack\nC. Snort\nD. Nessus",
+    "output": "C. Snort"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nThe Message condentiality or privacy means that the sender and the receiver expect\n\nA. Integrity\nB. Condentiality\nC. Authentication\nD. Nonrepudiation",
+    "output": "B. Condentiality"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nWhen a wireless user authenticates to any AP, both of them go in the course of four-step authentication progression which is called _____________\n\nA. AP-handshaking\nB. 4-way handshake\nC. 4-way connection\nD. wireless handshaking",
+    "output": "B. 4-way handshake"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nMessage authentication is a service beyond\n\nA. Message Condentiality\nB. Message Integrity\nC. Message Splashing\nD. Message Sending",
+    "output": "B. Message Integrity"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nWhich of the following are most vulnerable to injection attacks?\n\nA. Session IDs\nB. Registry keys\nC. Network communications\nD. SQL queries based on user input",
+    "output": "D. SQL queries based on user input"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nAssume that a TLS connection has been established successfully between a client and a server. Establishing the session included checking the server certificate and executing a DiffieHelmann exchange, but the client did not provide a client certificate. Further, assume that the client and server are honest, that the client and server don\u2019t leak their keys, and that the cryptography is good. Which of the following attacks does TLS protect against?\n1. An attacker replacing bytes sent by a client with bytes of the attacker\u2019s own choosing.\n2. An attacker reading the plaintext bytes sent by a client.\n\nA. True, True\nB. False, False\nC. True, False\nD. False, True",
+    "output": "A. True, True"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nWhich of the following is a Wireless traffic Sniffing tool?\n\nA. Maltego\nB. BurpSuit\nC. Nessus\nD. Wireshark",
+    "output": "D. Wireshark"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nA ___________ is a method in which a computer security mechanism is bypassed untraceable for accessing the computer or its information.\n\nA. front-door\nB. backdoor\nC. clickjacking\nD. key-logging",
+    "output": "B. backdoor"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nWhich of the following is not a block cipher operating mode?\n\nA. ECB\nB. CFB\nC. CBF\nD. CBC",
+    "output": "C. CBF"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nWhat is a web proxy?\n\nA. A piece of software that intercepts and possibly modifies requests (and responses) between a web browser and web server\nB. An agent that makes decisions on the client's behalf when interacting with web applications\nC. A piece of software that makes a web application look like a standalone application, making it easier to test\nD. A simulator for the web, for use when off-line",
+    "output": "A. A piece of software that intercepts and possibly modifies requests (and responses) between a web browser and web server"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nBuffer-overflow may remain as a bug in apps if __________ are not done fully.\n\nA. boundary hacks\nB. memory checks\nC. boundary checks\nD. buffer checks",
+    "output": "C. boundary checks"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nApplications developed by programming languages like ____ and ______ have this common buffer-overflow error.\n\nA. C, Ruby\nB. Python, Ruby\nC. C, C++\nD. Tcl, C#",
+    "output": "C. C, C++"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nEncryption and decryption provide secrecy, or condentiality, but not\n\nA. Authentication\nB. Integrity\nC. Privacy\nD. All of the above",
+    "output": "B. Integrity"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nA/an ___________ is a program that steals your logins & passwords for instant messaging applications.\n\nA. IM \u2013 Trojans\nB. Backdoor Trojans\nC. Trojan-Downloader\nD. Ransom Trojan",
+    "output": "A. IM \u2013 Trojans"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nThe sub key length at each round of DES is__________\n\nA. 32\nB. 56\nC. 48\nD. 64",
+    "output": "B. 56"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nWhich of the following is true of mutation-based fuzzing?\n\nA. It generates each different input by modifying a prior input\nB. It works by making small mutations to the target program to induce faults\nC. Each input is mutation that follows a given grammar\nD. It only makes sense for file-based fuzzing, not network-based fuzzing",
+    "output": "A. It generates each different input by modifying a prior input"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nWhat are the types of scanning?\n\nA. Port, network, and services\nB. Network, vulnerability, and port \nC. Passive, active, and interactive\nD. Server, client, and network",
+    "output": "B. Network, vulnerability, and port "
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nA sender must not be able to deny sending a message that was sent, is known as\n\nA. Message Nonrepudiation\nB. Message Integrity\nC. Message Condentiality\nD. Message Sending",
+    "output": "A. Message Nonrepudiation"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nA proxy rewall lters at the\n\nA. Physical layer\nB. Application layer\nC. Data link layer\nD. Network layer",
+    "output": "B. Application layer"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nEncapsulating Security Payload (ESP) belongs to which Internet Security Protocol?\n\nA. Secure Socket Layer Protocol\nB. Secure IP Protocol\nC. Secure Http Protocol\nD. Transport Layer Security Protocol",
+    "output": "B. Secure IP Protocol"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nA special tool is necessary for entering the network which is _______________ that helps the anonymous internet users to access into the Tor\u2019s network and use various Tor services.\n\nA. Opera browser\nB. Firefox\nC. Chrome\nD. Tor browser",
+    "output": "D. Tor browser"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nHow does a buffer overflow on the stack facilitate running attacker-injected code?\n\nA. By overwriting the return address to point to the location of that code\nB. By writing directly to the instruction pointer register the address of the code\nC. By writing directly to %eax the address of the code\nD. By changing the name of the running executable, stored on the stack",
+    "output": "A. By overwriting the return address to point to the location of that code"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nThe digest created by a hash function is normally called a\n\nA. Modication detection code (MDC)\nB. Modify authentication connection\nC. Message authentication control\nD. Message authentication cipher",
+    "output": "A. Modication detection code (MDC)"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nLet F: K \\times R \\to MF:K\u00d7R\u2192M be a secure PRF. For m \\in Mm\u2208M define E(k,m) = \\big[ r \\gets R,\\ \\text{output } \\big(r,\\ F(k,r) \\oplus m\\big)\\ \\big]E(k,m)=[r\u2190R, output (r, F(k,r)\u2295m) ] Is EE symantically secure under CPA?\n\nA. Yes, whenever F is a secure PRF\nB. No, there is always a CPA attack on this system\nC. Yes, but only if R is large enough so r never repeats (w.h.p)\nD. It depends on what F is used",
+    "output": "C. Yes, but only if R is large enough so r never repeats (w.h.p)"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nOld operating systems like _______ and NT-based systems have buffer-overflow attack a common vulnerability.\n\nA. Windows 7\nB. Chrome\nC. IOS12\nD. UNIX",
+    "output": "D. UNIX"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nWhat is a replay attack?\n\nA. When the attacker replies to a message sent to it by the system\nB. An attack that continuously repeats, probing for a weakness\nC. An attack that uses the system's own messages and so cannot be defended against\nD. The attacker resends a captured message, and the site accept its and responds in the attacker's favor",
+    "output": "D. The attacker resends a captured message, and the site accept its and responds in the attacker's favor"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nStatement 1| A U2F USB dongle prevents malware on the user\u2019s computer from stealing the user\u2019s second factor to authenticate as that user even when the user\u2019s computer is turned off. Statement 2| A server using U2F can reliably determine that the user who is attempting to login is indeed behind the computer that sent the login request.\n\nA. True, True\nB. False, False\nC. True, False\nD. False, True",
+    "output": "C. True, False"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\n____________________ is the anticipation of unauthorized access or break to computers or data by means of wireless networks.\n\nA. Wireless access\nB. Wireless security\nC. Wired Security\nD. Wired device apps",
+    "output": "B. Wireless security"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nWhich of the following are benefits of penetration testing?\n\nA. Results are often reproducible\nB. Full evidence of security: a clean test means a secure system\nC. Compositionality of security properties means tested components are secure even if others change\nD. Makes an adversarial neural network converge more quickly",
+    "output": "A. Results are often reproducible"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\n1. _________ framework made cracking of vulnerabilities easy like point and click.\n\nA. .Net\nB. Metasploit\nC. Zeus\nD. Ettercap",
+    "output": "B. Metasploit"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nYou are given a message (m) and its OTP encryption (c). Can you compute the OTP key from m and c ?\n\nA. No, I cannot compute the key.\nB. Yes, the key is k = m xor c.\nC. I can only compute half the bits of the key.\nD. Yes, the key is k = m xor m.",
+    "output": "B. Yes, the key is k = m xor c."
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nThe openSSL implementation described in \u201cRemote Timing Attacks are Practical\u201d (by Brumley and Boneh) uses the following performance optimizations: Chinese Remainder (CR), Montgomery Representation (MR), Karatsuba Multiplication (KM), and Repeated squaring and Sliding windows (RS). Which of the following options would close the timing channel attack described in the paper if you turned the listed optimizations off?\n1. CR and MR\n2. CR\n\nA. True, True\nB. False, False\nC. True, False\nD. False, True",
+    "output": "A. True, True"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nWhen the data must arrive at the receiver exactly as they were sent, its called\n\nA. Message Condentiality\nB. Message Integrity\nC. Message Splashing\nD. Message Sending",
+    "output": "B. Message Integrity"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nWhat is the difference between a direct leak and a side channel?\n\nA. A direct leak creates a denial of service by failing to free memory, while a channel frees memory as a side effect\nB. A direct leak is one that is intentional, rather than by unintentional\nC. A direct leak comes via the software system's intended interaction mechanism, where as a side channel leak comes from measurements of other system features, like timing, power usage, or space usage\nD. There is no difference",
+    "output": "C. A direct leak comes via the software system's intended interaction mechanism, where as a side channel leak comes from measurements of other system features, like timing, power usage, or space usage"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nA session symmetric key between two parties is used\n\nA. Only once\nB. Twice\nC. Multiple times\nD. Conditions dependant",
+    "output": "A. Only once"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nWhat is a nop sled\n\nA. It is an anonymous version of a mop sled\nB. It is a sequence of nops preceding injected shellcode, useful when the return address is unknown\nC. It is a method of removing zero bytes from shellcode\nD. It is another name for a branch instruction at the end of sequence of nops",
+    "output": "B. It is a sequence of nops preceding injected shellcode, useful when the return address is unknown"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nWhich Nmap scan is does not completely open a TCP connection?\n\nA. SYN stealth scan\nB. TCP connect\nC. XMAS tree scan\nD. ACK scan",
+    "output": "A. SYN stealth scan"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nBased on the paper \u201cClick Trajectories: End-to-End Analysis of the Spam Value Chain\u201d, which of the following statements are true? \u201cSpammers\u201d here refer to operators of various parts of the \u201cspam value chain.\u201d\n\nA. Spammers run their spam-advertised web sites on compromised user machines that are part of a botnet.\nB. Spammers need to register domain names in order for their spam-based advertisements to be effective.\nC. There is a high cost for spammers to switch acquiring banks.\nD. B and C",
+    "output": "D. B and C"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nIn a _____________ attack, the extra data that holds some specific instructions in the memory for actions is projected by a cyber-criminal or penetration tester to crack the system.\n\nA. Phishing\nB. MiTM\nC. Buffer-overflow\nD. Clickjacking",
+    "output": "C. Buffer-overflow"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\n_______________ is a popular tool used for network analysis in multiprotocol diverse network.\n\nA. Snort\nB. SuperScan\nC. Burp Suit\nD. EtterPeak",
+    "output": "D. EtterPeak"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\n___________________ is alike as that of Access Point (AP) from 802.11, & the mobile operators uses it for offering signal coverage.\n\nA. Base Signal Station\nB. Base Transmitter Station\nC. Base Transceiver Station\nD. Transceiver Station",
+    "output": "C. Base Transceiver Station"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nA __________ is a sequential segment of the memory location that is allocated for containing some data such as a character string or an array of integers.\n\nA. stack\nB. queue\nC. external storage\nD. buffer",
+    "output": "D. buffer"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nWhich form of encryption does WPA use?\n\nA. Shared key\nB. LEAP\nC. TKIP\nD. AES",
+    "output": "C. TKIP"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nLet suppose a search box of an application can take at most 200 words, and you\u2019ve inserted more than that and pressed the search button; the system crashes. Usually this is because of limited __________\n\nA. buffer\nB. external storage\nC. processing power\nD. local storage",
+    "output": "A. buffer"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\n___________________ began to show up few years back on wireless access points as a new way of adding or connecting new devices.\n\nA. WPA2\nB. WPA\nC. WPS\nD. WEP",
+    "output": "C. WPS"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nWhat are the port states determined by Nmap?\n\nA. Active, inactive, standby\nB. Open, half-open, closed \nC. Open, filtered, unfiltered\nD. Active, closed, unused",
+    "output": "C. Open, filtered, unfiltered"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nWhich among the following is the least strong security encryption standard?\n\nA. WEP\nB. WPA\nC. WPA2\nD. WPA3",
+    "output": "A. WEP"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nWhy is it that the compiler does not know the absolute address of a local variable?\n\nA. Programs are not allowed to reference memory using absolute addresses\nB. The size of the address depends on the architecture the program will run on\nC. As a stack-allocated variable, it could have different addresses depending on when its containing function is called\nD. Compiler writers are not very good at that sort of thing",
+    "output": "C. As a stack-allocated variable, it could have different addresses depending on when its containing function is called"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nThe stack is memory for storing\n\nA. Local variables\nB. Program code\nC. Dynamically linked libraries\nD. Global variables",
+    "output": "A. Local variables"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nCan a stream cipher have perfect secrecy?\n\nA. Yes, if the PRG is really \u201csecure\u201d\nB. No, there are no ciphers with perfect secrecy\nC. Yes, every cipher has perfect secrecy\nD. No, since the key is shorter than the message",
+    "output": "D. No, since the key is shorter than the message"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nWhich of the following does authorization aim to accomplish?\n\nA. Restrict what operations/data the user can access\nB. Determine if the user is an attacker\nC. Flag the user if he/she misbehaves\nD. Determine who the user is",
+    "output": "A. Restrict what operations/data the user can access"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nThe message must be encrypted at the sender site and decrypted at the\n\nA. Sender Site\nB. Site\nC. Receiver site\nD. Conferencing",
+    "output": "C. Receiver site"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nA _________________ may be a hidden part of a program, a separate infected program a Trojan in disguise of an executable or code in the firmware of any system\u2019s hardware.\n\nA. crypter\nB. virus\nC. backdoor\nD. key-logger",
+    "output": "C. backdoor"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nHow is IP address spoofing detected?\n\nA. Installing and configuring a IDS that can read the IP header\nB. Comparing the TTL values of the actual and spoofed addresses\nC. Implementing a firewall to the network\nD. Identify all TCP sessions that are initiated but does not complete successfully",
+    "output": "B. Comparing the TTL values of the actual and spoofed addresses"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nWhich of the following is not an example of presentation layer issues?\n\nA. Poor handling of unexpected input can lead to the execution of arbitrary instructions\nB. Unintentional or ill-directed use of superficially supplied input\nC. Cryptographic flaws in the system may get exploited to evade privacy\nD. Weak or non-existent authentication mechanisms",
+    "output": "D. Weak or non-existent authentication mechanisms"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nSuppose Unix did not provide a way of passing file descriptors between processes, but still allowed inheriting file descriptors from a parent on fork and exec. What aspects of the OKWS design would break without file descriptor passing?\n1. It would be impossible for services to send messages to oklogd.\n2. It would be impossible for services to get a TCP connection to a database proxy.\n\nA. True, True\nB. False, False\nC. True, False\nD. False, True",
+    "output": "B. False, False"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nWhy would a ping sweep be used?\n\nA. To identify live systems\nB. To locate live systems\nC. To identify open ports\nD. To locate firewalls",
+    "output": "A. To identify live systems"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nThe four Primary Security Principles related to messages are\n\nA. Confidentiality, Integrity, Non repudiation and Authentication\nB. Confidentiality, Access Control, Integrity, Non repudiation\nC. Authentication, Authorization, Availability, Integrity\nD. Availability, Authorization, Confidentiality, Integrity",
+    "output": "A. Confidentiality, Integrity, Non repudiation and Authentication"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nWhat was the first buffer overflow attack?\n\nA. Love Bug\nB. SQL Slammer\nC. Morris Worm\nD. Code Red",
+    "output": "C. Morris Worm"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nThe ______________ can cost you money, by sending text messages from your mobile phone numbers.\n\nA. IM \u2013 Trojans\nB. Backdoor Trojans\nC. SMS Trojan\nD. Ransom Trojan",
+    "output": "C. SMS Trojan"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nThree of the following are classic security properties; which one is not?\n\nA. Confidentiality\nB. Availability\nC. Correctness\nD. Integrity",
+    "output": "B. Availability"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nWhat is penetration testing?\n\nA. A procedure for testing libraries or other program components for vulnerabilities\nB. Whole-system testing for security flaws and bugs\nC. A security-minded form of unit testing that applies early in the development process\nD. All of the above",
+    "output": "B. Whole-system testing for security flaws and bugs"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nSuppose a user has an iPhone (running iOS) and downloads an app called Innocent from the Apple App Store and installs it. The user unlocks the phone and runs Innocent. Innocent exploits a bug in the iOS kernel which allows Innocent to redirect execution inside the kernel to code that Innocent controls. Now Innocent can execute any instructions it likes inside the iOS kernel. Innocent is not able to exploit any bugs in the phone\u2019s secure enclave. Can Innocent read the user\u2019s private information stored in the phone\u2019s flash (e.g. Contacts and messages), or will the security measures described in the paper keep the data private? If Innocent is only able to see encrypted data, then the phone has successfully kept the data private. Circle the security features of the phone (if any) that will prevent Innocent from reading information from the flash on the phone.\n\nA. Secure boot chain\nB. System software authorization \nC. The secure enclave\u2019s ephemeral key\nD. None of the above",
+    "output": "D. None of the above"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nWhy is it that anti-virus scanners would not have found an exploitation of Heartbleed?\n\nA. It's a vacuous question: Heartbleed only reads outside a buffer, so there is no possible exploit \nB. Anti-virus scanners tend to look for viruses and other malicious\nC. Heartbleed attacks the anti-virus scanner itself\nD. Anti-virus scanners tend to look for viruses and other malicious code, but Heartbleed exploits steal secrets without injecting any code ",
+    "output": "D. Anti-virus scanners tend to look for viruses and other malicious code, but Heartbleed exploits steal secrets without injecting any code "
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nSuppose we define h(H, m) = E(m, H)h(H,m)=E(m,H). Then the resulting h(\\cdot,\\cdot)h(\u22c5,\u22c5) is not collision resistant: to build a collision (H,m)(H,m) and (H\u2019,m\u2019)(H\u2019,m\u2019) choose random (H,m,m\u2019)(H,m,m\u2019) and construct H\u2019H\u2019 as follows:\n\nA. H\u2019=D(m\u2019, E(m,H))\nB. H\u2019=E(m\u2019,D(m,H))\nC. H\u2019=E(m\u2019,E(m,H))\nD. H\u2019=D(m\u2019,D(m,H))",
+    "output": "A. H\u2019=D(m\u2019, E(m,H))"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nWhich of the following does authentication aim to accomplish?\n\nA. Restrict what operations/data the user can access\nB. Determine if the user is an attacker\nC. Flag the user if he/she misbehaves\nD. Determine who the user is",
+    "output": "D. Determine who the user is"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nAssume that a TLS connection has been established successfully between a client and a server. Establishing the session included checking the server certificate and executing a DiffieHelmann exchange, but the client did not provide a client certificate. Further, assume that the client and server are honest, that the client and server don\u2019t leak their keys, and that the cryptography is good. Which of the following attacks does TLS protect against?\n1. An attacker stealing the server\u2019s private key and reading the plaintext of recorded past connections.\n2. An attacker breaking into a certificate authority and creating a fake certificate for the server.\n\nA. True, True\nB. False, False\nC. True, False\nD. False, True",
+    "output": "C. True, False"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nCan we build a secure PRP from a secure PRG?\n\nA. No, it cannot be done\nB. Yes, just plug the GGM PRF into the Luby-Rackoff theorem\nC. It depends on the underlying PRG\nD. Option text",
+    "output": "B. Yes, just plug the GGM PRF into the Luby-Rackoff theorem"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nA hash function guarantees the integrity of a message. It guarantees that the message has not be\n\nA. Replaced\nB. Overview\nC. Changed\nD. Violated",
+    "output": "C. Changed"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nStatement 1| U2F is a stronger second factor than sending an SMS code to a user\u2019s smartphone. Statement 2| An attacker that knows a user\u2019s password can easily guess the U2F key to access the user\u2019s account.\n\nA. True, True\nB. False, False\nC. True, False\nD. False, True",
+    "output": "C. True, False"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nThe openSSL implementation described in \u201cRemote Timing Attacks are Practical\u201d (by Brumley and Boneh) uses the following performance optimizations: Chinese Remainder (CR), Montgomery Representation (MR), Karatsuba Multiplication (KM), and Repeated squaring and Sliding windows (RS). Which of the following options would close the timing channel attack described in the paper if you turned the listed optimizations off?\n1. CR, MR, KM, and RS.\n2. RS\n\nA. True, True\nB. False, False\nC. True, False\nD. False, True",
+    "output": "C. True, False"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\n___________ is a process of wireless traffic analysis that may be helpful for forensic investigations or during troubleshooting any wireless issue.\n\nA. Wireless Traffic Sniffing\nB. WiFi Traffic Sniffing\nC. Wireless Traffic Checking\nD. Wireless Transmission Sniffing",
+    "output": "A. Wireless Traffic Sniffing"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nSHA-1 has a message digest of\n\nA. 160 bits\nB. 512 bits\nC. 628 bits\nD. 820 bits",
+    "output": "A. 160 bits"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\n_____________ can modify data on your system \u2013 so that your system doesn\u2019t run correctly or you can no longer access specific data, or it may even ask for ransom in order to give your access.\n\nA. IM \u2013 Trojans\nB. Backdoor Trojans\nC. Trojan-Downloader\nD. Ransom Trojan",
+    "output": "D. Ransom Trojan"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nWhat is ethical hacking?\n\nA. \"Hacking\" ethics so they justify unintended selfish behavior\nB. Hacking systems (e.g., during penetration testing) to expose vulnerabilities so they can be fixed, rather than exploited\nC. Hacking into systems run by those whose ethics you disagree with\nD. A slang term for rapid software development, e.g., as part of hackathons",
+    "output": "B. Hacking systems (e.g., during penetration testing) to expose vulnerabilities so they can be fixed, rather than exploited"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nExploitation of the Heartbleed bug permits\n\nA. overwriting cryptographic keys in memory\nB. a kind of code injection\nC. a read outside bounds of a buffer\nD. a format string attack",
+    "output": "C. a read outside bounds of a buffer"
+  },
+  {
+    "instruction": "Answer the following cybersecurity question.\n\nThe ____________ is anything which your search engine cannot search.\n\nA. Haunted web\nB. World Wide Web\nC. Surface web\nD. Deep Web",
+    "output": "D. Deep Web"
+  }
+]
