@@ -87,18 +87,30 @@ python eval.py \
 #### Diffusion Policy
 
 **Seed 100000:**  
-![Diffusion Seed 100000](report/videos/diffusion/diffusion_seed100000.mp4)
+
+https://github.com/user-attachments/assets/55c4dd0b-375c-4809-92ed-f2e9748612fa
+
 
 **Seed 100001:**  
-![Diffusion Seed 100001](report/videos/diffusion/diffusion_seed100001.mp4)
+
+https://github.com/user-attachments/assets/ec3f6c24-6833-403e-b7bc-4e14cb7314e4
+
+
+
 
 #### Regression Policy
 
 **Seed 100000:**  
-![Regression Seed 100000](report/videos/regression/regression_seed100000.mp4)
+
+https://github.com/user-attachments/assets/1a8ae4f0-2ac1-4aa5-bceb-bd896f6fac12
+
+
 
 **Seed 100001:**  
-![Regression Seed 100001](report/videos/regression/regression_seed100001.mp4)
+
+https://github.com/user-attachments/assets/ea7aa95b-0747-49c5-9f96-9446fcb47cac
+
+
 
 *Note: Videos are located in `report/videos/diffusion/` and `report/videos/regression/`*
 

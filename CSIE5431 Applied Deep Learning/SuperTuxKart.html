@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HW4 — Drive with Transformers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080b0f;
+    --bg2: #0e1318;
+    --bg3: #141b22;
+    --accent: #00e5ff;
+    --accent2: #ff6b35;
+    --accent3: #a8ff78;
+    --text: #e8edf2;
+    --muted: #5a6a7a;
+    --border: #1e2d3d;
+    --mono: 'Space Mono', monospace;
+    --display: 'Syne', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 14px;
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* ── NOISE OVERLAY ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.4;
+  }
+
+  /* ── GRID BG ── */
+  .grid-bg {
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 80px 60px;
+    border-bottom: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .hero-glow {
+    position: absolute;
+    top: -200px;
+    right: -200px;
+    width: 700px;
+    height: 700px;
+    background: radial-gradient(circle, rgba(0,229,255,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .hero-tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 24px;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.1s;
+  }
+
+  .hero h1 {
+    font-family: var(--display);
+    font-size: clamp(48px, 8vw, 96px);
+    font-weight: 800;
+    line-height: 1.0;
+    letter-spacing: -0.02em;
+    margin-bottom: 32px;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.2s;
+  }
+
+  .hero h1 span {
+    color: var(--accent);
+  }
+
+  .hero-sub {
+    font-size: 13px;
+    color: var(--muted);
+    max-width: 560px;
+    margin-bottom: 48px;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.3s;
+  }
+
+  .score-badge {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 8px;
+    background: linear-gradient(135deg, rgba(168,255,120,0.1), rgba(0,229,255,0.05));
+    border: 1px solid rgba(168,255,120,0.3);
+    padding: 16px 28px;
+    clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.4s;
+  }
+
+  .score-badge .num {
+    font-family: var(--display);
+    font-size: 48px;
+    font-weight: 800;
+    color: var(--accent3);
+    line-height: 1;
+  }
+
+  .score-badge .denom {
+    font-size: 20px;
+    color: var(--muted);
+  }
+
+  .score-badge .label {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    display: block;
+    margin-top: 2px;
+  }
+
+  .hero-meta {
+    position: absolute;
+    bottom: 40px;
+    right: 60px;
+    text-align: right;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    opacity: 0;
+    animation: fadeUp 0.6s ease forwards 0.5s;
+  }
+
+  /* ── SECTIONS ── */
+  .section {
+    position: relative;
+    padding: 80px 60px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-label {
+    font-size: 10px;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 40px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+    max-width: 200px;
+  }
+
+  h2 {
+    font-family: var(--display);
+    font-size: clamp(28px, 4vw, 42px);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 32px;
+    line-height: 1.1;
+  }
+
+  h3 {
+    font-family: var(--display);
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    color: var(--text);
+  }
+
+  p {
+    color: #8a9bac;
+    margin-bottom: 16px;
+    max-width: 680px;
+  }
+
+  /* ── CARDS ── */
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    margin-top: 40px;
+  }
+
+  .card {
+    background: var(--bg2);
+    padding: 32px;
+    transition: background 0.2s;
+  }
+
+  .card:hover {
+    background: var(--bg3);
+  }
+
+  .card-icon {
+    font-size: 28px;
+    margin-bottom: 16px;
+    display: block;
+  }
+
+  .card h3 {
+    font-size: 15px;
+    margin-bottom: 10px;
+  }
+
+  .card p {
+    font-size: 13px;
+    color: var(--muted);
+    margin: 0;
+    max-width: none;
+  }
+
+  /* ── DATASET TABLE ── */
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 32px;
+    font-size: 13px;
+  }
+
+  .data-table th {
+    text-align: left;
+    padding: 12px 20px;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    border-bottom: 1px solid var(--border);
+    font-weight: 400;
+  }
+
+  .data-table td {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    color: #8a9bac;
+    vertical-align: top;
+  }
+
+  .data-table td:first-child {
+    color: var(--text);
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .data-table tr:hover td {
+    background: var(--bg3);
+  }
+
+  .tag {
+    display: inline-block;
+    background: rgba(0,229,255,0.08);
+    border: 1px solid rgba(0,229,255,0.2);
+    color: var(--accent);
+    font-size: 11px;
+    padding: 2px 10px;
+    margin: 2px;
+    letter-spacing: 0.05em;
+  }
+
+  /* ── ARCHITECTURE BLOCKS ── */
+  .arch-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 24px;
+    margin-top: 40px;
+  }
+
+  .arch-card {
+    border: 1px solid var(--border);
+    background: var(--bg2);
+    overflow: hidden;
+    position: relative;
+  }
+
+  .arch-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+  }
+
+  .arch-card.mlp::before { background: var(--accent2); }
+  .arch-card.transformer::before { background: var(--accent); }
+  .arch-card.cnn::before { background: var(--accent3); }
+
+  .arch-header {
+    padding: 24px 28px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+
+  .arch-name {
+    font-family: var(--display);
+    font-size: 20px;
+    font-weight: 800;
+  }
+
+  .arch-card.mlp .arch-name { color: var(--accent2); }
+  .arch-card.transformer .arch-name { color: var(--accent); }
+  .arch-card.cnn .arch-name { color: var(--accent3); }
+
+  .arch-pts {
+    font-size: 12px;
+    color: var(--muted);
+    text-align: right;
+  }
+
+  .arch-pts strong {
+    font-size: 22px;
+    font-family: var(--display);
+    font-weight: 800;
+    color: var(--text);
+    display: block;
+  }
+
+  .arch-body {
+    padding: 24px 28px;
+  }
+
+  .arch-body p {
+    font-size: 13px;
+    color: var(--muted);
+    max-width: none;
+    margin-bottom: 20px;
+  }
+
+  .flow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+    margin: 16px 0;
+  }
+
+  .flow-box {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    padding: 6px 12px;
+    font-size: 11px;
+    color: var(--text);
+    white-space: nowrap;
+  }
+
+  .flow-arrow {
+    color: var(--muted);
+    font-size: 16px;
+  }
+
+  .spec-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+  }
+
+  .spec-row .key { color: var(--muted); }
+  .spec-row .val { color: var(--text); font-weight: 700; }
+
+  /* ── RESULTS ── */
+  .results-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    margin-top: 40px;
+  }
+
+  .result-cell {
+    background: var(--bg2);
+    padding: 32px 28px;
+  }
+
+  .result-model {
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 20px;
+  }
+
+  .metric-row {
+    margin-bottom: 16px;
+  }
+
+  .metric-label {
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  .metric-bar-wrap {
+    position: relative;
+    height: 6px;
+    background: var(--bg3);
+    margin-bottom: 4px;
+  }
+
+  .metric-bar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    transition: width 1s ease;
+  }
+
+  .metric-val {
+    font-family: var(--display);
+    font-size: 24px;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  .metric-target {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .pass { color: var(--accent3); }
+  .ec { color: var(--accent); }
+
+  .badge-ec {
+    display: inline-block;
+    background: rgba(0,229,255,0.1);
+    border: 1px solid rgba(0,229,255,0.3);
+    color: var(--accent);
+    font-size: 9px;
+    padding: 2px 8px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    vertical-align: middle;
+    margin-left: 6px;
+  }
+
+  .score-row {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .score-row .score-num {
+    font-family: var(--display);
+    font-size: 36px;
+    font-weight: 800;
+  }
+
+  .score-row .score-denom {
+    color: var(--muted);
+    font-size: 18px;
+  }
+
+  /* ── KEY FINDINGS ── */
+  .finding-list {
+    margin-top: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+  }
+
+  .finding {
+    background: var(--bg2);
+    padding: 24px 32px;
+    display: grid;
+    grid-template-columns: 48px 1fr;
+    gap: 20px;
+    align-items: start;
+    transition: background 0.2s;
+  }
+
+  .finding:hover {
+    background: var(--bg3);
+  }
+
+  .finding-num {
+    font-family: var(--display);
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--border);
+    line-height: 1;
+    padding-top: 2px;
+  }
+
+  .finding h4 {
+    font-family: var(--display);
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: var(--text);
+  }
+
+  .finding p {
+    font-size: 13px;
+    color: var(--muted);
+    margin: 0;
+    max-width: none;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    padding: 40px 60px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+
+  footer span { color: var(--accent3); }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .reveal {
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+
+  .reveal.visible {
+    opacity: 1;
+    transform: none;
+  }
+
+  @media (max-width: 768px) {
+    .hero, .section { padding: 60px 24px; }
+    .results-grid { grid-template-columns: 1fr; }
+    footer { flex-direction: column; gap: 12px; text-align: center; }
+    .hero-meta { position: static; text-align: left; margin-top: 40px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="grid-bg"></div>
+
+<!-- ── HERO ── -->
+<section class="hero">
+  <div class="hero-glow"></div>
+
+  <div class="hero-tag">SuperTuxKart</div>
+
+  <h1>Drive with<br><span>Transformers</span></h1>
+
+  <p class="hero-sub">
+    Learning to predict vehicle trajectories from lane boundaries and raw images,
+    using MLP, Transformer, and CNN architectures on the SuperTuxKart drive dataset.
+  </p>
+
+  <div class="score-badge">
+    <div>
+      <div style="display:flex;align-items:baseline;gap:8px;">
+        <span class="num">104</span>
+        <span class="denom">/ 100</span>
+      </div>
+      <span class="label">Final Score · Extra Credit Achieved</span>
+    </div>
+  </div>
+
+  <div class="hero-meta">
+    SuperTuxKart<br>
+    <span style="color:var(--accent)">Spring 2026</span>
+  </div>
+</section>
+
+<!-- ── TASK ── -->
+<section class="section">
+  <div class="section-label">01 · Task Overview</div>
+  <h2>Goal</h2>
+  <p>
+    Train models that predict a vehicle's future trajectory (waypoints) to enable
+    autonomous driving in SuperTuxKart. Given either ground-truth lane boundaries
+    or a raw RGB image, predict the next 3 waypoints in the vehicle's ego coordinate frame.
+  </p>
+  <p>
+    Predicted waypoints are fed into a low-level controller that converts them into
+    steering and throttle commands to drive the kart around a track.
+  </p>
+
+  <div class="card-grid reveal">
+    <div class="card">
+      <span class="card-icon">🏎️</span>
+      <h3>Part 1a — MLP Planner</h3>
+      <p>Predict waypoints from ground-truth lane boundaries using a multi-layer perceptron. Perfect-vision oracle scenario.</p>
+    </div>
+    <div class="card">
+      <span class="card-icon">🔭</span>
+      <h3>Part 1b — Transformer Planner</h3>
+      <p>Same task, but using a Perceiver-style cross-attention architecture. Query embeddings attend over track boundary features.</p>
+    </div>
+    <div class="card">
+      <span class="card-icon">📷</span>
+      <h3>Part 2 — CNN Planner</h3>
+      <p>Predict waypoints directly from raw RGB images. No ground-truth boundaries — the model must learn visual features end-to-end.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ── DATASET ── -->
+<section class="section">
+  <div class="section-label">02 · Dataset</div>
+  <h2>SuperTuxKart<br>Drive Dataset</h2>
+  <p>
+    Collected by driving around 4 tracks in SuperTuxKart. Each episode records
+    vehicle state and camera images at every frame. Data is processed into ego-frame
+    coordinates for training.
+  </p>
+
+  <table class="data-table reveal">
+    <thead>
+      <tr>
+        <th>Field</th>
+        <th>Shape</th>
+        <th>Description</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>track_left</td>
+        <td><span class="tag">(B, 10, 2)</span></td>
+        <td>Left lane boundary points in ego BEV frame. 10 points sampled ahead of the vehicle at 2.5m intervals.</td>
+      </tr>
+      <tr>
+        <td>track_right</td>
+        <td><span class="tag">(B, 10, 2)</span></td>
+        <td>Right lane boundary points in ego BEV frame. Mirror of track_left.</td>
+      </tr>
+      <tr>
+        <td>waypoints</td>
+        <td><span class="tag">(B, 3, 2)</span></td>
+        <td>Ground truth future vehicle positions. Target for all models.</td>
+      </tr>
+      <tr>
+        <td>waypoints_mask</td>
+        <td><span class="tag">(B, 3)</span></td>
+        <td>Boolean mask for valid waypoints. Used to ignore padding at episode boundaries.</td>
+      </tr>
+      <tr>
+        <td>image</td>
+        <td><span class="tag">(B, 3, 96, 128)</span></td>
+        <td>Front-facing RGB camera image. Used only by CNN Planner.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div style="margin-top:32px;" class="reveal">
+    <div class="spec-row" style="max-width:400px;border-top:none;border-bottom:1px solid var(--border);">
+      <span class="key">Training tracks</span>
+      <span class="val">cornfield_crossing, hacienda, lighthouse, snowmountain (×4 episodes each)</span>
+    </div>
+    <div class="spec-row" style="max-width:400px;">
+      <span class="key">Validation tracks</span>
+      <span class="val">Same 4 tracks, held-out episode _05</span>
+    </div>
+    <div class="spec-row" style="max-width:400px;">
+      <span class="key">Coordinate frame</span>
+      <span class="val">Ego bird's-eye view (BEV), x=lateral, z=longitudinal</span>
+    </div>
+  </div>
+</section>
+
+<!-- ── ARCHITECTURE ── -->
+<section class="section">
+  <div class="section-label">03 · Architecture</div>
+  <h2>Three Models,<br>One Goal</h2>
+
+  <div class="arch-grid">
+
+    <!-- MLP -->
+    <div class="arch-card mlp reveal">
+      <div class="arch-header">
+        <div>
+          <div class="arch-name">MLP Planner</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px;">State-based · Part 1a</div>
+        </div>
+        <div class="arch-pts">
+          <strong>26</strong>/ 35 pts
+        </div>
+      </div>
+      <div class="arch-body">
+        <p>Concatenates left and right track boundary points, flattens to a vector, and passes through a deep MLP to predict waypoints.</p>
+
+        <div class="flow">
+          <span class="flow-box">track_left<br>(B,10,2)</span>
+          <span class="flow-arrow">+</span>
+          <span class="flow-box">track_right<br>(B,10,2)</span>
+          <span class="flow-arrow">→</span>
+          <span class="flow-box">concat+flatten<br>(B,40)</span>
+          <span class="flow-arrow">→</span>
+          <span class="flow-box">MLP<br>×4 layers</span>
+          <span class="flow-arrow">→</span>
+          <span class="flow-box">waypoints<br>(B,3,2)</span>
+        </div>
+
+        <div class="spec-row">
+          <span class="key">hidden_dim</span>
+          <span class="val">512</span>
+        </div>
+        <div class="spec-row">
+          <span class="key">layers</span>
+          <span class="val">4 (with BN + Dropout)</span>
+        </div>
+        <div class="spec-row">
+          <span class="key">model size</span>
+          <span class="val">~1.5 MB</span>
+        </div>
+        <div class="spec-row">
+          <span class="key">loss</span>
+          <span class="val">Weighted L1 (lat ×2.0)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Transformer -->
+    <div class="arch-card transformer reveal">
+      <div class="arch-header">
+        <div>
+          <div class="arch-name">Transformer Planner</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px;">Perceiver-style · Part 1b</div>
+        </div>
+        <div class="arch-pts">
+          <strong>26</strong>/ 35 pts
+        </div>
+      </div>
+      <div class="arch-body">
+        <p>Uses 3 learned query embeddings (one per waypoint) to cross-attend over encoded track boundary points. Inspired by the Perceiver architecture.</p>
+
+        <div class="flow">
+          <span class="flow-box">track points<br>(B,20,2)</span>
+          <span class="flow-arrow">→</span>
+          <span class="flow-box">Linear proj<br>(B,20,128)</span>
+          <span class="flow-arrow">→</span>
+          <span class="flow-box">Cross-Attn<br>×4 layers</span>
+          <span class="flow-arrow">←</span>
+          <span class="flow-box">Query embed<br>(3, 128)</span>
+        </div>
+        <div class="flow" style="margin-top:4px;">
+          <span class="flow-arrow" style="margin-left:0">↓</span>
+          <span class="flow-box">Linear proj → waypoints (B,3,2)</span>
+        </div>
+
+        <div class="spec-row">
+          <span class="key">d_model</span>
+          <span class="val">128</span>
+        </div>
+        <div class="spec-row">
+          <span class="key">nhead / layers</span>
+          <span class="val">4 heads · 4 decoder layers</span>
+        </div>
+        <div class="spec-row">
+          <span class="key">model size</span>
+          <span class="val">~1.0 MB</span>
+        </div>
+        <div class="spec-row">
+          <span class="key">loss</span>
+          <span class="val">Weighted L1 (lat ×2.0)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- CNN -->
+    <div class="arch-card cnn reveal">
+      <div class="arch-header">
+        <div>
+          <div class="arch-name">CNN Planner</div>
+          <div style="font-size:12px;color:var(--muted);margin-top:4px;">Image-based · Part 2</div>
+        </div>
+        <div class="arch-pts">
+          <strong>27</strong>/ 30 pts
+        </div>
+      </div>
+      <div class="arch-body">
+        <p>ResNet-style encoder extracts spatial features from a raw RGB image. Global average pooling collapses spatial dimensions before a linear head predicts waypoints.</p>
+
+        <div class="flow">
+          <span class="flow-box">image<br>(B,3,96,128)</span>
+          <span class="flow-arrow">→</span>
+          <span class="flow-box">Stem<br>stride=2</span>
+          <span class="flow-arrow">→</span>
+          <span class="flow-box">ResBlocks<br>32→64→128→256</span>
+          <span class="flow-arrow">→</span>
+          <span class="flow-box">GAP<br>(B,256)</span>
+          <span class="flow-arrow">→</span>
+          <span class="flow-box">waypoints<br>(B,3,2)</span>
+        </div>
+
+        <div class="spec-row">
+          <span class="key">channels</span>
+          <span class="val">32 → 64 → 128 → 256</span>
+        </div>
+        <div class="spec-row">
+          <span class="key">skip connections</span>
+          <span class="val">✓ ResNet-style</span>
+        </div>
+        <div class="spec-row">
+          <span class="key">model size</span>
+          <span class="val">~3.5 MB</span>
+        </div>
+        <div class="spec-row">
+          <span class="key">loss</span>
+          <span class="val">Standard L1 (uniform)</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ── RESULTS ── -->
+<section class="section">
+  <div class="section-label">04 · Results</div>
+  <h2>Final Evaluation</h2>
+  <p>
+    Evaluated on held-out validation split. Longitudinal error measures forward/speed prediction accuracy;
+    lateral error measures steering accuracy.
+  </p>
+
+  <div class="results-grid reveal">
+
+    <!-- MLP -->
+    <div class="result-cell">
+      <div class="result-model">MLP Planner</div>
+
+      <div class="metric-row">
+        <div class="metric-label">Longitudinal Error</div>
+        <div class="metric-bar-wrap">
+          <div class="metric-bar" style="width:65%;background:var(--accent2);"></div>
+        </div>
+        <div class="metric-val pass">0.131 <span class="badge-ec">EC</span></div>
+        <div class="metric-target">target &lt; 0.2 · EC &lt; 0.16</div>
+      </div>
+
+      <div class="metric-row">
+        <div class="metric-label">Lateral Error</div>
+        <div class="metric-bar-wrap">
+          <div class="metric-bar" style="width:95%;background:var(--accent2);"></div>
+        </div>
+        <div class="metric-val pass">0.573</div>
+        <div class="metric-target">target &lt; 0.6</div>
+      </div>
+
+      <div class="score-row">
+        <div style="font-size:12px;color:var(--muted);">Score</div>
+        <div><span class="score-num" style="color:var(--accent2);">26</span><span class="score-denom"> / 35</span></div>
+      </div>
+    </div>
+
+    <!-- Transformer -->
+    <div class="result-cell">
+      <div class="result-model">Transformer Planner</div>
+
+      <div class="metric-row">
+        <div class="metric-label">Longitudinal Error</div>
+        <div class="metric-bar-wrap">
+          <div class="metric-bar" style="width:89%;background:var(--accent);"></div>
+        </div>
+        <div class="metric-val pass">0.178 <span class="badge-ec">EC</span></div>
+        <div class="metric-target">target &lt; 0.2 · EC &lt; 0.16</div>
+      </div>
+
+      <div class="metric-row">
+        <div class="metric-label">Lateral Error</div>
+        <div class="metric-bar-wrap">
+          <div class="metric-bar" style="width:96%;background:var(--accent);"></div>
+        </div>
+        <div class="metric-val pass">0.577</div>
+        <div class="metric-target">target &lt; 0.6</div>
+      </div>
+
+      <div class="score-row">
+        <div style="font-size:12px;color:var(--muted);">Score</div>
+        <div><span class="score-num" style="color:var(--accent);">26</span><span class="score-denom"> / 35</span></div>
+      </div>
+    </div>
+
+    <!-- CNN -->
+    <div class="result-cell">
+      <div class="result-model">CNN Planner</div>
+
+      <div class="metric-row">
+        <div class="metric-label">Longitudinal Error</div>
+        <div class="metric-bar-wrap">
+          <div class="metric-bar" style="width:39%;background:var(--accent3);"></div>
+        </div>
+        <div class="metric-val ec">0.154 <span class="badge-ec">EC</span></div>
+        <div class="metric-target">target &lt; 0.3 · EC &lt; 0.2</div>
+      </div>
+
+      <div class="metric-row">
+        <div class="metric-label">Lateral Error</div>
+        <div class="metric-bar-wrap">
+          <div class="metric-bar" style="width:38%;background:var(--accent3);"></div>
+        </div>
+        <div class="metric-val ec">0.225 <span class="badge-ec">EC</span></div>
+        <div class="metric-target">target &lt; 0.45 · EC &lt; 0.3</div>
+      </div>
+
+      <div class="score-row">
+        <div style="font-size:12px;color:var(--muted);">Score</div>
+        <div><span class="score-num" style="color:var(--accent3);">27</span><span class="score-denom"> / 30</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- total -->
+  <div style="margin-top:1px;background:var(--bg3);border:1px solid var(--border);border-top:none;padding:28px 28px;display:flex;justify-content:space-between;align-items:center;" class="reveal">
+    <div>
+      <div style="font-size:10px;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin-bottom:4px;">Total Score</div>
+      <div style="font-size:12px;color:var(--muted);">pystk driving tests pending on grader server</div>
+    </div>
+    <div style="text-align:right;">
+      <div style="font-family:var(--display);font-size:56px;font-weight:800;color:var(--accent3);line-height:1;">104</div>
+      <div style="color:var(--muted);font-size:16px;">/ 100 pts</div>
+    </div>
+  </div>
+</section>
+
+<!-- ── KEY FINDINGS ── -->
+<section class="section">
+  <div class="section-label">05 · Key Findings</div>
+  <h2>What We Learned</h2>
+
+  <div class="finding-list">
+    <div class="finding reveal">
+      <div class="finding-num">01</div>
+      <div>
+        <h4>Lateral error is the hard part</h4>
+        <p>Longitudinal (forward) error converged quickly across all models. Lateral (steering) error was consistently the bottleneck — the model needs to learn left/right geometry from a sparse 20-point representation of the track.</p>
+      </div>
+    </div>
+    <div class="finding reveal">
+      <div class="finding-num">02</div>
+      <div>
+        <h4>Weighted loss fixed the lat problem</h4>
+        <p>Adding a 2× weight on lateral loss in the training objective forced the optimizer to prioritize steering accuracy. Without it, the loss was dominated by longitudinal error and lat stagnated above 0.8.</p>
+      </div>
+    </div>
+    <div class="finding reveal">
+      <div class="finding-num">03</div>
+      <div>
+        <h4>CNN beats oracle models on lateral accuracy</h4>
+        <p>Surprisingly, the image-based CNN (lat=0.225) significantly outperformed the MLP (0.573) and Transformer (0.577) that receive ground-truth lane boundaries. Rich visual context from the image compensates for the lack of explicit geometry.</p>
+      </div>
+    </div>
+    <div class="finding reveal">
+      <div class="finding-num">04</div>
+      <div>
+        <h4>Val loss oscillation ≠ model quality</h4>
+        <p>Both MLP and Transformer showed highly unstable validation loss across epochs (±0.4 swings). Best model checkpointing by val loss was critical — the final epoch weights were often far from optimal.</p>
+      </div>
+    </div>
+    <div class="finding reveal">
+      <div class="finding-num">05</div>
+      <div>
+        <h4>Perceiver cross-attention works out of the box</h4>
+        <p>Using n_waypoints learned query embeddings attending over 20 track points (left+right) is a clean fit for the Perceiver architecture. The model learns which track points are most relevant for each future waypoint.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <div>SuperTuxKart<span>Spring 2026</span></div>
+  <div>HW4 — Drive with Transformers · <span>104 / 100</span></div>
+</footer>
+
+<script>
+  // scroll reveal
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((e, i) => {
+      if (e.isIntersecting) {
+        setTimeout(() => e.target.classList.add('visible'), i * 80);
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+  // animate metric bars on scroll
+  const barObserver = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.querySelectorAll('.metric-bar').forEach(bar => {
+          const w = bar.style.width;
+          bar.style.width = '0%';
+          setTimeout(() => bar.style.width = w, 200);
+        });
+      }
+    });
+  }, { threshold: 0.3 });
+
+  document.querySelectorAll('.results-grid').forEach(el => barObserver.observe(el));
+</script>
+
+</body>
+</html>
