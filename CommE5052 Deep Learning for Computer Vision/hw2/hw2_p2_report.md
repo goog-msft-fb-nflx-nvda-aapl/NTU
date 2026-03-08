@@ -36,7 +36,7 @@ where $\hat{x}_0 = \frac{x_t - \sqrt{1-\bar{\alpha}_t}\,\epsilon_\theta(x_t,t)}{
 
 Rows = noise inputs 00–03. Columns = $\eta = 0.0, 0.25, 0.5, 0.75, 1.0$.
 
-![eta grid](output_p2_report/report_p2_eta.png)
+![eta grid](./report_p2_eta.png)
 
 **Observation**: When $\eta=0$ (DDIM), sampling is fully deterministic — the same noise always produces the same image. As $\eta$ increases, stochasticity is introduced at each step (similar to DDPM when $\eta=1$). The overall face identity is preserved across $\eta$ values, but fine details (hair, background texture) vary more with higher $\eta$. Higher $\eta$ also tends to produce slightly noisier or softer images due to the added Gaussian noise at each denoising step.
 
@@ -50,12 +50,12 @@ Columns = $\alpha = 0.0, 0.1, 0.2, \ldots, 1.0$ interpolating between noise 00 a
 
 $$x_T^{(\alpha)} = \frac{\sin((1-\alpha)\theta)}{\sin\theta} x_T^{(0)} + \frac{\sin(\alpha\theta)}{\sin\theta} x_T^{(1)}, \quad \theta = \arccos\!\left(\frac{(x_T^{(0)})^\top x_T^{(1)}}{|x_T^{(0)}||x_T^{(1)}|}\right)$$
 
-![slerp](output_p2_report/report_p2_slerp.png)
+![slerp](./report_p2_slerp.png)
 
 ### Linear Interpolation
 
 $$x_T^{(\alpha)} = (1-\alpha)\,x_T^{(0)} + \alpha\,x_T^{(1)}$$
 
-![linear](output_p2_report/report_p2_linear.png)
+![linear](./report_p2_linear.png)
 
 **Observation**: Slerp produces a smooth, perceptually uniform transition between the two faces — identity, expression, and lighting change gradually and naturally across $\alpha$. Linear interpolation, by contrast, tends to produce blurrier intermediate images because it reduces the magnitude of the noise vector (the interpolated vector has smaller norm than either endpoint), pushing the sample toward lower-energy regions of the latent space. This causes the intermediate faces to appear washed-out or unnaturally blended compared to slerp.
