@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Deep MIR HW2 — Controllable Text-to-Music Generation</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --accent: #7c3aed;
+    --accent2: #06b6d4;
+    --accent3: #f59e0b;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --border: #1e1e2e;
+    --success: #10b981;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── NOISE OVERLAY ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.4;
+  }
+
+  /* ── HEADER ── */
+  header {
+    position: relative;
+    padding: 4rem 3rem 3rem;
+    border-bottom: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  header::after {
+    content: '';
+    position: absolute;
+    top: -80px; right: -80px;
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(124,58,237,0.15) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .header-tag {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--accent2);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 0.8rem;
+  }
+
+  h1 {
+    font-size: clamp(1.8rem, 4vw, 3rem);
+    font-weight: 800;
+    line-height: 1.1;
+    background: linear-gradient(135deg, #e2e8f0 0%, var(--accent2) 50%, var(--accent) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 0.5rem;
+  }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 0.95rem;
+    font-family: 'Space Mono', monospace;
+  }
+
+  /* ── NAV TABS ── */
+  nav {
+    display: flex;
+    gap: 0;
+    padding: 0 3rem;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    background: rgba(10,10,15,0.95);
+    backdrop-filter: blur(12px);
+    z-index: 100;
+  }
+
+  nav button {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    padding: 1rem 1.5rem;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+
+  nav button:hover { color: var(--text); }
+  nav button.active {
+    color: var(--accent2);
+    border-bottom-color: var(--accent2);
+  }
+
+  /* ── SECTIONS ── */
+  .section { display: none; padding: 3rem; animation: fadeIn 0.3s ease; }
+  .section.active { display: block; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── PIPELINE VIZ ── */
+  .pipeline {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+    margin: 2rem 0;
+    overflow-x: auto;
+    padding-bottom: 1rem;
+  }
+
+  .pipe-step {
+    flex: 1;
+    min-width: 180px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 1.5rem 1.2rem;
+    position: relative;
+    transition: border-color 0.2s;
+  }
+
+  .pipe-step:hover { border-color: var(--accent); }
+
+  .pipe-step::after {
+    content: '→';
+    position: absolute;
+    right: -18px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--accent);
+    font-size: 1.4rem;
+    z-index: 2;
+    background: var(--bg);
+    padding: 0 2px;
+  }
+
+  .pipe-step:last-child::after { display: none; }
+
+  .step-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--accent);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+  }
+
+  .step-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+  }
+
+  .step-model {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--accent2);
+    margin-bottom: 0.6rem;
+  }
+
+  .step-desc {
+    font-size: 0.75rem;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  .step-badge {
+    display: inline-block;
+    margin-top: 0.8rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 3px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .badge-done { background: rgba(16,185,129,0.15); color: var(--success); }
+
+  /* ── SECTION TITLES ── */
+  .section-title {
+    font-size: 1.4rem;
+    font-weight: 800;
+    margin-bottom: 0.4rem;
+  }
+
+  .section-title span {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--accent);
+    letter-spacing: 0.15em;
+    display: block;
+    margin-bottom: 0.3rem;
+    text-transform: uppercase;
+  }
+
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 1.5rem 0 2rem;
+  }
+
+  /* ── TRACK CARDS ── */
+  .tracks-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .track-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+
+  .track-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+
+  .track-header {
+    padding: 1.2rem 1.2rem 0.8rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: flex-start;
+    gap: 0.8rem;
+  }
+
+  .track-idx {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--accent);
+    padding: 0.2rem 0.4rem;
+    border: 1px solid var(--accent);
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .track-name {
+    font-size: 0.85rem;
+    font-weight: 600;
+    line-height: 1.3;
+    word-break: break-word;
+  }
+
+  .track-type {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--accent3);
+    margin-top: 0.3rem;
+  }
+
+  .track-body { padding: 1.2rem; }
+
+  .caption-box {
+    background: var(--surface2);
+    border-left: 2px solid var(--accent2);
+    padding: 0.7rem 0.9rem;
+    font-size: 0.75rem;
+    color: var(--muted);
+    line-height: 1.6;
+    font-family: 'Space Mono', monospace;
+    margin-bottom: 1rem;
+    max-height: 80px;
+    overflow: hidden;
+    position: relative;
+    cursor: pointer;
+    transition: max-height 0.3s ease;
+  }
+
+  .caption-box.expanded { max-height: 300px; }
+
+  .caption-box::after {
+    content: '▼ expand';
+    position: absolute;
+    bottom: 0; right: 0;
+    background: linear-gradient(to right, transparent, var(--surface2) 40%);
+    padding: 0.3rem 0.5rem 0.3rem 2rem;
+    font-size: 0.6rem;
+    color: var(--accent2);
+    letter-spacing: 0.1em;
+  }
+
+  .caption-box.expanded::after { content: '▲ collapse'; }
+
+  /* ── METRICS ── */
+  .metrics-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .metric {
+    background: var(--surface2);
+    padding: 0.5rem 0.6rem;
+    text-align: center;
+  }
+
+  .metric-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.55rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 0.2rem;
+  }
+
+  .metric-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.9rem;
+    font-weight: 700;
+  }
+
+  .val-high  { color: var(--success); }
+  .val-mid   { color: var(--accent3); }
+  .val-low   { color: #ef4444; }
+
+  .audiobox-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.4rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .aes-metric {
+    background: var(--surface2);
+    padding: 0.4rem;
+    text-align: center;
+  }
+
+  .aes-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.55rem;
+    color: var(--muted);
+    margin-bottom: 0.15rem;
+  }
+
+  .aes-bar-wrap {
+    height: 3px;
+    background: var(--border);
+    border-radius: 2px;
+    margin: 0.3rem 0 0.2rem;
+    overflow: hidden;
+  }
+
+  .aes-bar {
+    height: 100%;
+    background: var(--accent2);
+    border-radius: 2px;
+    transition: width 0.6s ease;
+  }
+
+  .aes-val {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text);
+  }
+
+  /* ── AUDIO PLAYER ── */
+  .audio-section {
+    margin-top: 1rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .audio-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 0.4rem;
+  }
+
+  .audio-note {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    font-style: italic;
+    padding: 0.5rem;
+    background: var(--surface2);
+    border: 1px dashed var(--border);
+    line-height: 1.5;
+  }
+
+  audio {
+    width: 100%;
+    height: 32px;
+    filter: invert(1) hue-rotate(200deg);
+    opacity: 0.85;
+  }
+
+  /* ── RETRIEVAL TABLE ── */
+  .retrieval-list { display: flex; flex-direction: column; gap: 1rem; }
+
+  .ret-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 1rem 1.2rem;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 1rem;
+    align-items: start;
+    transition: border-color 0.2s;
+  }
+
+  .ret-item:hover { border-color: var(--accent2); }
+
+  .ret-target {
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+
+  .ret-matches { display: flex; flex-direction: column; gap: 0.3rem; }
+
+  .ret-match {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+  }
+
+  .ret-rank {
+    color: var(--accent);
+    width: 16px;
+    flex-shrink: 0;
+  }
+
+  .ret-file { color: var(--muted); flex: 1; }
+
+  .ret-sim {
+    font-weight: 700;
+    font-size: 0.7rem;
+  }
+
+  /* ── EVAL TABLE ── */
+  .eval-table-wrap { overflow-x: auto; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+  }
+
+  th {
+    background: var(--surface2);
+    color: var(--accent2);
+    padding: 0.7rem 0.8rem;
+    text-align: left;
+    letter-spacing: 0.08em;
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+
+  td {
+    padding: 0.6rem 0.8rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  tr:hover td { background: var(--surface2); color: var(--text); }
+
+  td.highlight { color: var(--text); font-weight: 700; }
+
+  .bar-cell { min-width: 80px; }
+
+  .inline-bar {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .inline-bar-bg {
+    flex: 1;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .inline-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--accent2);
+  }
+
+  /* ── ENV SECTION ── */
+  .env-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .env-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 1.2rem;
+  }
+
+  .env-card-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--accent);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 0.8rem;
+  }
+
+  .env-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.3rem 0;
+    border-bottom: 1px solid var(--border);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+  }
+
+  .env-key { color: var(--muted); }
+  .env-val { color: var(--text); }
+
+  pre {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 1.2rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    line-height: 1.7;
+    overflow-x: auto;
+    color: var(--accent2);
+  }
+
+  pre .cmd { color: var(--text); }
+  pre .comment { color: var(--muted); }
+
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-tag">Deep MIR · CommE5070 · HW2</div>
+  <h1>Controllable Text-to-Music Generation</h1>
+  <div class="subtitle">MusicGen-Melody · Qwen2-Audio · LAION-CLAP · Meta Audiobox</div>
+</header>
+
+<nav>
+  <button class="active" onclick="show('pipeline', this)">Pipeline</button>
+  <button onclick="show('results', this)">Results</button>
+  <button onclick="show('retrieval', this)">Retrieval</button>
+  <button onclick="show('eval', this)">Eval Table</button>
+  <button onclick="show('env', this)">Reproduce</button>
+</nav>
+
+<!-- ══════════════════════════════════════════════════════ PIPELINE -->
+<div class="section active" id="pipeline">
+  <div class="section-title"><span>Overview</span>Pipeline</div>
+  <div class="divider"></div>
+
+  <div class="pipeline">
+    <div class="pipe-step">
+      <div class="step-num">Step 01</div>
+      <div class="step-title">Audio Retrieval</div>
+      <div class="step-model">LAION-CLAP</div>
+      <div class="step-desc">Multi-window CLAP embeddings. Cosine similarity ranking against reference_music_list_60s. Top-3 matches per target.</div>
+      <span class="step-badge badge-done">✓ Done</span>
+    </div>
+    <div class="pipe-step">
+      <div class="step-num">Step 02</div>
+      <div class="step-title">Audio Captioning</div>
+      <div class="step-model">Qwen2-Audio-7B-Instruct</div>
+      <div class="step-desc">ALM generates detailed music descriptions: instruments, tempo, mood, genre, melody, rhythm.</div>
+      <span class="step-badge badge-done">✓ Done</span>
+    </div>
+    <div class="pipe-step">
+      <div class="step-num">Step 03</div>
+      <div class="step-title">Music Generation</div>
+      <div class="step-model">facebook/musicgen-melody</div>
+      <div class="step-desc">Text + chromagram melody conditioning via generate_with_chroma(). 30s output, CFG=3.0. MIR-compliant.</div>
+      <span class="step-badge badge-done">✓ Done</span>
+    </div>
+    <div class="pipe-step">
+      <div class="step-num">Step 04</div>
+      <div class="step-title">Evaluation</div>
+      <div class="step-model">CLAP · Melody Acc · Audiobox</div>
+      <div class="step-desc">CLAP cosine sim (3 pairs), one-hot chromagram melody accuracy, Meta Audiobox CE/CU/PC/PQ.</div>
+      <span class="step-badge badge-done">✓ Done</span>
+    </div>
+  </div>
+
+  <div style="margin-top:2rem;">
+    <div class="section-title" style="font-size:1rem;"><span>Methodology Notes</span>Condition Strategy</div>
+    <div class="divider"></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;">
+      <div class="env-card">
+        <div class="env-card-title">Text Condition (Medium)</div>
+        <div style="font-size:0.78rem;color:var(--muted);line-height:1.6;">Caption from Qwen2-Audio-7B-Instruct passed directly as MusicGen text prompt. Covers genre, tempo, mood, instruments.</div>
+      </div>
+      <div class="env-card">
+        <div class="env-card-title">Melody Condition (Medium)</div>
+        <div style="font-size:0.78rem;color:var(--muted);line-height:1.6;">Chromagram extracted from target audio via MusicGen's built-in chroma pipeline. MIR-based, rule-compliant (no raw audio conditioning).</div>
+      </div>
+      <div class="env-card">
+        <div class="env-card-title">CFG Scale (Strong)</div>
+        <div style="font-size:0.78rem;color:var(--muted);line-height:1.6;">Classifier-free guidance set to 3.0 globally. Per-track tuning is a TODO improvement.</div>
+      </div>
+      <div class="env-card">
+        <div class="env-card-title">What we did NOT do</div>
+        <div style="font-size:0.78rem;color:var(--muted);line-height:1.6;">No audio conditioning directly. No autoencoder encode/decode of target. No model training or fine-tuning.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ RESULTS -->
+<div class="section" id="results">
+  <div class="section-title"><span>Per-Track</span>Generated Music & Captions</div>
+  <div class="divider"></div>
+  <div class="tracks-grid" id="tracksGrid"></div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ RETRIEVAL -->
+<div class="section" id="retrieval">
+  <div class="section-title"><span>Step 01</span>Retrieval Results</div>
+  <div class="divider"></div>
+  <p style="font-size:0.8rem;color:var(--muted);margin-bottom:1.5rem;font-family:'Space Mono',monospace;">LAION-CLAP cosine similarity · Top-3 matches per target · Multi-window averaging</p>
+  <div class="retrieval-list" id="retrievalList"></div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ EVAL TABLE -->
+<div class="section" id="eval">
+  <div class="section-title"><span>Step 04</span>Evaluation Metrics</div>
+  <div class="divider"></div>
+  <div class="eval-table-wrap">
+    <table id="evalTable">
+      <thead>
+        <tr>
+          <th>Track</th>
+          <th>tgt↔txt</th>
+          <th>txt↔gen</th>
+          <th>tgt↔gen</th>
+          <th>Mel Acc</th>
+          <th>G-CE</th>
+          <th>G-CU</th>
+          <th>G-PC</th>
+          <th>G-PQ</th>
+        </tr>
+      </thead>
+      <tbody id="evalBody"></tbody>
+    </table>
+  </div>
+  <div style="margin-top:1.5rem;padding:1rem;background:var(--surface);border:1px solid var(--border);">
+    <div style="font-family:'Space Mono',monospace;font-size:0.65rem;color:var(--muted);line-height:1.8;">
+      <strong style="color:var(--text);">Column legend</strong><br>
+      tgt↔txt = CLAP(target audio, text caption) &nbsp;·&nbsp;
+      txt↔gen = CLAP(text, generated audio) &nbsp;·&nbsp;
+      tgt↔gen = CLAP(target, generated) &nbsp;·&nbsp;
+      Mel Acc = one-hot chromagram accuracy &nbsp;·&nbsp;
+      G-CE/CU/PC/PQ = Meta Audiobox Aesthetics (generated)
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════ REPRODUCE -->
+<div class="section" id="env">
+  <div class="section-title"><span>Reproduction</span>Environment & Commands</div>
+  <div class="divider"></div>
+
+  <div class="env-grid">
+    <div class="env-card">
+      <div class="env-card-title">Hardware</div>
+      <div class="env-row"><span class="env-key">GPU</span><span class="env-val">NVIDIA H200 ×8</span></div>
+      <div class="env-row"><span class="env-key">VRAM</span><span class="env-val">143 GB each</span></div>
+      <div class="env-row"><span class="env-key">CUDA</span><span class="env-val">12.4</span></div>
+      <div class="env-row"><span class="env-key">Driver</span><span class="env-val">550.163.01</span></div>
+    </div>
+    <div class="env-card">
+      <div class="env-card-title">Core Stack</div>
+      <div class="env-row"><span class="env-key">Python</span><span class="env-val">3.10</span></div>
+      <div class="env-row"><span class="env-key">PyTorch</span><span class="env-val">2.1.0+cu121</span></div>
+      <div class="env-row"><span class="env-key">torchaudio</span><span class="env-val">2.1.0+cu121</span></div>
+      <div class="env-row"><span class="env-key">audiocraft</span><span class="env-val">1.3.0</span></div>
+    </div>
+    <div class="env-card">
+      <div class="env-card-title">Models</div>
+      <div class="env-row"><span class="env-key">Captioning</span><span class="env-val">Qwen2-Audio-7B-Instruct</span></div>
+      <div class="env-row"><span class="env-key">Generation</span><span class="env-val">musicgen-melody</span></div>
+      <div class="env-row"><span class="env-key">CLAP ckpt</span><span class="env-val">music_speech_...89.98.pt</span></div>
+      <div class="env-row"><span class="env-key">Aesthetics</span><span class="env-val">audiobox_aesthetics</span></div>
+    </div>
+    <div class="env-card">
+      <div class="env-card-title">Key Versions</div>
+      <div class="env-row"><span class="env-key">transformers (gen)</span><span class="env-val">4.35.2</span></div>
+      <div class="env-row"><span class="env-key">transformers (cap/eval)</span><span class="env-val">4.45.2</span></div>
+      <div class="env-row"><span class="env-key">laion-clap</span><span class="env-val">1.1.7</span></div>
+      <div class="env-row"><span class="env-key">numpy</span><span class="env-val">1.26.4</span></div>
+    </div>
+  </div>
+
+<pre><span class="comment"># 1. Create environment</span>
+<span class="cmd">conda create -n deep_mir_hw2 python=3.10
+conda activate deep_mir_hw2</span>
+
+<span class="comment"># 2. Install core stack</span>
+<span class="cmd">pip install torch==2.1.0+cu121 torchaudio==2.1.0+cu121 torchvision==0.16.0+cu121 \
+    --index-url https://download.pytorch.org/whl/cu121
+pip install numpy==1.26.4 audiocraft==1.3.0
+pip install transformers==4.45.2 accelerate
+pip install laion-clap==1.1.7 audiobox_aesthetics librosa soundfile scipy av==13.1.0</span>
+
+<span class="comment"># 3. Download CLAP checkpoint</span>
+<span class="cmd">wget https://huggingface.co/lukewys/laion_clap/resolve/main/music_speech_audioset_epoch_15_esc_89.98.pt</span>
+
+<span class="comment"># 4. Run pipeline</span>
+<span class="cmd">python step1_retrieval.py</span>
+<span class="cmd">python step2_captioning.py</span>
+<span class="cmd">pip install transformers==4.35.2   <span class="comment"># pin back for audiocraft</span>
+python step3_generation.py</span>
+<span class="cmd">pip install transformers==4.45.2   <span class="comment"># upgrade for eval</span>
+python step4_eval.py</span></pre>
+</div>
+
+<script>
+// ── DATA ─────────────────────────────────────────────────────────────────────
+
+const TRACKS = [
+  {
+    name: "10_country_114_beat_4-4.wav",
+    type: "Drum Solo · Country",
+    caption: "This music is characterized by its genre, which is rock and alternative with elements of electronic pop. The instrument used includes drums, bass, and percussion. It has a tempo of 105.3 bpm with a time signature of 4/4. The melody is described as cool and easygoing, featuring a recurring chord progression of G major to C major. The rhythm pattern follows a common time beat, contributing to the overall upbeat yet relaxed mood of the piece.",
+    clap: { tt: 0.107, tg: 0.356, gg: 0.394 },
+    mel: 0.1354,
+    aes: { CE: 6.53, CU: 7.27, PC: 5.67, PQ: 6.87 },
+    genFile: "outputs/generated/10_country_114_beat_4-4.wav"
+  },
+  {
+    name: "4_jazz_120_beat_3-4.wav",
+    type: "Drum Solo · Jazz",
+    caption: "This is a jazz-inspired instrumental piece with a slow tempo of around 89 BPM. It has a 4/4 time signature and features a chord progression through E major, F# minor, G major, A major, B major, C major, D# major, and G# major. The melody includes notes such as E3, F#3, G3, A3, B2, C4, D#4, and G4.",
+    clap: { tt: 0.322, tg: 0.297, gg: 0.625 },
+    mel: 0.2740,
+    aes: { CE: 7.29, CU: 7.83, PC: 5.93, PQ: 6.93 },
+    genFile: "outputs/generated/4_jazz_120_beat_3-4.wav"
+  },
+  {
+    name: "6_rock_102_beat_3-4.wav",
+    type: "Drum Solo · Rock",
+    caption: "This music is characterized by its rock beat with a unique swing to it. The drum beat follows a 4/4 time signature with a tempo of 105.3 bpm, featuring a snare on every alternate count and a soft kick on the first count. It creates an engaging and lively atmosphere suitable for scenes depicting movement or action.",
+    clap: { tt: 0.296, tg: 0.452, gg: 0.649 },
+    mel: 0.1041,
+    aes: { CE: 7.01, CU: 7.88, PC: 5.81, PQ: 7.38 },
+    genFile: "outputs/generated/6_rock_102_beat_3-4.wav"
+  },
+  {
+    name: "Hedwig's theme x dizi ｜竹笛也能施魔法！Bamboo flute_60s.mp3",
+    type: "Chinese Flute Solo",
+    caption: "The music is an instrumental piece with a flute playing a soothing melody in the key of E minor at a moderate tempo of 93.8 BPM. The melody has a waltz-like rhythm pattern with a sequence of E major, D major, and C major chords. The overall mood of the music can be described as calming and peaceful.",
+    clap: { tt: 0.438, tg: 0.432, gg: 0.586 },
+    mel: 0.6587,
+    aes: { CE: 7.08, CU: 7.13, PC: 4.74, PQ: 6.91 },
+    genFile: "outputs/generated/Hedwig's theme x dizi ｜from Harry Potter ｜竹笛也能施魔法！Bamboo flute_60s.wav"
+  },
+  {
+    name: "Mussorgsky：Pictures at an Exhibition_60s.mp3",
+    type: "Piano Solo · Classical",
+    caption: "The music is a classical piece featuring piano with a moderate tempo of 98.4 BPM in F major key. It presents an optimistic mood with a melody carried by D# major, A# major, C minor, and G minor chords. Notable musical features include the rich chord progression and the use of both major and minor chords contributing to the overall uplifting yet slightly melancholic feel.",
+    clap: { tt: 0.307, tg: 0.183, gg: 0.448 },
+    mel: 0.5341,
+    aes: { CE: 7.53, CU: 7.81, PC: 3.44, PQ: 7.37 },
+    genFile: "outputs/generated/Mussorgsky： Pictures at an Exhibition (Pletnev, Andsnes)_60s.wav"
+  },
+  {
+    name: "Spirited Away OST「Always With Me」Piano Cover_60s.mp3",
+    type: "Piano Solo · Japanese OST",
+    caption: "Instrumental piano piece with a classical genre, conveying a nostalgic and heartwarming mood. The melody is slow-paced, featuring a sequence of D4 and C4 notes that creates a soothing effect. It follows a 3/4 time signature with a tempo of approximately 105.3 bpm.",
+    clap: { tt: 0.435, tg: 0.276, gg: 0.548 },
+    mel: 0.5468,
+    aes: { CE: 7.46, CU: 7.84, PC: 4.64, PQ: 7.68 },
+    genFile: "outputs/generated/Spirited Away OST「Always With Me ⧸ Itsumo Nando Demo」Ru's Piano Cover [Sheet Music]_60s.wav"
+  },
+  {
+    name: "IRIS OUT ⧸ 米津玄師 (Piano Solo)_60s.mp3",
+    type: "Piano Solo · J-Pop",
+    caption: "Instrumental classical piece played on a grand piano with a lively tempo of 125 BPM in G# minor key featuring complex chord progressions and a melody that includes high notes like D♯6. The rhythm pattern is 4/4 time signature with a strong emphasis on the beats.",
+    clap: { tt: 0.371, tg: 0.354, gg: 0.570 },
+    mel: 0.5151,
+    aes: { CE: 7.46, CU: 7.82, PC: 4.18, PQ: 7.33 },
+    genFile: "outputs/generated/【楽譜あり】IRIS OUT⧸米津玄師（ピアノソロ上級）.wav"
+  },
+  {
+    name: "菊花台-周杰倫 (Flute + Piano)_60s.mp3",
+    type: "Chinese Flute + Piano Duet",
+    caption: "The music is instrumental with a classical genre featuring piano and strings, played at a moderate tempo of 83.3 bpm in D major key with a 4/4 time signature. The melody includes notes like E5, A4, and F#4. It's characterized by its serene and emotional depth.",
+    clap: { tt: 0.253, tg: 0.368, gg: 0.518 },
+    mel: 0.4721,
+    aes: { CE: 7.25, CU: 7.85, PC: 4.73, PQ: 7.52 },
+    genFile: "outputs/generated/【菊花台-周杰倫（D調）】.wav"
+  },
+  {
+    name: "竹笛｜这世界那么多人_cover 莫文蔚_60s.mp3",
+    type: "Chinese Flute Solo",
+    caption: "The music is instrumental with a flute playing the main melody. It has a slow tempo of 89.6 BPM in the key of C major and a time signature of 4/4. The melody includes notes like G4, E4, and D4. The overall mood of the piece is emotional and sad.",
+    clap: { tt: 0.329, tg: 0.498, gg: 0.577 },
+    mel: 0.5789,
+    aes: { CE: 7.68, CU: 8.00, PC: 4.53, PQ: 7.67 },
+    genFile: "outputs/generated/竹笛｜这世界那么多人_cover 莫文蔚_60s.wav"
+  }
+];
+
+const RETRIEVAL = [
+  { target: "10_country_114_beat_4-4.wav", matches: [
+    { rank:1, file:"81_dance-breakbeat_170_beat_4-4.wav", sim:0.830 },
+    { rank:2, file:"79_latin-reggaeton_90_beat_4-4.wav",  sim:0.818 },
+    { rank:3, file:"145_latin-brazilian-baiao_95_beat_4-4.wav", sim:0.803 }
+  ]},
+  { target: "4_jazz_120_beat_3-4.wav", matches: [
+    { rank:1, file:"82_neworleans-funk_84_beat_4-4.wav", sim:0.912 },
+    { rank:2, file:"78_jazz-fast_290_beat_4-4.wav",      sim:0.901 },
+    { rank:3, file:"145_latin-brazilian-baiao_95_beat_4-4.wav", sim:0.890 }
+  ]},
+  { target: "6_rock_102_beat_3-4.wav", matches: [
+    { rank:1, file:"82_neworleans-funk_84_beat_4-4.wav",       sim:0.976 },
+    { rank:2, file:"239_funk-purdieshuffle_130_beat_4-4.wav",  sim:0.961 },
+    { rank:3, file:"202_rock-halftime_140_beat_4-4.wav",       sim:0.947 }
+  ]},
+  { target: "Hedwig's theme x dizi", matches: [
+    { rank:1, file:"安童哥買菜.MP3",         sim:0.787 },
+    { rank:2, file:"元若藍-愛X無限大-03.綠柚子.mp3", sim:0.754 },
+    { rank:3, file:"幽蘭逢春.mp3",           sim:0.741 }
+  ]},
+  { target: "Mussorgsky: Pictures at an Exhibition", matches: [
+    { rank:1, file:"MIDI-Unprocessed_XP_21_R1_2004_04_Track04.wav", sim:0.698 },
+    { rank:2, file:"MIDI-Unprocessed_XP_22_R2_2004_02_Track02.wav", sim:0.659 },
+    { rank:3, file:"MIDI-Unprocessed_SMF_12_R1_2004_07_Track07.wav",sim:0.654 }
+  ]},
+  { target: "Spirited Away OST (Piano Cover)", matches: [
+    { rank:1, file:"MIDI-Unprocessed_XP_21_R1_2004_04_Track04.wav", sim:0.719 },
+    { rank:2, file:"MIDI-Unprocessed_XP_22_R2_2004_02_Track02.wav", sim:0.684 },
+    { rank:3, file:"MIDI-Unprocessed_XP_20_R1_2004_02_Track02.wav", sim:0.672 }
+  ]},
+  { target: "IRIS OUT / 米津玄師 (Piano Solo)", matches: [
+    { rank:1, file:"山樂III 繆儀琳、小巨人團演奏.mp3", sim:0.553 },
+    { rank:2, file:"黃土情.mp3",                       sim:0.538 },
+    { rank:3, file:"MIDI-Unprocessed_XP_18_R1_2004_05_Track05.wav", sim:0.531 }
+  ]},
+  { target: "菊花台 (Flute + Piano)", matches: [
+    { rank:1, file:"MIDI-Unprocessed_XP_21_R1_2004_04_Track04.wav", sim:0.611 },
+    { rank:2, file:"MIDI-Unprocessed_XP_19_R1_2004_02_Track02.wav", sim:0.561 },
+    { rank:3, file:"MIDI-Unprocessed_XP_22_R2_2004_02_Track02.wav", sim:0.536 }
+  ]},
+  { target: "竹笛｜这世界那么多人_cover 莫文蔚", matches: [
+    { rank:1, file:"MIDI-Unprocessed_XP_21_R1_2004_04_Track04.wav", sim:0.628 },
+    { rank:2, file:"MIDI-Unprocessed_XP_22_R2_2004_02_Track02.wav", sim:0.599 },
+    { rank:3, file:"MIDI-Unprocessed_XP_19_R1_2004_02_Track02.wav", sim:0.588 }
+  ]}
+];
+
+// ── HELPERS ──────────────────────────────────────────────────────────────────
+
+function colorVal(v, lo, hi) {
+  if (v >= hi) return 'val-high';
+  if (v >= lo) return 'val-mid';
+  return 'val-low';
+}
+
+function simColor(s) {
+  if (s >= 0.8) return 'val-high';
+  if (s >= 0.6) return 'val-mid';
+  return 'val-low';
+}
+
+// ── RENDER TRACKS ─────────────────────────────────────────────────────────────
+
+function renderTracks() {
+  const grid = document.getElementById('tracksGrid');
+  TRACKS.forEach((t, i) => {
+    const card = document.createElement('div');
+    card.className = 'track-card';
+    card.innerHTML = `
+      <div class="track-header">
+        <div class="track-idx">${String(i+1).padStart(2,'0')}</div>
+        <div>
+          <div class="track-name">${t.name}</div>
+          <div class="track-type">${t.type}</div>
+        </div>
+      </div>
+      <div class="track-body">
+        <div class="audio-label">ALM Caption</div>
+        <div class="caption-box" onclick="this.classList.toggle('expanded')">${t.caption}</div>
+
+        <div class="audio-label">CLAP Similarity</div>
+        <div class="metrics-row">
+          <div class="metric">
+            <div class="metric-label">tgt↔txt</div>
+            <div class="metric-value ${colorVal(t.clap.tt,0.25,0.4)}">${t.clap.tt.toFixed(3)}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">txt↔gen</div>
+            <div class="metric-value ${colorVal(t.clap.tg,0.25,0.4)}">${t.clap.tg.toFixed(3)}</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">tgt↔gen</div>
+            <div class="metric-value ${colorVal(t.clap.gg,0.5,0.6)}">${t.clap.gg.toFixed(3)}</div>
+          </div>
+        </div>
+
+        <div class="audio-label">Melody Accuracy &nbsp;<span style="color:var(--accent);font-size:0.7rem;">${(t.mel*100).toFixed(1)}%</span></div>
+        <div style="height:4px;background:var(--border);border-radius:2px;margin-bottom:1rem;overflow:hidden;">
+          <div style="height:100%;width:${t.mel*100}%;background:${t.mel>0.5?'var(--success)':t.mel>0.25?'var(--accent3)':'#ef4444'};border-radius:2px;"></div>
+        </div>
+
+        <div class="audio-label">Audiobox Aesthetics (Generated)</div>
+        <div class="audiobox-row">
+          ${['CE','CU','PC','PQ'].map(k=>`
+          <div class="aes-metric">
+            <div class="aes-label">${k}</div>
+            <div class="aes-bar-wrap"><div class="aes-bar" style="width:${t.aes[k]/10*100}%"></div></div>
+            <div class="aes-val">${t.aes[k].toFixed(2)}</div>
+          </div>`).join('')}
+        </div>
+
+        <div class="audio-section">
+          <div class="audio-label">Generated Audio (30s)</div>
+          <div class="audio-note">
+            ⚠ Audio files are relative to this HTML file's location.<br>
+            Place this file at <code>CommE5070/</code> root to enable playback,<br>
+            or host the generated/ folder alongside it.
+          </div>
+        </div>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+// ── RENDER RETRIEVAL ──────────────────────────────────────────────────────────
+
+function renderRetrieval() {
+  const list = document.getElementById('retrievalList');
+  RETRIEVAL.forEach(r => {
+    const item = document.createElement('div');
+    item.className = 'ret-item';
+    item.innerHTML = `
+      <div>
+        <div class="ret-target">${r.target}</div>
+        <div class="ret-matches">
+          ${r.matches.map(m=>`
+          <div class="ret-match">
+            <span class="ret-rank">#${m.rank}</span>
+            <span class="ret-file">${m.file}</span>
+            <span class="ret-sim ${simColor(m.sim)}">${m.sim.toFixed(3)}</span>
+          </div>`).join('')}
+        </div>
+      </div>
+    `;
+    list.appendChild(item);
+  });
+}
+
+// ── RENDER EVAL TABLE ─────────────────────────────────────────────────────────
+
+function renderEvalTable() {
+  const tbody = document.getElementById('evalBody');
+  TRACKS.forEach(t => {
+    const tr = document.createElement('tr');
+    const shortName = t.name.length > 40 ? t.name.slice(0,38)+'…' : t.name;
+    tr.innerHTML = `
+      <td class="highlight" title="${t.name}">${shortName}</td>
+      <td class="${colorVal(t.clap.tt,0.25,0.4)}">${t.clap.tt.toFixed(3)}</td>
+      <td class="${colorVal(t.clap.tg,0.25,0.4)}">${t.clap.tg.toFixed(3)}</td>
+      <td class="${colorVal(t.clap.gg,0.5,0.6)}">${t.clap.gg.toFixed(3)}</td>
+      <td class="bar-cell">
+        <div class="inline-bar">
+          <div class="inline-bar-bg"><div class="inline-bar-fill" style="width:${t.mel*100}%;background:${t.mel>0.5?'var(--success)':t.mel>0.25?'var(--accent3)':'#ef4444'}"></div></div>
+          <span style="color:var(--text)">${(t.mel*100).toFixed(1)}%</span>
+        </div>
+      </td>
+      <td>${t.aes.CE.toFixed(2)}</td>
+      <td>${t.aes.CU.toFixed(2)}</td>
+      <td>${t.aes.PC.toFixed(2)}</td>
+      <td>${t.aes.PQ.toFixed(2)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ── NAV ───────────────────────────────────────────────────────────────────────
+
+function show(id, btn) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ── INIT ──────────────────────────────────────────────────────────────────────
+renderTracks();
+renderRetrieval();
+renderEvalTable();
+</script>
+</body>
+</html>
