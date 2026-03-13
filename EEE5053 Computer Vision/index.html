@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CV HW1 — James Christian</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --border: #1e1e2e;
+    --accent: #c8f060;
+    --accent2: #60c8f0;
+    --text: #e8e8f0;
+    --muted: #5a5a72;
+    --card: #13131c;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* ── NOISE OVERLAY ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 999; opacity: 0.35;
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1.2rem 3rem;
+    background: rgba(10,10,15,0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-logo { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1rem; color: var(--accent); letter-spacing: 0.05em; }
+  .nav-links { display: flex; gap: 2rem; }
+  .nav-links a { color: var(--muted); text-decoration: none; font-size: 0.8rem; letter-spacing: 0.1em; text-transform: uppercase; transition: color 0.2s; }
+  .nav-links a:hover { color: var(--accent); }
+
+  /* ── HERO ── */
+  .hero {
+    min-height: 100vh;
+    display: flex; flex-direction: column; justify-content: flex-end;
+    padding: 0 3rem 5rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(200,240,96,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(200,240,96,0.04) 1px, transparent 1px);
+    background-size: 60px 60px;
+    animation: gridshift 20s linear infinite;
+  }
+  @keyframes gridshift { from { transform: translateY(0); } to { transform: translateY(60px); } }
+
+  .hero-tag {
+    font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 1.5rem;
+    display: flex; align-items: center; gap: 0.8rem;
+  }
+  .hero-tag::before { content: ''; display: block; width: 32px; height: 1px; background: var(--accent); }
+
+  .hero h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(3rem, 8vw, 7rem);
+    font-weight: 800;
+    line-height: 0.95;
+    letter-spacing: -0.03em;
+    margin-bottom: 2rem;
+  }
+  .hero h1 span { color: var(--accent); }
+  .hero h1 .dim { color: var(--muted); }
+
+  .hero-meta {
+    display: flex; gap: 3rem; align-items: flex-end;
+    flex-wrap: wrap;
+  }
+  .hero-desc { max-width: 480px; color: var(--muted); font-size: 0.85rem; line-height: 1.8; }
+  .hero-info { display: flex; flex-direction: column; gap: 0.3rem; }
+  .hero-info span { font-size: 0.75rem; color: var(--muted); }
+  .hero-info strong { font-family: 'Syne', sans-serif; color: var(--text); font-size: 0.9rem; }
+
+  /* ── SECTION ── */
+  section { padding: 6rem 3rem; max-width: 1200px; margin: 0 auto; }
+
+  .section-label {
+    font-size: 0.7rem; letter-spacing: 0.25em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 0.8rem;
+    display: flex; align-items: center; gap: 0.8rem;
+  }
+  .section-label::before { content: ''; display: block; width: 20px; height: 1px; background: var(--accent); }
+
+  h2 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(1.8rem, 4vw, 3rem);
+    font-weight: 700; line-height: 1.1;
+    margin-bottom: 1rem;
+  }
+  h3 {
+    font-family: 'Syne', sans-serif;
+    font-size: 1.2rem; font-weight: 600;
+    color: var(--accent2);
+    margin: 2.5rem 0 1rem;
+  }
+  p { color: var(--muted); margin-bottom: 1rem; max-width: 720px; }
+
+  /* ── DIVIDER ── */
+  .divider { border: none; border-top: 1px solid var(--border); margin: 0; }
+
+  /* ── CONCEPT CARDS ── */
+  .concept-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5px; margin: 3rem 0;
+    border: 1.5px solid var(--border);
+  }
+  .concept-card {
+    background: var(--card); padding: 2rem;
+    border: 1px solid var(--border);
+    transition: background 0.2s;
+    position: relative; overflow: hidden;
+  }
+  .concept-card:hover { background: #17172a; }
+  .concept-card::before {
+    content: attr(data-num);
+    position: absolute; top: -0.5rem; right: 1rem;
+    font-family: 'Syne', sans-serif; font-size: 5rem; font-weight: 800;
+    color: rgba(200,240,96,0.04); line-height: 1; pointer-events: none;
+  }
+  .concept-card h4 { font-family: 'Syne', sans-serif; font-size: 0.95rem; font-weight: 700; margin-bottom: 0.8rem; color: var(--text); }
+  .concept-card p { font-size: 0.82rem; color: var(--muted); margin: 0; max-width: none; }
+
+  /* ── FORMULA BOX ── */
+  .formula-box {
+    background: var(--card); border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    padding: 1.5rem 2rem; margin: 2rem 0;
+    font-size: 0.85rem; color: var(--accent2);
+    overflow-x: auto;
+  }
+  .formula-box .label { font-size: 0.7rem; color: var(--muted); letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 0.5rem; }
+
+  /* ── PIPELINE ── */
+  .pipeline {
+    display: flex; align-items: center; flex-wrap: wrap;
+    gap: 0; margin: 2.5rem 0;
+  }
+  .pipe-step {
+    background: var(--card); border: 1px solid var(--border);
+    padding: 0.8rem 1.2rem;
+    font-size: 0.78rem; color: var(--text);
+    white-space: nowrap;
+  }
+  .pipe-arrow { color: var(--accent); padding: 0 0.5rem; font-size: 1rem; }
+
+  /* ── IMAGE GRID ── */
+  .img-grid {
+    display: grid; gap: 2px;
+    margin: 2rem 0;
+  }
+  .img-grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
+  .img-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+  .img-grid.cols-2 { grid-template-columns: repeat(2, 1fr); }
+  .img-grid.cols-1 { grid-template-columns: 1fr; max-width: 640px; }
+
+  .img-cell {
+    background: var(--card); border: 1px solid var(--border);
+    overflow: hidden; position: relative;
+  }
+  .img-cell img { width: 100%; display: block; object-fit: cover; transition: transform 0.4s; }
+  .img-cell:hover img { transform: scale(1.03); }
+  .img-caption {
+    padding: 0.6rem 0.8rem;
+    font-size: 0.7rem; color: var(--muted);
+    letter-spacing: 0.05em; border-top: 1px solid var(--border);
+    background: var(--card);
+  }
+  .img-caption .tag {
+    display: inline-block; background: var(--accent); color: #000;
+    font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em;
+    padding: 0.1rem 0.4rem; margin-right: 0.4rem; text-transform: uppercase;
+  }
+  .img-caption .tag.blue { background: var(--accent2); }
+  .img-caption .tag.red { background: #f06060; }
+
+  /* ── COST TABLE ── */
+  .cost-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin: 2rem 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+  th {
+    font-family: 'Syne', sans-serif; font-size: 0.7rem;
+    letter-spacing: 0.15em; text-transform: uppercase;
+    padding: 0.8rem 1rem; text-align: left;
+    border-bottom: 2px solid var(--accent);
+    color: var(--accent);
+  }
+  td { padding: 0.65rem 1rem; border-bottom: 1px solid var(--border); color: var(--muted); }
+  tr:hover td { background: #17172a; color: var(--text); }
+  .best-row td { color: var(--accent) !important; }
+  .worst-row td { color: #f06060 !important; }
+  .table-title { font-family: 'Syne', sans-serif; font-size: 0.8rem; color: var(--text); margin-bottom: 0.8rem; letter-spacing: 0.1em; }
+
+  /* ── THRESHOLD SECTION ── */
+  .threshold-row { display: grid; grid-template-columns: 80px 1fr; gap: 2px; margin-bottom: 2px; align-items: stretch; }
+  .threshold-label {
+    background: var(--card); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Syne', sans-serif; font-size: 1.1rem; font-weight: 700;
+    color: var(--accent); writing-mode: vertical-rl; letter-spacing: 0.1em;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 3rem;
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 1rem;
+    color: var(--muted); font-size: 0.75rem;
+  }
+  footer strong { color: var(--accent); font-family: 'Syne', sans-serif; }
+
+  /* ── SCROLL REVEAL ── */
+  .reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.6s ease, transform 0.6s ease; }
+  .reveal.visible { opacity: 1; transform: none; }
+
+  @media (max-width: 768px) {
+    nav { padding: 1rem 1.5rem; }
+    .hero { padding: 0 1.5rem 4rem; }
+    section { padding: 4rem 1.5rem; }
+    .img-grid.cols-4 { grid-template-columns: repeat(2, 1fr); }
+    .cost-wrap { grid-template-columns: 1fr; }
+    .threshold-row { grid-template-columns: 1fr; }
+    .threshold-label { writing-mode: horizontal-tb; padding: 0.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">CV / HW1</div>
+  <div class="nav-links">
+    <a href="#part1">Part 1</a>
+    <a href="#part2">Part 2</a>
+    <a href="#results">Results</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-tag">Computer Vision · Spring 2026</div>
+  <h1>
+    Scale Invariant<br/>
+    <span>Feature Detection</span><br/>
+    <span class="dim">&amp; Image Filtering</span>
+  </h1>
+  <div class="hero-meta">
+    <p class="hero-desc">
+      Implementation of Difference of Gaussian (DoG) for scale-invariant keypoint detection,
+      and a vectorized Joint Bilateral Filter for edge-preserving image smoothing
+      with optimal grayscale guidance selection.
+    </p>
+    <div class="hero-info">
+      <span>Author</span><strong>James Christian</strong>
+      <span style="margin-top:0.8rem">Student ID</span><strong>R13921031</strong>
+    </div>
+  </div>
+</div>
+
+<hr class="divider"/>
+
+<!-- PART 1 THEORY -->
+<section id="part1">
+  <div class="section-label">Part 1</div>
+  <h2>Difference of<br/><span style="color:var(--accent)">Gaussian</span></h2>
+  <p>
+    Scale-invariant feature detection identifies keypoints that remain stable across different scales of an image.
+    The Difference of Gaussian (DoG) approximates the Laplacian of Gaussian (LoG) efficiently
+    by subtracting two Gaussian-blurred images at adjacent scales.
+  </p>
+
+  <div class="concept-grid reveal">
+    <div class="concept-card" data-num="01">
+      <h4>Laplacian of Gaussian (LoG)</h4>
+      <p>Detects blob-like structures by finding zero crossings of the second derivative. Computationally expensive but theoretically optimal for scale-space extrema detection.</p>
+    </div>
+    <div class="concept-card" data-num="02">
+      <h4>Difference of Gaussian (DoG)</h4>
+      <p>Efficient approximation of LoG. Computed by subtracting two Gaussian-blurred images: DoG = G(x,σ·k) − G(x,σ). Uses two octaves with 5 Gaussian images each → 4 DoG images per octave.</p>
+    </div>
+    <div class="concept-card" data-num="03">
+      <h4>Gaussian Pyramid</h4>
+      <p>Octave 1 uses the raw input image as the base, blurred progressively with σ, σ², σ³, σ⁴ where σ = 2^(1/4). Octave 2 downsamples the last blurred image by 0.5× using nearest-neighbor interpolation.</p>
+    </div>
+    <div class="concept-card" data-num="04">
+      <h4>Local Extrema Detection</h4>
+      <p>A keypoint is detected if a pixel is strictly greater or less than all 26 neighbors in a 3×3×3 neighborhood across adjacent DoG scales, and its absolute value exceeds the threshold.</p>
+    </div>
+  </div>
+
+  <h3>Implementation Pipeline</h3>
+  <div class="pipeline reveal">
+    <div class="pipe-step">Input Image</div><div class="pipe-arrow">→</div>
+    <div class="pipe-step">Gaussian Pyramid<br/><small style="color:var(--muted)">2 octaves × 5 imgs</small></div><div class="pipe-arrow">→</div>
+    <div class="pipe-step">DoG Images<br/><small style="color:var(--muted)">4 per octave</small></div><div class="pipe-arrow">→</div>
+    <div class="pipe-step">3D Local Extrema<br/><small style="color:var(--muted)">26-neighbor check</small></div><div class="pipe-arrow">→</div>
+    <div class="pipe-step">Threshold Filter</div><div class="pipe-arrow">→</div>
+    <div class="pipe-step">Dedup + Sort<br/><small style="color:var(--muted)">np.unique</small></div>
+  </div>
+
+  <!-- DoG Images -->
+  <h3>DoG Images — 1.png (threshold = 5.0)</h3>
+  <p>8 DoG images across 2 octaves. Each image represents the difference between adjacent Gaussian-blurred versions of the input.</p>
+
+  <div style="margin-bottom:0.5rem; font-size:0.72rem; color:var(--muted); letter-spacing:0.1em; text-transform:uppercase;">Original Input Image</div>
+  <div class="img-grid cols-1 reveal">
+    <div class="img-cell">
+      <img src="part1/testdata/1.png" alt="Original 1.png"/>
+      <div class="img-caption"><span class="tag blue">INPUT</span>1.png — original grayscale input before DoG</div>
+    </div>
+  </div>
+
+  <div style="margin-bottom:0.5rem; font-size:0.72rem; color:var(--muted); letter-spacing:0.1em; text-transform:uppercase;">Octave 1 — Full Resolution</div>
+  <div class="img-grid cols-4 reveal">
+    <div class="img-cell">
+      <img src="part1/output/1_dog_oct1_0.png" alt="Oct1 DoG1"/>
+      <div class="img-caption"><span class="tag">OCT1</span>DoG 1 — σ¹→σ²</div>
+    </div>
+    <div class="img-cell">
+      <img src="part1/output/1_dog_oct1_1.png" alt="Oct1 DoG2"/>
+      <div class="img-caption"><span class="tag">OCT1</span>DoG 2 — σ²→σ³</div>
+    </div>
+    <div class="img-cell">
+      <img src="part1/output/1_dog_oct1_2.png" alt="Oct1 DoG3"/>
+      <div class="img-caption"><span class="tag">OCT1</span>DoG 3 — σ³→σ⁴</div>
+    </div>
+    <div class="img-cell">
+      <img src="part1/output/1_dog_oct1_3.png" alt="Oct1 DoG4"/>
+      <div class="img-caption"><span class="tag">OCT1</span>DoG 4 — σ⁴→σ⁵</div>
+    </div>
+  </div>
+
+  <div style="margin-bottom:0.5rem; font-size:0.72rem; color:var(--muted); letter-spacing:0.1em; text-transform:uppercase;">Octave 2 — Half Resolution (0.5×)</div>
+  <div class="img-grid cols-4 reveal">
+    <div class="img-cell">
+      <img src="part1/output/1_dog_oct2_0.png" alt="Oct2 DoG1"/>
+      <div class="img-caption"><span class="tag blue">OCT2</span>DoG 1 — σ¹→σ²</div>
+    </div>
+    <div class="img-cell">
+      <img src="part1/output/1_dog_oct2_1.png" alt="Oct2 DoG2"/>
+      <div class="img-caption"><span class="tag blue">OCT2</span>DoG 2 — σ²→σ³</div>
+    </div>
+    <div class="img-cell">
+      <img src="part1/output/1_dog_oct2_2.png" alt="Oct2 DoG3"/>
+      <div class="img-caption"><span class="tag blue">OCT2</span>DoG 3 — σ³→σ⁴</div>
+    </div>
+    <div class="img-cell">
+      <img src="part1/output/1_dog_oct2_3.png" alt="Oct2 DoG4"/>
+      <div class="img-caption"><span class="tag blue">OCT2</span>DoG 4 — σ⁴→σ⁵</div>
+    </div>
+  </div>
+
+  <!-- Threshold Comparison -->
+  <h3 id="results">Threshold Comparison — 2.png</h3>
+  <p>
+    Higher thresholds filter out weak responses, retaining only the most salient keypoints.
+    Lower thresholds detect more features but include noise and false positives.
+  </p>
+
+  <div class="reveal" style="margin:2rem 0;">
+    <div class="threshold-row">
+      <div class="threshold-label">t = 0.5</div>
+      <div class="img-cell">
+        <img src="part1/output/2_keypoints_t0.5.png" alt="threshold 0.5"/>
+        <div class="img-caption"><span class="tag">161 keypoints</span>Low threshold — many features including noise</div>
+      </div>
+    </div>
+    <div class="threshold-row">
+      <div class="threshold-label">t = 1.0</div>
+      <div class="img-cell">
+        <img src="part1/output/2_keypoints_t1.0.png" alt="threshold 1.0"/>
+        <div class="img-caption"><span class="tag blue">58 keypoints</span>Medium threshold — balanced detection</div>
+      </div>
+    </div>
+    <div class="threshold-row">
+      <div class="threshold-label">t = 5.0</div>
+      <div class="img-cell">
+        <img src="part1/output/2_keypoints_t5.0.png" alt="threshold 5.0"/>
+        <div class="img-caption"><span class="tag red">9 keypoints</span>High threshold — only the most prominent features</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider"/>
+
+<!-- PART 2 THEORY -->
+<section id="part2">
+  <div class="section-label">Part 2</div>
+  <h2>Joint Bilateral<br/><span style="color:var(--accent)">Filter</span></h2>
+  <p>
+    The bilateral filter smooths images while preserving edges by combining a spatial Gaussian kernel
+    with a range kernel based on intensity differences. The Joint Bilateral Filter (JBF) decouples
+    the guidance signal, allowing a separate grayscale image to control edge preservation.
+  </p>
+
+  <div class="formula-box reveal">
+    <div class="label">JBF Formulation</div>
+    I'(p) = [ Σ_{q∈Ω} G_s(p,q) · G_r(T_p, T_q) · I(q) ] / [ Σ_{q∈Ω} G_s(p,q) · G_r(T_p, T_q) ]<br/><br/>
+    G_s(p,q) = exp( −‖p−q‖² / 2σ_s² )  &nbsp;&nbsp;  G_r(T_p,T_q) = exp( −‖T_p−T_q‖² / 2σ_r² )
+  </div>
+
+  <div class="concept-grid reveal">
+    <div class="concept-card" data-num="01">
+      <h4>Spatial Kernel G_s</h4>
+      <p>Gaussian based on pixel distance. Window size = 6σ_s + 1. Precomputed as a 2D LUT before filtering — reused for every pixel, eliminating redundant exp() calls.</p>
+    </div>
+    <div class="concept-card" data-num="02">
+      <h4>Range Kernel G_r</h4>
+      <p>Gaussian based on intensity difference in guidance image T, normalized to [0,1]. For grayscale guidance: scalar diff. For color guidance: Euclidean distance in RGB space.</p>
+    </div>
+    <div class="concept-card" data-num="03">
+      <h4>Grayscale Guidance Selection</h4>
+      <p>6 candidate grayscale images are generated from weighted combinations of R, G, B channels plus cv2 standard. The one minimizing L1 cost between JBF output and original is selected as optimal.</p>
+    </div>
+    <div class="concept-card" data-num="04">
+      <h4>Vectorization Strategy</h4>
+      <p>All pixel-level operations replaced with NumPy array shifts. Only W×W kernel offset loops remain. Achieves ~0.24 sec — faster than the reference 0.26 sec on AMD Ryzen 9 7950X.</p>
+    </div>
+  </div>
+
+  <!-- COST TABLES -->
+  <h3>JBF Cost per Grayscale Guidance</h3>
+  <p>L1-norm between JBF output and original RGB image. Lower cost = better edge preservation.</p>
+
+  <div class="cost-wrap reveal">
+    <div>
+      <div class="table-title">Image: 1.png &nbsp;|&nbsp; σ_s=2, σ_r=0.1</div>
+      <table>
+        <thead><tr><th>Grayscale Setting</th><th>Cost</th></tr></thead>
+        <tbody>
+          <tr class="best-row"><td>R×0.8 + G×0.2 + B×0.0</td><td>2,480,017 ★</td></tr>
+          <tr><td>cv2.COLOR_BGR2GRAY</td><td>2,522,821</td></tr>
+          <tr><td>R×0.1 + G×0.4 + B×0.5</td><td>2,584,439</td></tr>
+          <tr><td>R×0.0 + G×1.0 + B×0.0</td><td>2,598,167</td></tr>
+          <tr><td>R×0.1 + G×0.0 + B×0.9</td><td>2,685,522</td></tr>
+          <tr class="worst-row"><td>R×0.0 + G×0.0 + B×1.0</td><td>2,719,330 ✗</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div>
+      <div class="table-title">Image: 2.png &nbsp;|&nbsp; σ_s=1, σ_r=0.05</div>
+      <table>
+        <thead><tr><th>Grayscale Setting</th><th>Cost</th></tr></thead>
+        <tbody>
+          <tr class="best-row"><td>R×0.1 + G×0.0 + B×0.9</td><td>596,105 ★</td></tr>
+          <tr><td>R×0.2 + G×0.0 + B×0.8</td><td>600,574</td></tr>
+          <tr><td>R×1.0 + G×0.0 + B×0.0</td><td>614,089</td></tr>
+          <tr><td>R×0.4 + G×0.0 + B×0.6</td><td>632,100</td></tr>
+          <tr><td>cv2.COLOR_BGR2GRAY</td><td>676,556</td></tr>
+          <tr class="worst-row"><td>R×0.2 + G×0.8 + B×0.0</td><td>681,602 ✗</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- VISUAL RESULTS -->
+  <h3>Visual Results — 1.png</h3>
+  <p>Comparing original, highest-cost filtered (blue-only guidance), and lowest-cost filtered (red-dominant guidance).</p>
+
+  <div class="img-grid cols-3 reveal">
+    <div class="img-cell">
+      <img src="part2/output/1_original.png" alt="Original 1"/>
+      <div class="img-caption"><span class="tag blue">ORIGINAL</span>Input RGB image</div>
+    </div>
+    <div class="img-cell">
+      <img src="part2/output/1_filtered_worst.png" alt="Filtered worst 1"/>
+      <div class="img-caption"><span class="tag red">WORST</span>Filtered — R×0.0+G×0.0+B×1.0</div>
+    </div>
+    <div class="img-cell">
+      <img src="part2/output/1_filtered_best.png" alt="Filtered best 1"/>
+      <div class="img-caption"><span class="tag">BEST</span>Filtered — R×0.8+G×0.2+B×0.0</div>
+    </div>
+  </div>
+
+  <div class="img-grid cols-2 reveal" style="max-width:640px;">
+    <div class="img-cell">
+      <img src="part2/output/1_gray_worst.png" alt="Gray worst 1"/>
+      <div class="img-caption"><span class="tag red">WORST GUIDANCE</span>Blue channel only — low contrast</div>
+    </div>
+    <div class="img-cell">
+      <img src="part2/output/1_gray_best.png" alt="Gray best 1"/>
+      <div class="img-caption"><span class="tag">BEST GUIDANCE</span>Red-dominant — high edge contrast</div>
+    </div>
+  </div>
+
+  <h3>Visual Results — 2.png</h3>
+  <p>Comparing original, highest-cost filtered (green-dominant guidance), and lowest-cost filtered (blue-dominant guidance).</p>
+
+  <div class="img-grid cols-3 reveal">
+    <div class="img-cell">
+      <img src="part2/output/2_original.png" alt="Original 2"/>
+      <div class="img-caption"><span class="tag blue">ORIGINAL</span>Input RGB image</div>
+    </div>
+    <div class="img-cell">
+      <img src="part2/output/2_filtered_worst.png" alt="Filtered worst 2"/>
+      <div class="img-caption"><span class="tag red">WORST</span>Filtered — R×0.2+G×0.8+B×0.0</div>
+    </div>
+    <div class="img-cell">
+      <img src="part2/output/2_filtered_best.png" alt="Filtered best 2"/>
+      <div class="img-caption"><span class="tag">BEST</span>Filtered — R×0.1+G×0.0+B×0.9</div>
+    </div>
+  </div>
+
+  <div class="img-grid cols-2 reveal" style="max-width:640px;">
+    <div class="img-cell">
+      <img src="part2/output/2_gray_worst.png" alt="Gray worst 2"/>
+      <div class="img-caption"><span class="tag red">WORST GUIDANCE</span>Green-dominant — weak boundaries</div>
+    </div>
+    <div class="img-cell">
+      <img src="part2/output/2_gray_best.png" alt="Gray best 2"/>
+      <div class="img-caption"><span class="tag">BEST GUIDANCE</span>Blue-dominant — strong edge contrast</div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider"/>
+
+<footer>
+  <div>
+    <strong>James Christian</strong> · R13921031<br/>
+    <span>Computer Vision HW1 · NTU Spring 2026</span>
+  </div>
+  <div style="text-align:right;">
+    <span>DoG: 169 keypoints matched ✓</span><br/>
+    <span>JBF: BF error=0, JBF error=0 ✓ · 0.24 sec</span>
+  </div>
+</footer>
+
+<script>
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach((e, i) => {
+      if (e.isIntersecting) {
+        setTimeout(() => e.target.classList.add('visible'), i * 80);
+        observer.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.1 });
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
