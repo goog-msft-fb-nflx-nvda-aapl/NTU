@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gaussian SLAM: Gaussian Splatting SLAM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:     #06090e;
+  --bg2:    #0a1018;
+  --bg3:    #0f1620;
+  --panel:  #0c1622;
+  --border: #1a2d1a;
+  --accent:  #39ff88;   /* gaussian green */
+  --accent2: #a8ff3e;   /* lime */
+  --accent3: #00e5ff;   /* cyan */
+  --warn:    #ffb830;   /* amber */
+  --purple:  #b97aff;
+  --text:   #d4eedd;
+  --muted:  #4a7a5a;
+  --card:   #0b1714;
+  --glow:   0 0 30px rgba(57,255,136,0.12);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  line-height: 1.7;
+  overflow-x: hidden;
+}
+
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 0; opacity: 0.5;
+}
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 2px; }
+
+/* ─── NAV ─── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0;
+  z-index: 100;
+  background: rgba(6,9,14,0.88);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 2rem;
+  display: flex; align-items: center; justify-content: space-between;
+  height: 56px;
+}
+.nav-logo { font-family:'Space Mono',monospace; font-size:0.75rem; color:var(--accent); letter-spacing:0.1em; }
+.nav-links { display:flex; gap:1.5rem; list-style:none; }
+.nav-links a { font-family:'Space Mono',monospace; font-size:0.65rem; letter-spacing:0.08em; color:var(--muted); text-decoration:none; text-transform:uppercase; transition:color 0.2s; }
+.nav-links a:hover { color:var(--accent); }
+
+/* ─── HERO ─── */
+.hero {
+  min-height: 100vh;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  position: relative; padding: 6rem 2rem 4rem; text-align: center; overflow: hidden;
+}
+
+.hero-grid {
+  position: absolute; inset: 0;
+  background-image:
+    linear-gradient(rgba(57,255,136,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(57,255,136,0.03) 1px, transparent 1px);
+  background-size: 50px 50px;
+  mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black, transparent);
+}
+
+/* Floating Gaussians in hero background */
+.hero-gaussians {
+  position: absolute; inset: 0; pointer-events: none; overflow: hidden;
+}
+.gauss-blob {
+  position: absolute; border-radius: 50%;
+  filter: blur(60px); opacity: 0.15;
+}
+.gb1 { width:400px; height:300px; background:radial-gradient(var(--accent), transparent 70%); top:-80px; right:-60px; animation:gf1 9s ease-in-out infinite; }
+.gb2 { width:300px; height:400px; background:radial-gradient(var(--accent2), transparent 70%); bottom:-100px; left:-60px; animation:gf2 11s ease-in-out infinite; }
+.gb3 { width:250px; height:250px; background:radial-gradient(var(--accent3), transparent 70%); top:40%; left:10%; animation:gf3 7s ease-in-out infinite; }
+
+@keyframes gf1 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(-30px,20px) scale(1.1)} }
+@keyframes gf2 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(20px,-30px) scale(0.9)} }
+@keyframes gf3 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(40px,15px)} }
+
+.award-badge {
+  display:inline-flex; align-items:center; gap:0.5rem;
+  font-family:'Space Mono',monospace; font-size:0.65rem; letter-spacing:0.12em;
+  color:var(--warn); border:1px solid rgba(255,184,48,0.35);
+  padding:0.35rem 0.9rem; border-radius:2px; margin-bottom:0.75rem;
+  background:rgba(255,184,48,0.06); text-transform:uppercase;
+}
+.award-badge::before { content:'🏆'; font-size:0.75rem; }
+
+.badge {
+  display:inline-flex; align-items:center; gap:0.5rem;
+  font-family:'Space Mono',monospace; font-size:0.65rem; letter-spacing:0.15em;
+  color:var(--accent); border:1px solid rgba(57,255,136,0.3);
+  padding:0.35rem 0.9rem; border-radius:2px; margin-bottom:2rem;
+  background:rgba(57,255,136,0.05); text-transform:uppercase;
+}
+.badge::before { content:''; width:6px; height:6px; background:var(--accent); border-radius:50%; animation:pulse 2s ease-in-out infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+h1 { font-family:'Syne',sans-serif; font-size:clamp(2.5rem,6vw,5rem); font-weight:800; line-height:1.0; letter-spacing:-0.02em; margin-bottom:0.5rem; }
+.title-gaussian { color:var(--text); }
+.title-slam { color:transparent; background:linear-gradient(135deg,var(--accent),var(--accent2)); -webkit-background-clip:text; background-clip:text; }
+
+.subtitle { font-family:'Space Mono',monospace; font-size:0.8rem; color:var(--muted); letter-spacing:0.1em; margin-bottom:2rem; text-transform:uppercase; }
+.hero-desc { max-width:560px; color:#5a9a6a; font-size:1rem; line-height:1.8; margin-bottom:3rem; }
+
+.hero-pills { display:flex; gap:0.75rem; flex-wrap:wrap; justify-content:center; margin-bottom:3rem; }
+.pill { font-family:'Space Mono',monospace; font-size:0.65rem; padding:0.4rem 0.8rem; border-radius:2px; letter-spacing:0.08em; text-transform:uppercase; }
+.pill-cvpr { background:rgba(57,255,136,0.10); color:var(--accent); border:1px solid rgba(57,255,136,0.25); }
+.pill-mono { background:rgba(0,229,255,0.10); color:var(--accent3); border:1px solid rgba(0,229,255,0.25); }
+.pill-award{ background:rgba(255,184,48,0.10); color:var(--warn); border:1px solid rgba(255,184,48,0.25); }
+
+.scroll-hint { position:absolute; bottom:2rem; left:50%; transform:translateX(-50%); font-family:'Space Mono',monospace; font-size:0.6rem; color:var(--muted); letter-spacing:0.15em; text-transform:uppercase; display:flex; flex-direction:column; align-items:center; gap:0.5rem; }
+.scroll-line { width:1px; height:40px; background:linear-gradient(var(--accent),transparent); animation:scrollDown 2s ease-in-out infinite; }
+@keyframes scrollDown { 0%{transform:scaleY(0);transform-origin:top} 50%{transform:scaleY(1);transform-origin:top} 51%{transform:scaleY(1);transform-origin:bottom} 100%{transform:scaleY(0);transform-origin:bottom} }
+
+/* ─── SECTIONS ─── */
+section { position:relative; z-index:1; padding:5rem 2rem; max-width:1100px; margin:0 auto; }
+
+.section-label { font-family:'Space Mono',monospace; font-size:0.62rem; letter-spacing:0.2em; text-transform:uppercase; color:var(--accent); margin-bottom:0.75rem; display:flex; align-items:center; gap:0.75rem; }
+.section-label::before { content:''; display:inline-block; width:24px; height:1px; background:var(--accent); }
+
+h2 { font-family:'Syne',sans-serif; font-size:clamp(1.8rem,3.5vw,2.8rem); font-weight:700; line-height:1.1; letter-spacing:-0.02em; margin-bottom:1.5rem; }
+h3 { font-family:'Syne',sans-serif; font-size:1.3rem; font-weight:600; margin-bottom:0.75rem; }
+p { color:#5a9a6a; margin-bottom:1rem; }
+
+.divider { width:100%; height:1px; background:linear-gradient(90deg,transparent,var(--border),transparent); margin:0; }
+
+/* ─── CARDS ─── */
+.card-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:1rem; margin-top:2rem; }
+.card { background:var(--card); border:1px solid var(--border); border-radius:4px; padding:1.5rem; position:relative; overflow:hidden; transition:border-color 0.3s,transform 0.3s; }
+.card:hover { border-color:var(--accent); transform:translateY(-2px); box-shadow:var(--glow); }
+.card-icon { font-size:1.8rem; margin-bottom:0.75rem; }
+.card h3 { font-size:1rem; margin-bottom:0.5rem; color:var(--text); }
+.card p { font-size:0.875rem; margin:0; }
+.card::after { content:''; position:absolute; top:0;left:0;right:0; height:2px; background:linear-gradient(90deg,var(--accent),var(--accent2)); opacity:0; transition:opacity 0.3s; }
+.card:hover::after { opacity:1; }
+
+/* ─── HIGHLIGHT BOX ─── */
+.highlight-box { border-left:3px solid var(--accent); background:rgba(57,255,136,0.04); padding:1.25rem 1.5rem; border-radius:0 4px 4px 0; margin:1.5rem 0; }
+.highlight-box.warn { border-left-color:var(--warn); background:rgba(255,184,48,0.04); }
+.highlight-box.cyan { border-left-color:var(--accent3); background:rgba(0,229,255,0.04); }
+.highlight-box.purple { border-left-color:var(--purple); background:rgba(185,122,255,0.04); }
+.highlight-box p { margin:0; font-size:0.9rem; }
+.highlight-box strong { color:var(--text); }
+
+/* ─── CODE BLOCK ─── */
+.code-block { background:#030608; border:1px solid var(--border); border-radius:4px; padding:1.5rem; font-family:'Space Mono',monospace; font-size:0.78rem; line-height:1.8; overflow-x:auto; position:relative; margin:1.5rem 0; }
+.code-block::before { content:attr(data-lang); position:absolute; top:0.5rem; right:0.75rem; font-size:0.6rem; color:var(--muted); letter-spacing:0.1em; text-transform:uppercase; }
+.tok-comment { color:#2d5a3d; }
+.tok-key  { color:var(--accent); }
+.tok-str  { color:var(--accent2); }
+.tok-num  { color:var(--warn); }
+.tok-fn   { color:var(--purple); }
+
+/* ─── GRID ─── */
+.grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:1.5rem; margin-top:2rem; }
+@media(max-width:640px){ .grid-2 { grid-template-columns:1fr; } }
+
+/* ─── TABLE ─── */
+.compare-table { width:100%; border-collapse:collapse; margin-top:2rem; font-size:0.875rem; }
+.compare-table th { font-family:'Space Mono',monospace; font-size:0.65rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); padding:0.75rem 1rem; text-align:left; border-bottom:1px solid var(--border); }
+.compare-table th:nth-child(2) { color:#5a7a99; }
+.compare-table th:nth-child(3) { color:#5a9a5a; }
+.compare-table th:nth-child(4) { color:var(--accent); }
+.compare-table td { padding:0.75rem 1rem; border-bottom:1px solid rgba(26,45,26,0.5); color:#5a9a6a; vertical-align:top; }
+.compare-table td:first-child { font-family:'Space Mono',monospace; font-size:0.75rem; color:var(--text); }
+.compare-table tr:hover td { background:rgba(57,255,136,0.02); }
+.tag-bad  { color:var(--warn); }
+.tag-good { color:var(--accent); }
+.tag-mid  { color:var(--accent3); }
+
+/* ─── FORMULA ─── */
+.formula { font-family:'Space Mono',monospace; font-size:0.88rem; background:var(--bg); border:1px solid var(--border); padding:1rem 1.5rem; border-radius:4px; color:var(--accent2); text-align:center; margin:1rem 0; overflow-x:auto; }
+
+/* ─── DEMO ─── */
+.demo-container { background:var(--card); border:1px solid var(--border); border-radius:4px; overflow:hidden; margin-top:2rem; }
+.demo-header { background:var(--bg2); border-bottom:1px solid var(--border); padding:0.75rem 1.25rem; display:flex; align-items:center; gap:0.5rem; font-family:'Space Mono',monospace; font-size:0.7rem; color:var(--muted); }
+.dot { width:8px; height:8px; border-radius:50%; }
+.dot-r { background:#ff5f57; } .dot-y { background:#febc2e; } .dot-g { background:#28c840; }
+.demo-body { padding:2rem; }
+
+.btn { font-family:'Space Mono',monospace; font-size:0.7rem; letter-spacing:0.08em; text-transform:uppercase; padding:0.5rem 1.2rem; border-radius:2px; border:1px solid; cursor:pointer; transition:all 0.2s; background:transparent; }
+.btn-primary { color:var(--accent); border-color:rgba(57,255,136,0.4); }
+.btn-primary:hover { background:rgba(57,255,136,0.08); border-color:var(--accent); }
+.btn-secondary { color:var(--accent3); border-color:rgba(0,229,255,0.4); }
+.btn-secondary:hover { background:rgba(0,229,255,0.08); border-color:var(--accent3); }
+.btn-warn { color:var(--warn); border-color:rgba(255,184,48,0.4); }
+.btn-warn:hover { background:rgba(255,184,48,0.08); border-color:var(--warn); }
+.demo-controls { display:flex; gap:0.75rem; flex-wrap:wrap; margin-top:1.25rem; justify-content:center; }
+
+/* ─── VIDEO PLACEHOLDER ─── */
+.video-placeholder { background:var(--bg); border:2px dashed var(--border); border-radius:4px; padding:3rem; text-align:center; color:var(--muted); font-family:'Space Mono',monospace; font-size:0.75rem; line-height:2; }
+.video-placeholder .icon { font-size:2.5rem; margin-bottom:1rem; }
+
+/* ─── SECTION DARK ─── */
+.section-dark { background:var(--bg2); border-top:1px solid var(--border); border-bottom:1px solid var(--border); max-width:100%; padding:5rem 2rem; }
+.section-dark > .inner { max-width:1100px; margin:0 auto; }
+
+/* ─── TIMELINE ─── */
+.timeline { position:relative; padding-left:2rem; margin-top:2.5rem; }
+.timeline::before { content:''; position:absolute; left:0;top:0;bottom:0; width:1px; background:linear-gradient(var(--accent),var(--accent2),transparent); }
+.timeline-item { position:relative; margin-bottom:2.5rem; }
+.timeline-item::before { content:''; position:absolute; left:-2.4rem; top:0.3rem; width:8px; height:8px; border-radius:50%; background:var(--accent); box-shadow:0 0 10px var(--accent); }
+.timeline-year { font-family:'Space Mono',monospace; font-size:0.65rem; color:var(--accent); letter-spacing:0.1em; margin-bottom:0.25rem; }
+.timeline-item h3 { font-size:1.1rem; color:var(--text); margin-bottom:0.5rem; }
+.timeline-item p { font-size:0.9rem; }
+
+/* ─── QUIZ ─── */
+.quiz-card { background:var(--card); border:1px solid var(--border); border-radius:4px; padding:2rem; margin-bottom:1.25rem; }
+.quiz-q { font-family:'Syne',sans-serif; font-size:1rem; font-weight:600; margin-bottom:1.25rem; color:var(--text); }
+.quiz-options { display:flex; flex-direction:column; gap:0.6rem; }
+.quiz-opt { background:var(--bg2); border:1px solid var(--border); border-radius:3px; padding:0.7rem 1rem; font-family:'Space Mono',monospace; font-size:0.75rem; color:var(--muted); cursor:pointer; text-align:left; transition:all 0.2s; width:100%; }
+.quiz-opt:hover { border-color:var(--accent); color:var(--text); }
+.quiz-opt.correct { border-color:var(--accent); color:var(--accent); background:rgba(57,255,136,0.07); }
+.quiz-opt.wrong { border-color:var(--warn); color:var(--warn); background:rgba(255,184,48,0.07); }
+.quiz-feedback { margin-top:0.75rem; font-size:0.82rem; color:var(--muted); display:none; font-family:'Space Mono',monospace; line-height:1.7; }
+
+/* ─── RESOURCES ─── */
+.resource-list { display:flex; flex-direction:column; gap:0.75rem; margin-top:1.5rem; }
+.resource-item { display:flex; align-items:center; gap:1rem; background:var(--card); border:1px solid var(--border); border-radius:4px; padding:0.9rem 1.25rem; text-decoration:none; transition:all 0.2s; }
+.resource-item:hover { border-color:var(--accent); background:rgba(57,255,136,0.03); }
+.resource-tag { font-family:'Space Mono',monospace; font-size:0.6rem; letter-spacing:0.1em; text-transform:uppercase; padding:0.25rem 0.5rem; border-radius:2px; white-space:nowrap; }
+.tag-paper { background:rgba(57,255,136,0.1); color:var(--accent); border:1px solid rgba(57,255,136,0.2); }
+.tag-code  { background:rgba(0,229,255,0.1); color:var(--accent3); border:1px solid rgba(0,229,255,0.2); }
+.tag-video { background:rgba(255,184,48,0.1); color:var(--warn); border:1px solid rgba(255,184,48,0.2); }
+.resource-text { font-size:0.875rem; color:var(--text); }
+.resource-sub  { font-size:0.75rem; color:var(--muted); font-family:'Space Mono',monospace; }
+
+/* ─── PROGRESS / FADE ─── */
+#readProgress { position:fixed; top:56px; left:0; height:2px; background:linear-gradient(90deg,var(--accent),var(--accent2)); z-index:99; transition:width 0.1s; }
+.fade-in { opacity:0; transform:translateY(24px); transition:opacity 0.6s ease, transform 0.6s ease; }
+.fade-in.visible { opacity:1; transform:none; }
+
+/* ─── ARCH ─── */
+.arch-wrap { background:var(--card); border:1px solid var(--border); border-radius:4px; padding:2rem; margin-top:2rem; overflow-x:auto; }
+
+/* ─── GAUSSIAN SPLATTING CANVAS ─── */
+#splat-canvas { width:100%; max-width:700px; display:block; margin:0 auto; border-radius:3px; }
+.viz-label { font-family:'Space Mono',monospace; font-size:0.65rem; color:var(--muted); text-align:center; margin-top:0.75rem; letter-spacing:0.08em; }
+
+footer { border-top:1px solid var(--border); padding:2rem; text-align:center; font-family:'Space Mono',monospace; font-size:0.65rem; color:var(--muted); letter-spacing:0.08em; }
+</style>
+</head>
+<body>
+
+<div id="readProgress"></div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">// GAUSSIAN-SLAM</div>
+  <ul class="nav-links">
+    <li><a href="#prerequisites">Prereqs</a></li>
+    <li><a href="#3dgs">3DGS</a></li>
+    <li><a href="#method">Method</a></li>
+    <li><a href="#demo">Demo</a></li>
+    <li><a href="#quiz">Quiz</a></li>
+    <li><a href="#resources">Resources</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-gaussians">
+    <div class="gauss-blob gb1"></div>
+    <div class="gauss-blob gb2"></div>
+    <div class="gauss-blob gb3"></div>
+  </div>
+
+  <div class="award-badge">CVPR 2024 Highlight · Best Demo Award</div>
+  <div class="badge">Interactive Lecture · Imperial College London</div>
+
+  <h1>
+    <span class="title-gaussian">Gaussian</span><br>
+    <span class="title-slam">SLAM</span>
+  </h1>
+
+  <div class="subtitle">Gaussian Splatting SLAM · CVPR 2024</div>
+
+  <p class="hero-desc">
+    The first SLAM system that ditches neural networks entirely — and uses 3D Gaussians as the one unified representation for tracking, mapping, and photo-realistic rendering. From a single monocular camera.
+  </p>
+
+  <div class="hero-pills">
+    <span class="pill pill-cvpr">CVPR 2024 Highlight</span>
+    <span class="pill pill-mono">Monocular + RGB-D</span>
+    <span class="pill pill-award">Best Demo Award</span>
+  </div>
+
+  <div class="scroll-hint">
+    scroll
+    <div class="scroll-line"></div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ═══════════════════ PREREQUISITES ═══════════════════ -->
+<section id="prerequisites" class="fade-in">
+  <div class="section-label">Section 01</div>
+  <h2>Background You Need</h2>
+  <p>This paper sits at the intersection of SLAM and 3D Gaussian Splatting. Here's what each piece means.</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-icon">🔵</div>
+      <h3>3D Gaussian Splatting (3DGS)</h3>
+      <p>Represent a scene as millions of tiny 3D ellipsoids (Gaussians), each with a position, orientation, size, color, and opacity. Render by "splatting" them onto the image plane — extremely fast via GPU rasterization, not ray marching.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">📷</div>
+      <h3>Monocular SLAM</h3>
+      <p>The hardest SLAM setup: only a single RGB camera, no depth sensor. Scale ambiguity is a fundamental challenge — the system must infer depth purely from motion and appearance across frames.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">🗺️</div>
+      <h3>Dense vs Sparse SLAM</h3>
+      <p>Sparse SLAM tracks a few hundred keypoints. Dense SLAM reconstructs the entire scene surface. Gaussian SLAM is dense — every Gaussian contributes to both the 3D map and the rendered image used for tracking.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">⚡</div>
+      <h3>Direct Optimisation</h3>
+      <p>Instead of extracting keypoints and matching descriptors, direct methods minimise photometric error directly against the 3D representation. More robust to texture-less surfaces, but more computationally demanding.</p>
+    </div>
+  </div>
+
+  <div class="highlight-box" style="margin-top:2rem">
+    <p><strong>Key upgrade over neural SLAM:</strong> Where iMAP and NICE-SLAM use implicit neural networks (slow to query, needs ray marching), Gaussian SLAM uses <em>explicit</em> 3D Gaussians — directly rasterizable on a GPU at interactive rates.</p>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ═══════════════════ 3DGS PRIMER ═══════════════════ -->
+<section id="3dgs" class="fade-in">
+  <div class="section-label">Section 02 · Foundation</div>
+  <h2>3D Gaussian Splatting — A Quick Primer</h2>
+  <p style="max-width:700px">Before understanding Gaussian SLAM, you need to understand 3DGS itself. It's a radically different scene representation from NeRF.</p>
+
+  <div class="grid-2">
+    <div>
+      <h3 style="color:var(--accent)">What is a Gaussian?</h3>
+      <p style="font-size:0.9rem">Each 3D Gaussian is parameterised by:</p>
+      <ul style="padding-left:1.25rem; color:#5a9a6a; font-size:0.9rem; line-height:2.2">
+        <li><strong style="color:var(--text)">μ</strong> — center position (x, y, z)</li>
+        <li><strong style="color:var(--text)">Σ</strong> — 3D covariance (shape & orientation)</li>
+        <li><strong style="color:var(--text)">α</strong> — opacity</li>
+        <li><strong style="color:var(--text)">c</strong> — color (via spherical harmonics)</li>
+      </ul>
+      <div class="formula">G(x) = exp(−½ (x−μ)ᵀ Σ⁻¹ (x−μ))</div>
+      <p style="font-size:0.875rem">Rendering is rasterization: project Gaussians to 2D, sort by depth, alpha-composite. No ray marching. No neural network at render time.</p>
+    </div>
+    <div>
+      <h3 style="color:var(--warn)">NeRF vs 3DGS</h3>
+      <table class="compare-table" style="margin-top:0.5rem">
+        <thead>
+          <tr><th>Property</th><th>NeRF</th><th>3DGS</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Representation</td><td class="tag-bad">Implicit MLP</td><td class="tag-good">Explicit Gaussians</td></tr>
+          <tr><td>Rendering</td><td class="tag-bad">Ray marching</td><td class="tag-good">Rasterization</td></tr>
+          <tr><td>Speed</td><td class="tag-bad">Seconds/frame</td><td class="tag-good">&gt;100 fps</td></tr>
+          <tr><td>Editability</td><td class="tag-bad">Black box</td><td class="tag-good">Explicit, editable</td></tr>
+          <tr><td>Training time</td><td class="tag-bad">Hours</td><td class="tag-good">~30 min</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Timeline: path to Gaussian SLAM -->
+  <div class="timeline" style="margin-top:3rem">
+    <div class="timeline-item">
+      <div class="timeline-year">2020 — NeRF</div>
+      <h3>Neural Radiance Fields</h3>
+      <p>Scene as an MLP. Beautiful quality but hours to train, seconds per frame to render. SLAM use impossible.</p>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-year">2021 — iMAP</div>
+      <h3>First Neural SLAM</h3>
+      <p>Single MLP as the map. Real-time but catastrophic forgetting and small-room-only limitation.</p>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-year">2022 — NICE-SLAM</div>
+      <h3>Hierarchical Grid SLAM</h3>
+      <p>Feature grids + pretrained decoders. Scalable, sharper. Still implicit, still slow to render.</p>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-year">2023 — 3D Gaussian Splatting</div>
+      <h3>Kerbl et al. (SIGGRAPH 2023)</h3>
+      <p>Real-time rendering via explicit Gaussians. No neural network at inference. Sets the stage for Gaussian SLAM.</p>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-year">2023 — Gaussian SLAM (CVPR 2024 Highlight)</div>
+      <h3>Matsuki, Murai et al.</h3>
+      <p>First application of 3DGS to SLAM. Monocular. Unified representation for tracking + mapping + rendering. Tiny and transparent objects handled. Best Demo Award.</p>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ═══════════════════ METHOD ═══════════════════ -->
+<div class="section-dark" id="method">
+<div class="inner">
+<section class="fade-in" style="padding-top:0;padding-bottom:0">
+  <div class="section-label">Section 03 · CVPR 2024</div>
+  <h2>Gaussian Splatting SLAM — The Method</h2>
+  <p style="max-width:680px">Three core innovations make 3DGS work in a live SLAM pipeline.</p>
+
+  <div class="grid-2" style="margin-top:2rem">
+    <div>
+      <h3 style="color:var(--accent)">Innovation 1: Tracking via Direct Optimisation</h3>
+      <p style="font-size:0.9rem">
+        Original 3DGS required <em>accurate poses from offline SfM</em> as input. That's useless for SLAM.
+      </p>
+      <p style="font-size:0.9rem">
+        Gaussian SLAM reformulates tracking as: given the current Gaussian map, find the camera pose <strong>T</strong> that minimises photometric + depth error between the rendered image and the observed frame.
+      </p>
+      <div class="formula">T* = argmin ‖I_render(T, G) − I_obs‖²</div>
+      <p style="font-size:0.9rem">
+        This gives a wide basin of convergence — robust even when the camera moves fast or the scene has few texture features.
+      </p>
+    </div>
+    <div>
+      <h3 style="color:var(--accent2)">Innovation 2: Geometric Verification & Regularisation</h3>
+      <p style="font-size:0.9rem">
+        Incremental reconstruction creates ambiguities: the same surface may be covered by multiple overlapping Gaussians, or a Gaussian may grow too large and "bleed" into empty space.
+      </p>
+      <div class="highlight-box cyan">
+        <p><strong>Geometric verification</strong> — checks that each Gaussian is consistent with observed depth before committing it to the map.</p>
+      </div>
+      <div class="highlight-box cyan" style="margin-top:0.75rem">
+        <p><strong>Regularisation</strong> — penalises Gaussians that are too large, too elongated, or placed in empty space. Keeps the map tight and accurate.</p>
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-top:2.5rem">
+    <h3 style="color:var(--purple)">Innovation 3: Monocular Depth Initialisation</h3>
+    <p style="font-size:0.9rem; max-width:700px">
+      Without a depth sensor, new Gaussians must be initialised from monocular depth estimates (e.g., from a monocular depth network) and then refined via photometric optimisation. The system handles scale ambiguity by anchoring the Gaussian scale to the estimated scene geometry — not assuming any fixed scale.
+    </p>
+    <div class="highlight-box purple">
+      <p><strong>Result:</strong> The same system works with a plain webcam (monocular) <em>or</em> an RGB-D sensor — just swap the depth source. No code changes needed.</p>
+    </div>
+  </div>
+
+  <!-- Architecture SVG -->
+  <div class="arch-wrap" style="margin-top:3rem">
+    <div class="section-label" style="margin-bottom:1.25rem">Architecture · Gaussian SLAM Pipeline</div>
+    <svg viewBox="0 0 940 300" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:940px;display:block;margin:0 auto" font-family="Space Mono, monospace">
+      <defs>
+        <marker id="arr" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#1a2d1a"/></marker>
+        <marker id="arrg" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#39ff88" opacity="0.6"/></marker>
+        <radialGradient id="gb" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#39ff88" stop-opacity="0.3"/>
+          <stop offset="100%" stop-color="#39ff88" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+
+      <!-- Input -->
+      <rect x="10" y="110" width="105" height="80" rx="3" fill="#0b1714" stroke="#1a2d1a" stroke-width="1.5"/>
+      <text x="62" y="142" fill="#4a7a5a" font-size="9" text-anchor="middle">INPUT</text>
+      <text x="62" y="160" fill="#d4eedd" font-size="11" text-anchor="middle" font-weight="bold">RGB / RGB-D</text>
+      <text x="62" y="176" fill="#4a7a5a" font-size="8" text-anchor="middle">live camera</text>
+
+      <line x1="115" y1="150" x2="155" y2="150" stroke="#1a2d1a" stroke-width="1.5" marker-end="url(#arr)"/>
+
+      <!-- Depth init -->
+      <rect x="158" y="80" width="110" height="55" rx="3" fill="#0b1714" stroke="#b97aff" stroke-width="1.5"/>
+      <text x="213" y="102" fill="#4a7a5a" font-size="8" text-anchor="middle">MONO DEPTH</text>
+      <text x="213" y="118" fill="#b97aff" font-size="10" text-anchor="middle" font-weight="bold">Depth Init</text>
+      <text x="213" y="130" fill="#4a7a5a" font-size="7" text-anchor="middle">scale-ambiguity handled</text>
+
+      <rect x="158" y="165" width="110" height="55" rx="3" fill="#0b1714" stroke="#1a2d1a" stroke-width="1"/>
+      <text x="213" y="187" fill="#4a7a5a" font-size="8" text-anchor="middle">OR</text>
+      <text x="213" y="203" fill="#4a7a5a" font-size="10" text-anchor="middle" font-weight="bold">Depth Sensor</text>
+      <text x="213" y="215" fill="#4a7a5a" font-size="7" text-anchor="middle">RGB-D mode</text>
+
+      <line x1="268" y1="107" x2="308" y2="140" stroke="#1a2d1a" stroke-width="1.5" marker-end="url(#arr)"/>
+      <line x1="268" y1="193" x2="308" y2="162" stroke="#1a2d1a" stroke-width="1.5" marker-end="url(#arr)"/>
+
+      <!-- Gaussian Map -->
+      <rect x="311" y="80" width="140" height="140" rx="3" fill="#0b1714" stroke="#39ff88" stroke-width="2"/>
+      <text x="381" y="106" fill="#4a7a5a" font-size="9" text-anchor="middle">GAUSSIAN MAP</text>
+      <!-- little gaussian blobs -->
+      <ellipse cx="355" cy="140" rx="18" ry="11" fill="url(#gb)" opacity="0.9"/>
+      <ellipse cx="355" cy="140" rx="18" ry="11" fill="none" stroke="#39ff88" stroke-width="0.8" opacity="0.6"/>
+      <ellipse cx="385" cy="125" rx="14" ry="8" fill="url(#gb)" opacity="0.7" transform="rotate(30,385,125)"/>
+      <ellipse cx="385" cy="125" rx="14" ry="8" fill="none" stroke="#a8ff3e" stroke-width="0.8" opacity="0.5" transform="rotate(30,385,125)"/>
+      <ellipse cx="410" cy="148" rx="20" ry="10" fill="url(#gb)" opacity="0.8" transform="rotate(-15,410,148)"/>
+      <ellipse cx="410" cy="148" rx="20" ry="10" fill="none" stroke="#39ff88" stroke-width="0.8" opacity="0.6" transform="rotate(-15,410,148)"/>
+      <ellipse cx="370" cy="162" rx="12" ry="7" fill="url(#gb)" opacity="0.6"/>
+      <ellipse cx="370" cy="162" rx="12" ry="7" fill="none" stroke="#00e5ff" stroke-width="0.8" opacity="0.5"/>
+      <text x="381" y="196" fill="#39ff88" font-size="9" text-anchor="middle" font-weight="bold">{ μ, Σ, α, c }</text>
+      <text x="381" y="210" fill="#4a7a5a" font-size="7" text-anchor="middle">explicit, editable</text>
+
+      <!-- Arrows to tracking and mapping -->
+      <line x1="451" y1="120" x2="511" y2="100" stroke="#1a2d1a" stroke-width="1.5" marker-end="url(#arr)"/>
+      <line x1="451" y1="180" x2="511" y2="200" stroke="#1a2d1a" stroke-width="1.5" marker-end="url(#arr)"/>
+
+      <!-- Tracking -->
+      <rect x="514" y="60" width="130" height="75" rx="3" fill="#0b1714" stroke="#a8ff3e" stroke-width="1.5"/>
+      <text x="579" y="82" fill="#4a7a5a" font-size="9" text-anchor="middle">TRACKING</text>
+      <text x="579" y="98" fill="#a8ff3e" font-size="10" text-anchor="middle" font-weight="bold">Direct Pose Opt.</text>
+      <text x="579" y="112" fill="#4a7a5a" font-size="7" text-anchor="middle">minimise render error</text>
+      <text x="579" y="125" fill="#4a7a5a" font-size="7" text-anchor="middle">wide convergence basin</text>
+
+      <!-- Mapping -->
+      <rect x="514" y="165" width="130" height="75" rx="3" fill="#0b1714" stroke="#00e5ff" stroke-width="1.5"/>
+      <text x="579" y="187" fill="#4a7a5a" font-size="9" text-anchor="middle">MAPPING</text>
+      <text x="579" y="203" fill="#00e5ff" font-size="10" text-anchor="middle" font-weight="bold">Gaussian Growth</text>
+      <text x="579" y="217" fill="#4a7a5a" font-size="7" text-anchor="middle">geo verification</text>
+      <text x="579" y="230" fill="#4a7a5a" font-size="7" text-anchor="middle">+ regularisation</text>
+
+      <!-- Arrows to renderer -->
+      <line x1="644" y1="97" x2="694" y2="135" stroke="#1a2d1a" stroke-width="1.5" marker-end="url(#arr)"/>
+      <line x1="644" y1="203" x2="694" y2="165" stroke="#1a2d1a" stroke-width="1.5" marker-end="url(#arr)"/>
+
+      <!-- Renderer -->
+      <rect x="697" y="105" width="120" height="90" rx="3" fill="#0b1714" stroke="#b97aff" stroke-width="1.5"/>
+      <text x="757" y="130" fill="#4a7a5a" font-size="9" text-anchor="middle">RENDERER</text>
+      <text x="757" y="148" fill="#b97aff" font-size="10" text-anchor="middle" font-weight="bold">Gaussian Splat</text>
+      <text x="757" y="164" fill="#4a7a5a" font-size="7" text-anchor="middle">rasterization (fast!)</text>
+      <text x="757" y="180" fill="#39ff88" font-size="8" text-anchor="middle">photo-realistic</text>
+
+      <!-- Feedback -->
+      <path d="M817 150 Q880 150 880 40 Q880 12 381 12 Q311 12 311 78" fill="none" stroke="#39ff88" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#arrg)" opacity="0.5"/>
+      <text x="848" y="80" fill="#2d5a3d" font-size="7" text-anchor="middle">update</text>
+      <text x="848" y="92" fill="#2d5a3d" font-size="7" text-anchor="middle">Gaussians</text>
+
+    </svg>
+  </div>
+
+  <div class="grid-2" style="margin-top:3rem">
+    <div>
+      <h3 style="color:var(--accent)">What Makes It Special</h3>
+      <div class="highlight-box">
+        <p><strong>One representation, everything</strong><br>The same set of Gaussians is used for tracking, mapping, AND novel view synthesis — no separate modules, no format conversion.</p>
+      </div>
+      <div class="highlight-box" style="margin-top:0.75rem">
+        <p><strong>Tiny & transparent objects</strong><br>Explicit Gaussians can represent very small objects and partially-transparent surfaces — something implicit methods consistently fail at.</p>
+      </div>
+    </div>
+    <div>
+      <h3 style="color:var(--accent3)">Numbers</h3>
+      <table class="compare-table" style="margin-top:0.5rem">
+        <thead><tr><th>Metric</th><th>iMAP*</th><th>NICE-SLAM</th><th>Gaussian SLAM</th></tr></thead>
+        <tbody>
+          <tr><td>Tracking (ATE↓)</td><td class="tag-bad">High</td><td class="tag-mid">Better</td><td class="tag-good">SOTA</td></tr>
+          <tr><td>Rendering quality</td><td class="tag-bad">Blurry</td><td class="tag-mid">Moderate</td><td class="tag-good">Photo-realistic</td></tr>
+          <tr><td>Monocular mode</td><td class="tag-bad">No</td><td class="tag-bad">No</td><td class="tag-good">Yes</td></tr>
+          <tr><td>Transparent objects</td><td class="tag-bad">No</td><td class="tag-bad">No</td><td class="tag-good">Yes</td></tr>
+          <tr><td>Live speed</td><td class="tag-mid">10Hz track / 2Hz map</td><td class="tag-mid">~10Hz</td><td class="tag-good">3fps full system</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="code-block" data-lang="python" style="margin-top:2.5rem">
+<span class="tok-comment"># Gaussian SLAM: pseudocode of the core loop</span>
+<span class="tok-key">class</span> <span class="tok-fn">GaussianSLAM</span>:
+    <span class="tok-key">def</span> <span class="tok-fn">__init__</span>(self):
+        <span class="tok-comment"># The ENTIRE system lives in one set of Gaussians</span>
+        self.gaussians = <span class="tok-fn">GaussianMap</span>()   <span class="tok-comment"># { μ, Σ, α, c } per Gaussian</span>
+        self.pose_history = []
+
+    <span class="tok-key">def</span> <span class="tok-fn">process_frame</span>(self, rgb, depth=<span class="tok-key">None</span>):
+        <span class="tok-comment"># 1. TRACKING: find pose by minimising render error</span>
+        T = <span class="tok-fn">optimise_pose</span>(
+            self.gaussians,
+            rgb, depth,
+            loss=<span class="tok-str">'photometric + depth'</span>
+        )
+
+        <span class="tok-comment"># 2. MAPPING: grow Gaussian map with new Gaussians</span>
+        new_gaussians = <span class="tok-fn">initialise_gaussians</span>(rgb, depth, T)
+        new_gaussians = <span class="tok-fn">geometric_verification</span>(new_gaussians)
+        self.gaussians.<span class="tok-fn">add</span>(new_gaussians)
+        self.gaussians.<span class="tok-fn">optimise</span>(regularise=<span class="tok-key">True</span>)
+
+        <span class="tok-comment"># 3. RENDER: just splat the Gaussians — no neural network!</span>
+        rendered = self.gaussians.<span class="tok-fn">splat</span>(T)   <span class="tok-comment"># fast GPU rasterization</span>
+        <span class="tok-key">return</span> T, rendered
+  </div>
+
+</section>
+</div>
+</div>
+
+<!-- ═══════════════════ DEMO ═══════════════════ -->
+<section id="demo" class="fade-in">
+  <div class="section-label">Section 04</div>
+  <h2>Interactive Demos</h2>
+
+  <!-- DEMO 1: Gaussian Splatting Visualiser -->
+  <div class="demo-container">
+    <div class="demo-header">
+      <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+      <span style="margin-left:0.5rem">Demo 1 — 3D Gaussian Representation Visualiser</span>
+    </div>
+    <div class="demo-body">
+      <p style="font-size:0.875rem; margin-bottom:1rem; max-width:640px">
+        Each ellipse represents one 3D Gaussian. Click to add new Gaussians. Watch how they overlap and alpha-composite to form a surface. Toggle between the raw Gaussians view and the rendered RGB output.
+      </p>
+      <canvas id="splat-canvas" width="700" height="320"></canvas>
+      <p class="viz-label">Click to place Gaussians · Use controls to switch views</p>
+      <div class="demo-controls">
+        <button class="btn btn-primary" onclick="addRandomGaussian()">Add Gaussian</button>
+        <button class="btn btn-primary" onclick="addBurst()">Add 10 Gaussians</button>
+        <button class="btn btn-secondary" onclick="toggleRenderMode()">Mode: <span id="renderModeLabel">Gaussians</span></button>
+        <button class="btn btn-warn" onclick="clearGaussians()">Clear</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DEMO 2: Monocular vs RGB-D -->
+  <div class="demo-container" style="margin-top:1.5rem">
+    <div class="demo-header">
+      <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+      <span style="margin-left:0.5rem">Demo 2 — Tracking: Direct Optimisation Convergence</span>
+    </div>
+    <div class="demo-body">
+      <p style="font-size:0.875rem; margin-bottom:1.5rem; max-width:640px">
+        Visualise how direct pose optimisation works. The green frustum is the ground truth camera. The red frustum is the current estimate. Watch gradient descent converge as it minimises photometric error.
+      </p>
+      <canvas id="trackCanvas" width="700" height="280" style="width:100%;max-width:700px;display:block;margin:0 auto;border-radius:3px"></canvas>
+      <p class="viz-label">Gradient descent minimising ‖render(T, G) − I_obs‖²</p>
+      <div class="demo-controls">
+        <button class="btn btn-primary" onclick="startTracking()">Start Optimisation</button>
+        <button class="btn btn-secondary" onclick="perturbPose()">Perturb Pose</button>
+        <button class="btn btn-warn" onclick="resetTracking()">Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DEMO 3: GPU Results Placeholder -->
+  <div class="demo-container" style="margin-top:1.5rem">
+    <div class="demo-header">
+      <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+      <span style="margin-left:0.5rem">Demo 3 — Live GPU Results (H200 × 8)</span>
+    </div>
+    <div class="demo-body">
+      <div class="grid-2">
+        <div>
+          <div style="font-family:'Space Mono',monospace; font-size:0.7rem; color:var(--accent3); margin-bottom:0.5rem; letter-spacing:0.08em">Monocular — TUM fr1/desk</div>
+          <div class="video-placeholder">
+            <div class="icon">🎬</div>
+            <div>Video coming after GPU run</div>
+            <div style="margin-top:0.5rem; color:var(--muted)">MonoGS monocular reconstruction</div>
+          </div>
+        </div>
+        <div>
+          <div style="font-family:'Space Mono',monospace; font-size:0.7rem; color:var(--accent); margin-bottom:0.5rem; letter-spacing:0.08em">RGB-D — Replica Office</div>
+          <div class="video-placeholder">
+            <div class="icon">🎬</div>
+            <div>Video coming after GPU run</div>
+            <div style="margin-top:0.5rem; color:var(--muted)">RGB-D mode Gaussian map</div>
+          </div>
+        </div>
+      </div>
+      <div class="highlight-box" style="margin-top:1.5rem">
+        <p><strong>Code:</strong> <code>github.com/muskie82/MonoGS</code> — install, run on TUM/Replica datasets, record the Gaussian splat visualisation and rendered output. Swap the placeholders above with <code>&lt;video&gt;</code> tags.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ═══════════════════ QUIZ ═══════════════════ -->
+<section id="quiz" class="fade-in">
+  <div class="section-label">Section 05</div>
+  <h2>Check Your Understanding</h2>
+  <p style="margin-bottom:2rem">Four questions on Gaussian SLAM's key ideas.</p>
+
+  <div class="quiz-card">
+    <div class="quiz-q">1. Why does original 3DGS require poses from an offline SfM system, and how does Gaussian SLAM solve this?</div>
+    <div class="quiz-options">
+      <button class="quiz-opt" onclick="ans(this,false,'q1')">A. Original 3DGS needs depth maps, which SfM provides</button>
+      <button class="quiz-opt" onclick="ans(this,true,'q1')">B. Original 3DGS assumes known camera poses as input; Gaussian SLAM adds a direct pose optimisation stage that estimates poses online from the Gaussian map itself</button>
+      <button class="quiz-opt" onclick="ans(this,false,'q1')">C. SfM is needed to initialise the Gaussian positions before any training</button>
+      <button class="quiz-opt" onclick="ans(this,false,'q1')">D. Original 3DGS only works with perspective cameras; SfM handles other camera types</button>
+    </div>
+    <div class="quiz-feedback" id="fb-q1">✓ Correct! The original 3DGS paper took camera poses as a given input. Gaussian SLAM's key contribution is formulating tracking as direct optimisation against the rendered Gaussian map — making the system fully self-contained without any offline preprocessing.</div>
+  </div>
+
+  <div class="quiz-card">
+    <div class="quiz-q">2. What is "geometric verification" and why is it needed in incremental Gaussian mapping?</div>
+    <div class="quiz-options">
+      <button class="quiz-opt" onclick="ans(this,false,'q2')">A. A check that the camera pose is consistent with the IMU reading</button>
+      <button class="quiz-opt" onclick="ans(this,false,'q2')">B. A loop-closure detection algorithm that aligns revisited areas</button>
+      <button class="quiz-opt" onclick="ans(this,true,'q2')">C. A check that newly added Gaussians are geometrically consistent with observed depth — preventing incorrect Gaussians from corrupting the map</button>
+      <button class="quiz-opt" onclick="ans(this,false,'q2')">D. A step that converts Gaussians into a mesh for downstream tasks</button>
+    </div>
+    <div class="quiz-feedback" id="fb-q2">✓ Correct! When adding Gaussians frame-by-frame, noisy depth estimates or moving objects can introduce inconsistent Gaussians. Geometric verification rejects Gaussians that don't match the observed geometry, keeping the map clean and accurate.</div>
+  </div>
+
+  <div class="quiz-card">
+    <div class="quiz-q">3. How does Gaussian SLAM handle the scale ambiguity problem in monocular mode?</div>
+    <div class="quiz-options">
+      <button class="quiz-opt" onclick="ans(this,false,'q3')">A. It assumes the camera moves at a constant, known speed</button>
+      <button class="quiz-opt" onclick="ans(this,true,'q3')">B. It uses a monocular depth estimation network to initialise Gaussian positions, then refines scale via photometric optimisation against subsequent frames</button>
+      <button class="quiz-opt" onclick="ans(this,false,'q3')">C. It requires the user to input the room dimensions at startup</button>
+      <button class="quiz-opt" onclick="ans(this,false,'q3')">D. It ignores scale and only tracks rotation</button>
+    </div>
+    <div class="quiz-feedback" id="fb-q3">✓ Correct! Scale ambiguity is fundamental in monocular vision — the same image could have come from a scene twice as far away with objects twice as large. Gaussian SLAM bootstraps scale from a monocular depth network and continuously refines it through photometric optimisation across frames.</div>
+  </div>
+
+  <div class="quiz-card">
+    <div class="quiz-q">4. What is the main advantage of Gaussian Splatting's rasterization renderer over NeRF's ray marching?</div>
+    <div class="quiz-options">
+      <button class="quiz-opt" onclick="ans(this,false,'q4')">A. It produces higher quality novel views</button>
+      <button class="quiz-opt" onclick="ans(this,false,'q4')">B. It requires less GPU memory</button>
+      <button class="quiz-opt" onclick="ans(this,true,'q4')">C. It is orders of magnitude faster — rendering is just a projection and sort operation on explicit primitives, not thousands of neural network queries per pixel</button>
+      <button class="quiz-opt" onclick="ans(this,false,'q4')">D. It works without any GPU at all</button>
+    </div>
+    <div class="quiz-feedback" id="fb-q4">✓ Correct! NeRF ray marching evaluates the MLP at hundreds of sample points per pixel — that's millions of forward passes per frame. Gaussian splatting projects ellipsoids to 2D and alpha-composites them, which maps perfectly to GPU rasterization pipelines and achieves 100+ fps on modern hardware.</div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ═══════════════════ RESOURCES ═══════════════════ -->
+<section id="resources" class="fade-in">
+  <div class="section-label">Section 06</div>
+  <h2>Go Deeper</h2>
+  <p>Papers, code, and videos to continue exploring Gaussian SLAM and 3DGS.</p>
+
+  <div class="resource-list">
+    <a class="resource-item" href="https://arxiv.org/abs/2312.06741" target="_blank">
+      <span class="resource-tag tag-paper">Paper</span>
+      <div>
+        <div class="resource-text">Gaussian Splatting SLAM</div>
+        <div class="resource-sub">Matsuki, Murai et al. · CVPR 2024 Highlight · arXiv:2312.06741</div>
+      </div>
+    </a>
+    <a class="resource-item" href="https://github.com/muskie82/MonoGS" target="_blank">
+      <span class="resource-tag tag-code">Code</span>
+      <div>
+        <div class="resource-text">MonoGS — Official GitHub Repository</div>
+        <div class="resource-sub">muskie82/MonoGS · PyTorch + 3DGS CUDA kernels</div>
+      </div>
+    </a>
+    <a class="resource-item" href="https://rmurai.co.uk/projects/GaussianSplattingSLAM/" target="_blank">
+      <span class="resource-tag tag-video">Project</span>
+      <div>
+        <div class="resource-text">Official Project Page — Interactive 3D Viewer</div>
+        <div class="resource-sub">rmurai.co.uk · WebGL Gaussian splat viewer embedded</div>
+      </div>
+    </a>
+    <a class="resource-item" href="https://www.youtube.com/watch?v=x604ghp9R_Q" target="_blank">
+      <span class="resource-tag tag-video">Video</span>
+      <div>
+        <div class="resource-text">Official Demo Video — Monocular & RGB-D Results</div>
+        <div class="resource-sub">YouTube · TUM, Replica, self-captured sequences</div>
+      </div>
+    </a>
+    <a class="resource-item" href="https://arxiv.org/abs/2308.04079" target="_blank">
+      <span class="resource-tag tag-paper">Prereq</span>
+      <div>
+        <div class="resource-text">3D Gaussian Splatting for Real-Time Radiance Field Rendering</div>
+        <div class="resource-sub">Kerbl et al. · SIGGRAPH 2023 · The foundation paper</div>
+      </div>
+    </a>
+    <a class="resource-item" href="https://arxiv.org/abs/2112.12130" target="_blank">
+      <span class="resource-tag tag-paper">Related</span>
+      <div>
+        <div class="resource-text">NICE-SLAM — the neural implicit predecessor</div>
+        <div class="resource-sub">Zhu, Peng et al. · CVPR 2022 · arXiv:2112.12130</div>
+      </div>
+    </a>
+  </div>
+</section>
+
+<footer>
+  <div>Gaussian SLAM: Gaussian Splatting SLAM · Interactive Lecture</div>
+  <div style="margin-top:0.5rem">CVPR 2024 Highlight · Best Demo Award · H200 GPU Demo</div>
+</footer>
+
+<!-- ═══════════════════ SCRIPTS ═══════════════════ -->
+<script>
+// ─── READ PROGRESS ───
+window.addEventListener('scroll', () => {
+  const s = document.documentElement.scrollTop;
+  const t = document.documentElement.scrollHeight - window.innerHeight;
+  document.getElementById('readProgress').style.width = (s/t*100) + '%';
+});
+
+// ─── FADE IN ───
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => { if(e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.1 });
+document.querySelectorAll('.fade-in').forEach(el => obs.observe(el));
+
+// ─── QUIZ ───
+const answered = {};
+function ans(btn, correct, qid) {
+  if(answered[qid]) return;
+  answered[qid] = true;
+  const opts = btn.closest('.quiz-options').querySelectorAll('.quiz-opt');
+  opts.forEach(o => o.style.pointerEvents='none');
+  btn.classList.add(correct ? 'correct' : 'wrong');
+  const fb = document.getElementById('fb-'+qid);
+  fb.style.display = 'block';
+  if(!correct) {
+    opts.forEach(o => { if(o.getAttribute('onclick').includes('true')) o.classList.add('correct'); });
+    fb.textContent = '✗ Not quite. ' + fb.textContent.slice(2);
+  }
+}
+
+// ─── GAUSSIAN SPLAT DEMO ───
+const sc = document.getElementById('splat-canvas');
+const ctx = sc.getContext('2d');
+let gaussians = [];
+let renderMode = 'gaussians'; // or 'rendered'
+
+const COLORS = ['#39ff88','#a8ff3e','#00e5ff','#b97aff','#ffb830','#ff6b6b'];
+
+function randomGaussian(x, y) {
+  const angle = Math.random() * Math.PI;
+  const rx = 15 + Math.random() * 40;
+  const ry = 8 + Math.random() * 20;
+  return {
+    x: x || (40 + Math.random() * 620),
+    y: y || (20 + Math.random() * 280),
+    rx, ry, angle,
+    color: COLORS[Math.floor(Math.random()*COLORS.length)],
+    alpha: 0.3 + Math.random() * 0.5,
+    id: Math.random()
+  };
+}
+
+function drawGaussiansView() {
+  ctx.fillStyle = '#030608';
+  ctx.fillRect(0, 0, 700, 320);
+  // grid
+  ctx.strokeStyle = 'rgba(57,255,136,0.04)';
+  ctx.lineWidth = 1;
+  for(let x=0;x<700;x+=50){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,320);ctx.stroke();}
+  for(let y=0;y<320;y+=50){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(700,y);ctx.stroke();}
+
+  gaussians.forEach(g => {
+    ctx.save();
+    ctx.translate(g.x, g.y);
+    ctx.rotate(g.angle);
+
+    const grad = ctx.createRadialGradient(0,0,0, 0,0,Math.max(g.rx,g.ry));
+    const col = g.color;
+    grad.addColorStop(0, col + Math.round(g.alpha*255).toString(16).padStart(2,'0'));
+    grad.addColorStop(0.5, col + '44');
+    grad.addColorStop(1, col + '00');
+
+    ctx.beginPath();
+    ctx.ellipse(0, 0, g.rx, g.ry, 0, 0, Math.PI*2);
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.strokeStyle = col + '88';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // center dot
+    ctx.beginPath();
+    ctx.arc(0, 0, 2, 0, Math.PI*2);
+    ctx.fillStyle = col;
+    ctx.fill();
+
+    ctx.restore();
+  });
+
+  // label
+  ctx.fillStyle = 'rgba(57,255,136,0.4)';
+  ctx.font = '10px Space Mono, monospace';
+  ctx.fillText(`${gaussians.length} Gaussians`, 12, 20);
+}
+
+function drawRenderedView() {
+  // Simulate a rendered RGB image by compositing Gaussians
+  ctx.fillStyle = '#060c08';
+  ctx.fillRect(0,0,700,320);
+
+  // Sort back to front (simple y-depth approximation)
+  const sorted = [...gaussians].sort((a,b) => b.y-a.y);
+  sorted.forEach(g => {
+    ctx.save();
+    ctx.translate(g.x, g.y);
+    ctx.rotate(g.angle);
+    ctx.globalAlpha = g.alpha * 0.85;
+    const grad = ctx.createRadialGradient(0,0,0,0,0,Math.max(g.rx,g.ry));
+    grad.addColorStop(0, g.color);
+    grad.addColorStop(0.6, g.color+'99');
+    grad.addColorStop(1, '#000000');
+    ctx.beginPath();
+    ctx.ellipse(0,0,g.rx*1.3,g.ry*1.3,0,0,Math.PI*2);
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.restore();
+  });
+
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = 'rgba(168,255,62,0.4)';
+  ctx.font = '10px Space Mono, monospace';
+  ctx.fillText('Rendered RGB (alpha-composite)', 12, 20);
+}
+
+function renderSplat() {
+  if(renderMode === 'gaussians') drawGaussiansView();
+  else drawRenderedView();
+}
+
+function addRandomGaussian() {
+  gaussians.push(randomGaussian());
+  renderSplat();
+}
+
+function addBurst() {
+  for(let i=0;i<10;i++) gaussians.push(randomGaussian());
+  renderSplat();
+}
+
+function clearGaussians() {
+  gaussians = [];
+  renderSplat();
+}
+
+function toggleRenderMode() {
+  renderMode = renderMode === 'gaussians' ? 'rendered' : 'gaussians';
+  document.getElementById('renderModeLabel').textContent = renderMode === 'gaussians' ? 'Gaussians' : 'Rendered';
+  renderSplat();
+}
+
+sc.addEventListener('click', e => {
+  const r = sc.getBoundingClientRect();
+  const sx = 700/r.width, sy = 320/r.height;
+  gaussians.push(randomGaussian((e.clientX-r.left)*sx, (e.clientY-r.top)*sy));
+  renderSplat();
+});
+
+// Init with some gaussians
+for(let i=0;i<18;i++) gaussians.push(randomGaussian());
+renderSplat();
+
+// ─── TRACKING DEMO ───
+const tc = document.getElementById('trackCanvas');
+const tctx = tc.getContext('2d');
+
+let gtPose = { x: 350, y: 140, angle: 0 };
+let estPose = { x: 350, y: 140, angle: 0 };
+let trackInterval = null;
+let loss = 1.0;
+let isTracking = false;
+let lossHistory = [];
+
+function perturbPose() {
+  estPose = {
+    x: gtPose.x + (Math.random()-0.5)*120,
+    y: gtPose.y + (Math.random()-0.5)*60,
+    angle: gtPose.angle + (Math.random()-0.5)*0.8
+  };
+  loss = 1.0;
+  lossHistory = [1.0];
+  drawTracking();
+}
+
+function drawFrustum(ctx2, pose, color, label) {
+  ctx2.save();
+  ctx2.translate(pose.x, pose.y);
+  ctx2.rotate(pose.angle);
+  // frustum shape
+  ctx2.beginPath();
+  ctx2.moveTo(0,0);
+  ctx2.lineTo(-30, 45);
+  ctx2.lineTo(30, 45);
+  ctx2.closePath();
+  ctx2.strokeStyle = color;
+  ctx2.lineWidth = 2;
+  ctx2.stroke();
+  ctx2.fillStyle = color + '22';
+  ctx2.fill();
+  // camera body
+  ctx2.beginPath();
+  ctx2.rect(-12,-10,24,20);
+  ctx2.fillStyle = color + '55';
+  ctx2.fill();
+  ctx2.strokeStyle = color;
+  ctx2.lineWidth = 1.5;
+  ctx2.stroke();
+  ctx2.restore();
+  // label
+  ctx2.fillStyle = color;
+  ctx2.font = '9px Space Mono, monospace';
+  ctx2.fillText(label, pose.x+18, pose.y-15);
+}
+
+function drawTracking() {
+  tctx.fillStyle = '#030608';
+  tctx.fillRect(0,0,700,280);
+
+  // grid
+  tctx.strokeStyle = 'rgba(57,255,136,0.04)';
+  tctx.lineWidth = 1;
+  for(let x=0;x<700;x+=50){tctx.beginPath();tctx.moveTo(x,0);tctx.lineTo(x,280);tctx.stroke();}
+  for(let y=0;y<280;y+=50){tctx.beginPath();tctx.moveTo(0,y);tctx.lineTo(700,y);tctx.stroke();}
+
+  // some scene Gaussians background
+  [[180,80,'#39ff88'],[520,160,'#a8ff3e'],[280,200,'#00e5ff'],[450,90,'#b97aff'],[350,170,'#39ff88']].forEach(([x,y,c]) => {
+    const grad = tctx.createRadialGradient(x,y,0,x,y,40);
+    grad.addColorStop(0,c+'55'); grad.addColorStop(1,c+'00');
+    tctx.beginPath(); tctx.ellipse(x,y,45,28,0.3,0,Math.PI*2);
+    tctx.fillStyle = grad; tctx.fill();
+  });
+
+  // error line
+  const dx = estPose.x - gtPose.x, dy = estPose.y - gtPose.y;
+  const d = Math.sqrt(dx*dx+dy*dy);
+  if(d > 2) {
+    tctx.beginPath();
+    tctx.moveTo(gtPose.x, gtPose.y);
+    tctx.lineTo(estPose.x, estPose.y);
+    tctx.strokeStyle = 'rgba(255,184,48,0.4)';
+    tctx.lineWidth = 1.5;
+    tctx.setLineDash([4,3]);
+    tctx.stroke();
+    tctx.setLineDash([]);
+  }
+
+  drawFrustum(tctx, gtPose, '#39ff88', 'Ground Truth T*');
+  drawFrustum(tctx, estPose, '#ff6b35', 'Estimate T_est');
+
+  // loss graph (mini)
+  if(lossHistory.length > 1) {
+    tctx.beginPath();
+    const gx = 520, gy = 40, gw = 160, gh = 60;
+    tctx.fillStyle = 'rgba(0,0,0,0.5)';
+    tctx.fillRect(gx, gy, gw, gh+20);
+    tctx.strokeStyle = '#1a2d1a'; tctx.lineWidth=1; tctx.strokeRect(gx,gy,gw,gh+20);
+    tctx.fillStyle = '#4a7a5a'; tctx.font='8px Space Mono,monospace';
+    tctx.fillText('Photometric Loss', gx+4, gy+12);
+    tctx.beginPath();
+    lossHistory.forEach((l,i) => {
+      const px = gx + (i/(lossHistory.length-1))*gw;
+      const py = gy+20 + (1-l)*gh;
+      i===0 ? tctx.moveTo(px,py) : tctx.lineTo(px,py);
+    });
+    tctx.strokeStyle = '#39ff88'; tctx.lineWidth=1.5; tctx.stroke();
+    tctx.fillStyle = '#39ff88'; tctx.font='9px Space Mono,monospace';
+    tctx.fillText('L='+loss.toFixed(3), gx+4, gy+gh+14);
+  }
+
+  // ATE label
+  tctx.fillStyle = '#4a7a5a'; tctx.font='9px Space Mono,monospace';
+  tctx.fillText('ATE: '+d.toFixed(1)+'px', 12, 20);
+}
+
+function startTracking() {
+  if(isTracking) return;
+  isTracking = true;
+  perturbPose();
+  const lerp = (a,b,t) => a+(b-a)*t;
+  let step = 0;
+  trackInterval = setInterval(() => {
+    const t = 0.07;
+    estPose.x = lerp(estPose.x, gtPose.x, t);
+    estPose.y = lerp(estPose.y, gtPose.y, t);
+    estPose.angle = lerp(estPose.angle, gtPose.angle, t);
+    const dx = estPose.x-gtPose.x, dy = estPose.y-gtPose.y;
+    loss = Math.sqrt(dx*dx+dy*dy)/120;
+    lossHistory.push(Math.max(0,loss));
+    if(lossHistory.length > 80) lossHistory.shift();
+    drawTracking();
+    step++;
+    if(Math.sqrt(dx*dx+dy*dy) < 1.5) {
+      clearInterval(trackInterval);
+      isTracking = false;
+    }
+  }, 40);
+}
+
+function resetTracking() {
+  clearInterval(trackInterval);
+  isTracking = false;
+  estPose = { x:gtPose.x, y:gtPose.y, angle:gtPose.angle };
+  loss = 0; lossHistory = [];
+  drawTracking();
+}
+
+drawTracking();
+</script>
+</body>
+</html>
