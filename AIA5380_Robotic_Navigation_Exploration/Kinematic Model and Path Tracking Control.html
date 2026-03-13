@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>F1 Track Challenge | Homework Showcase</title>
+  <style>
+    :root {
+      --bg: #0b0f14;
+      --panel: #121922;
+      --panel-2: #192330;
+      --text: #eaf1f7;
+      --muted: #a9b7c6;
+      --accent: #ff3b30;
+      --accent-2: #ffd166;
+      --line: rgba(255,255,255,0.08);
+      --shadow: 0 18px 40px rgba(0,0,0,0.35);
+      --radius: 18px;
+      --maxw: 1120px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top right, rgba(255,59,48,0.16), transparent 28%),
+        radial-gradient(circle at left center, rgba(255,209,102,0.08), transparent 24%),
+        linear-gradient(180deg, #0b0f14 0%, #0e141c 100%);
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    .container {
+      width: min(calc(100% - 32px), var(--maxw));
+      margin: 0 auto;
+    }
+
+    .nav {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      backdrop-filter: blur(10px);
+      background: rgba(11,15,20,0.72);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 0;
+      gap: 16px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+    }
+
+    .brand-badge {
+      width: 12px;
+      height: 12px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      box-shadow: 0 0 18px rgba(255,59,48,0.45);
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 18px;
+      flex-wrap: wrap;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .nav-links a:hover { color: var(--text); }
+
+    .hero {
+      padding: 72px 0 40px;
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.25fr 0.75fr;
+      gap: 24px;
+      align-items: stretch;
+    }
+
+    .hero-card,
+    .panel {
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      border-radius: var(--radius);
+    }
+
+    .hero-card {
+      padding: 32px;
+      min-height: 360px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      width: fit-content;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 999px;
+      padding: 8px 14px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 18px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2.4rem, 5vw, 4.5rem);
+      line-height: 0.95;
+      letter-spacing: -0.04em;
+    }
+
+    .accent { color: var(--accent); }
+
+    .hero p {
+      color: var(--muted);
+      max-width: 62ch;
+      margin: 18px 0 24px;
+      font-size: 1.04rem;
+    }
+
+    .hero-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border-radius: 999px;
+      padding: 12px 18px;
+      font-weight: 700;
+      border: 1px solid transparent;
+      transition: 0.2s ease;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), #ff6b61);
+      color: white;
+    }
+
+    .btn-primary:hover { transform: translateY(-1px); }
+
+    .btn-secondary {
+      background: rgba(255,255,255,0.04);
+      border-color: rgba(255,255,255,0.08);
+      color: var(--text);
+    }
+
+    .hero-side {
+      padding: 24px;
+      display: grid;
+      gap: 14px;
+      align-content: center;
+    }
+
+    .stat {
+      padding: 18px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.015));
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 16px;
+    }
+
+    .stat-label {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-size: 1.55rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+    }
+
+    section {
+      padding: 28px 0;
+    }
+
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 18px;
+      margin-bottom: 18px;
+    }
+
+    .section-head h2 {
+      margin: 0;
+      font-size: clamp(1.5rem, 2.5vw, 2.15rem);
+      letter-spacing: -0.03em;
+    }
+
+    .section-head p {
+      margin: 0;
+      color: var(--muted);
+      max-width: 58ch;
+    }
+
+    .command {
+      padding: 22px;
+      overflow-x: auto;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.98rem;
+      white-space: pre-wrap;
+    }
+
+    .results-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: rgba(255,255,255,0.02);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+
+    th, td {
+      padding: 16px 14px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+    }
+
+    th {
+      color: var(--muted);
+      font-weight: 700;
+      font-size: 0.95rem;
+      background: rgba(255,255,255,0.025);
+    }
+
+    tr:last-child td { border-bottom: none; }
+
+    .track-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+    }
+
+    .track-card {
+      overflow: hidden;
+    }
+
+    .track-meta {
+      padding: 18px 18px 6px;
+    }
+
+    .track-meta h3 {
+      margin: 0 0 6px;
+      font-size: 1.2rem;
+    }
+
+    .track-meta p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    video {
+      width: 100%;
+      display: block;
+      aspect-ratio: 16 / 9;
+      background: #000;
+      border-top: 1px solid var(--line);
+      border-bottom-left-radius: var(--radius);
+      border-bottom-right-radius: var(--radius);
+    }
+
+    .notes {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .list {
+      margin: 0;
+      padding-left: 20px;
+      color: var(--muted);
+    }
+
+    .list li + li { margin-top: 10px; }
+
+    .footer {
+      padding: 28px 0 56px;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .footer-card {
+      padding: 20px 22px;
+    }
+
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .pill {
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.03);
+      color: var(--text);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 920px) {
+      .hero-grid,
+      .track-grid,
+      .notes {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .container { width: min(calc(100% - 20px), var(--maxw)); }
+      .hero { padding-top: 36px; }
+      .hero-card, .hero-side, .command { padding: 20px; }
+      th, td { padding: 12px 10px; }
+      .nav-inner { align-items: flex-start; flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="container nav-inner">
+      <div class="brand">
+        <span class="brand-badge"></span>
+        <span>F1 Track Challenge</span>
+      </div>
+      <div class="nav-links">
+        <a href="#overview">Overview</a>
+        <a href="#results">Results</a>
+        <a href="#videos">Videos</a>
+        <a href="#improvements">Improvements</a>
+      </div>
+    </div>
+  </nav>
+
+  <header class="hero" id="overview">
+    <div class="container hero-grid">
+      <div class="hero-card">
+        <div class="eyebrow">Autonomous Navigation Homework Showcase</div>
+        <h1>Bicycle Model + <span class="accent">Stanley Control</span></h1>
+        <p>
+          This page presents my F1 Track Challenge submission for the navigation homework.
+          I evaluated lateral control performance on Silverstone, Suzuka, and Monza, and selected
+          the Stanley controller with <strong>k<sub>p</sub> = 8.0</strong> for its strong cross-track accuracy
+          and consistent behavior across all three circuits.
+        </p>
+        <div class="hero-actions">
+          <a class="btn btn-primary" href="#videos">Watch simulations</a>
+          <a class="btn btn-secondary" href="#results">View metrics</a>
+        </div>
+      </div>
+
+      <aside class="hero-side hero-card">
+        <div class="stat">
+          <div class="stat-label">Simulation setup</div>
+          <div class="stat-value">Bicycle + Stanley</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Selected gain</div>
+          <div class="stat-value">k<sub>p</sub> = 8.0</div>
+        </div>
+        <div class="stat">
+          <div class="stat-label">Best average CTE</div>
+          <div class="stat-value">0.0472 m</div>
+        </div>
+      </aside>
+    </div>
+  </header>
+
+  <main>
+    <section>
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <h2>Run Command</h2>
+          </div>
+          <p>Command used for the final challenge submission.</p>
+        </div>
+        <div class="panel command">python navigation.py -s bicycle -c stanley -t [Silverstone|Suzuka|Monza]</div>
+      </div>
+    </section>
+
+    <section id="results">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <h2>Final Results</h2>
+          </div>
+          <p>
+            Tracking error was weighted more heavily than completion time, so controller selection prioritized stability and path accuracy.
+          </p>
+        </div>
+        <div class="panel results-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Track</th>
+                <th>Total Time</th>
+                <th>Average CTE</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Silverstone</strong></td>
+                <td>108.80 s</td>
+                <td>0.0472 m</td>
+                <td>Best cross-track accuracy among the three runs.</td>
+              </tr>
+              <tr>
+                <td><strong>Suzuka</strong></td>
+                <td>104.95 s</td>
+                <td>0.0691 m</td>
+                <td>Handled sharper curvature with acceptable tracking error.</td>
+              </tr>
+              <tr>
+                <td><strong>Monza</strong></td>
+                <td>96.45 s</td>
+                <td>0.0541 m</td>
+                <td>Fastest lap while maintaining low lateral error.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section id="videos">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <h2>Simulation Videos</h2>
+          </div>
+          <p>
+            Put the three video files in the same directory as this HTML file on GitHub Pages.
+            Update the filenames below if your actual filenames are different.
+          </p>
+        </div>
+
+        <div class="track-grid">
+          <article class="panel track-card">
+            <div class="track-meta">
+              <h3>Silverstone</h3>
+              <p>Total Time: 108.80 s · Average CTE: 0.0472 m</p>
+            </div>
+            <video controls preload="metadata" playsinline>
+              <source src="silverstone.mp4" type="video/mp4" />
+              Your browser does not support the video tag.
+            </video>
+          </article>
+
+          <article class="panel track-card">
+            <div class="track-meta">
+              <h3>Suzuka</h3>
+              <p>Total Time: 104.95 s · Average CTE: 0.0691 m</p>
+            </div>
+            <video controls preload="metadata" playsinline>
+              <source src="suzuka.mp4" type="video/mp4" />
+              Your browser does not support the video tag.
+            </video>
+          </article>
+
+          <article class="panel track-card">
+            <div class="track-meta">
+              <h3>Monza</h3>
+              <p>Total Time: 96.45 s · Average CTE: 0.0541 m</p>
+            </div>
+            <video controls preload="metadata" playsinline>
+              <source src="monza.mp4" type="video/mp4" />
+              Your browser does not support the video tag.
+            </video>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="improvements">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <h2>What I Improved</h2>
+          </div>
+          <p>Additional engineering work outside the designated TODO blocks, all marked with <code>#NewFeature</code>.</p>
+        </div>
+
+        <div class="notes">
+          <div class="panel" style="padding: 22px;">
+            <h3 style="margin-top: 0;">Implementation changes</h3>
+            <ul class="list">
+              <li><strong>Headless mode</strong> via <code>--headless</code> to run simulations without GUI windows on remote servers.</li>
+              <li><strong>Auto-exit on finish</strong> so the simulator terminates automatically when the track is completed.</li>
+              <li><strong>Timeout mechanism</strong> via <code>--max_time</code> to stop unstable or oscillatory runs during tuning.</li>
+              <li><strong>CLI gain overrides</strong> for PID gains and LQR weights, enabling fast parameter sweeps without editing source code.</li>
+            </ul>
+          </div>
+
+          <div class="panel" style="padding: 22px;">
+            <h3 style="margin-top: 0;">Tuning workflow</h3>
+            <ul class="list">
+              <li>Built an automated <strong>grid search script</strong> to evaluate controller settings across multiple runs.</li>
+              <li>Tested multiple lateral controllers, including PID, Pure Pursuit, Stanley, and LQR.</li>
+              <li>Selected <strong>Stanley with k<sub>p</sub> = 8.0</strong> as the final submission due to its low CTE and robust behavior across all three tracks.</li>
+            </ul>
+            <div class="pill-row">
+              <span class="pill">Headless mode</span>
+              <span class="pill">Auto exit</span>
+              <span class="pill">Timeout control</span>
+              <span class="pill">CLI tuning</span>
+              <span class="pill">Grid search</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="panel footer-card">
+        <strong>Homework summary</strong><br />
+        This showcase highlights a controller design workflow centered on path tracking accuracy, implementation discipline, and reproducible tuning.
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
