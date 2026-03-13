@@ -1,0 +1,1653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Neural SLAM: From iMAP to NICE-SLAM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #060910;
+  --bg2: #0c1220;
+  --bg3: #111927;
+  --panel: #0f1c2e;
+  --border: #1e3050;
+  --accent: #00c8ff;
+  --accent2: #7b4fff;
+  --accent3: #00ffa3;
+  --warn: #ff6b35;
+  --text: #dce8f5;
+  --muted: #5a7a99;
+  --card: #0d1a2b;
+  --glow: 0 0 30px rgba(0,200,255,0.15);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  font-size: 16px;
+  line-height: 1.7;
+  overflow-x: hidden;
+}
+
+/* ─── NOISE OVERLAY ─── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.4;
+}
+
+/* ─── SCROLLBAR ─── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 2px; }
+
+/* ─── NAV ─── */
+nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+  background: rgba(6,9,16,0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+}
+
+.nav-logo {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--accent);
+  letter-spacing: 0.1em;
+}
+
+.nav-links {
+  display: flex;
+  gap: 1.5rem;
+  list-style: none;
+}
+
+.nav-links a {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  text-decoration: none;
+  text-transform: uppercase;
+  transition: color 0.2s;
+}
+
+.nav-links a:hover { color: var(--accent); }
+
+/* ─── HERO ─── */
+.hero {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding: 6rem 2rem 4rem;
+  text-align: center;
+  overflow: hidden;
+}
+
+.hero-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,200,255,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,200,255,0.04) 1px, transparent 1px);
+  background-size: 60px 60px;
+  mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black, transparent);
+}
+
+.hero-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+}
+
+.orb1 {
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(0,200,255,0.12), transparent 70%);
+  top: -100px; left: -100px;
+  animation: float1 8s ease-in-out infinite;
+}
+
+.orb2 {
+  width: 400px; height: 400px;
+  background: radial-gradient(circle, rgba(123,79,255,0.10), transparent 70%);
+  bottom: -80px; right: -80px;
+  animation: float2 10s ease-in-out infinite;
+}
+
+@keyframes float1 {
+  0%, 100% { transform: translate(0,0); }
+  50% { transform: translate(30px, 20px); }
+}
+@keyframes float2 {
+  0%, 100% { transform: translate(0,0); }
+  50% { transform: translate(-20px, -30px); }
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.15em;
+  color: var(--accent);
+  border: 1px solid rgba(0,200,255,0.3);
+  padding: 0.35rem 0.9rem;
+  border-radius: 2px;
+  margin-bottom: 2rem;
+  text-transform: uppercase;
+  background: rgba(0,200,255,0.05);
+}
+
+.badge::before {
+  content: '';
+  width: 6px; height: 6px;
+  background: var(--accent);
+  border-radius: 50%;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+h1 {
+  font-family: 'Syne', sans-serif;
+  font-size: clamp(2.5rem, 6vw, 5rem);
+  font-weight: 800;
+  line-height: 1.0;
+  letter-spacing: -0.02em;
+  margin-bottom: 0.5rem;
+}
+
+.title-neural { color: var(--text); }
+.title-slam {
+  color: transparent;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+.subtitle {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.8rem;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  margin-bottom: 2rem;
+  text-transform: uppercase;
+}
+
+.hero-desc {
+  max-width: 560px;
+  color: #7a9bb8;
+  font-size: 1rem;
+  line-height: 1.8;
+  margin-bottom: 3rem;
+}
+
+.hero-pills {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-bottom: 3rem;
+}
+
+.pill {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  padding: 0.4rem 0.8rem;
+  border-radius: 2px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.pill-iccv { background: rgba(255,107,53,0.12); color: var(--warn); border: 1px solid rgba(255,107,53,0.25); }
+.pill-cvpr { background: rgba(0,200,255,0.10); color: var(--accent); border: 1px solid rgba(0,200,255,0.25); }
+.pill-gpu  { background: rgba(0,255,163,0.10); color: var(--accent3); border: 1px solid rgba(0,255,163,0.25); }
+
+.scroll-hint {
+  position: absolute;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  color: var(--muted);
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.scroll-line {
+  width: 1px;
+  height: 40px;
+  background: linear-gradient(var(--accent), transparent);
+  animation: scrollDown 2s ease-in-out infinite;
+}
+
+@keyframes scrollDown {
+  0% { transform: scaleY(0); transform-origin: top; }
+  50% { transform: scaleY(1); transform-origin: top; }
+  51% { transform: scaleY(1); transform-origin: bottom; }
+  100% { transform: scaleY(0); transform-origin: bottom; }
+}
+
+/* ─── SECTIONS ─── */
+section {
+  position: relative;
+  z-index: 1;
+  padding: 5rem 2rem;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.section-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.section-label::before {
+  content: '';
+  display: inline-block;
+  width: 24px;
+  height: 1px;
+  background: var(--accent);
+}
+
+h2 {
+  font-family: 'Syne', sans-serif;
+  font-size: clamp(1.8rem, 3.5vw, 2.8rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  margin-bottom: 1.5rem;
+}
+
+h3 {
+  font-family: 'Syne', sans-serif;
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+p { color: #8aacca; margin-bottom: 1rem; }
+
+/* ─── DIVIDER ─── */
+.divider {
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border), transparent);
+  margin: 0;
+}
+
+/* ─── CONCEPT CARDS ─── */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1.5rem;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.3s, transform 0.3s;
+}
+
+.card:hover {
+  border-color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: var(--glow);
+}
+
+.card-icon {
+  font-size: 1.8rem;
+  margin-bottom: 0.75rem;
+}
+
+.card h3 { font-size: 1rem; margin-bottom: 0.5rem; color: var(--text); }
+.card p { font-size: 0.875rem; margin: 0; }
+
+.card::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.card:hover::after { opacity: 1; }
+
+/* ─── TIMELINE ─── */
+.timeline {
+  position: relative;
+  padding-left: 2rem;
+  margin-top: 2.5rem;
+}
+
+.timeline::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 1px;
+  background: linear-gradient(var(--accent), var(--accent2), transparent);
+}
+
+.timeline-item {
+  position: relative;
+  margin-bottom: 2.5rem;
+}
+
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: -2.4rem;
+  top: 0.3rem;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 10px var(--accent);
+}
+
+.timeline-year {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--accent);
+  letter-spacing: 0.1em;
+  margin-bottom: 0.25rem;
+}
+
+.timeline-item h3 { font-size: 1.1rem; color: var(--text); margin-bottom: 0.5rem; }
+.timeline-item p { font-size: 0.9rem; }
+
+/* ─── CODE BLOCK ─── */
+.code-block {
+  background: #040810;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1.5rem;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.78rem;
+  line-height: 1.8;
+  overflow-x: auto;
+  position: relative;
+  margin: 1.5rem 0;
+}
+
+.code-block::before {
+  content: attr(data-lang);
+  position: absolute;
+  top: 0.5rem; right: 0.75rem;
+  font-size: 0.6rem;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.tok-comment { color: #3d5a7a; }
+.tok-key  { color: var(--accent); }
+.tok-str  { color: var(--accent3); }
+.tok-num  { color: #f4b942; }
+.tok-fn   { color: var(--accent2); }
+
+/* ─── COMPARISON TABLE ─── */
+.compare-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 2rem;
+  font-size: 0.875rem;
+}
+
+.compare-table th {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.compare-table th:nth-child(2) { color: var(--warn); }
+.compare-table th:nth-child(3) { color: var(--accent); }
+
+.compare-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid rgba(30,48,80,0.5);
+  color: #8aacca;
+  vertical-align: top;
+}
+
+.compare-table td:first-child {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--text);
+}
+
+.compare-table tr:hover td { background: rgba(0,200,255,0.03); }
+
+.tag-bad  { color: var(--warn); }
+.tag-good { color: var(--accent3); }
+
+/* ─── ARCHITECTURE DIAGRAM ─── */
+.arch-wrap {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2rem;
+  margin-top: 2rem;
+  overflow-x: auto;
+}
+
+/* ─── DEMO SECTION ─── */
+.demo-container {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 2rem;
+}
+
+.demo-header {
+  background: var(--bg2);
+  border-bottom: 1px solid var(--border);
+  padding: 0.75rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.dot { width: 8px; height: 8px; border-radius: 50%; }
+.dot-r { background: #ff5f57; }
+.dot-y { background: #febc2e; }
+.dot-g { background: #28c840; }
+
+.demo-body { padding: 2rem; }
+
+/* ─── CANVAS DEMO ─── */
+#rayCanvas {
+  width: 100%;
+  max-width: 700px;
+  display: block;
+  margin: 0 auto;
+  border-radius: 2px;
+}
+
+.demo-controls {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1.25rem;
+  justify-content: center;
+}
+
+.btn {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.5rem 1.2rem;
+  border-radius: 2px;
+  border: 1px solid;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: transparent;
+}
+
+.btn-primary {
+  color: var(--accent);
+  border-color: rgba(0,200,255,0.4);
+}
+
+.btn-primary:hover {
+  background: rgba(0,200,255,0.1);
+  border-color: var(--accent);
+}
+
+.btn-secondary {
+  color: var(--accent2);
+  border-color: rgba(123,79,255,0.4);
+}
+
+.btn-secondary:hover {
+  background: rgba(123,79,255,0.1);
+  border-color: var(--accent2);
+}
+
+.btn-green {
+  color: var(--accent3);
+  border-color: rgba(0,255,163,0.4);
+}
+
+.btn-green:hover {
+  background: rgba(0,255,163,0.1);
+  border-color: var(--accent3);
+}
+
+/* ─── VIDEO PLACEHOLDER ─── */
+.video-placeholder {
+  background: var(--bg);
+  border: 2px dashed var(--border);
+  border-radius: 4px;
+  padding: 3rem;
+  text-align: center;
+  color: var(--muted);
+  font-family: 'Space Mono', monospace;
+  font-size: 0.75rem;
+  line-height: 2;
+}
+
+.video-placeholder .icon { font-size: 2.5rem; margin-bottom: 1rem; }
+
+/* ─── GRID 2COL ─── */
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+
+@media (max-width: 640px) { .grid-2 { grid-template-columns: 1fr; } }
+
+/* ─── QUIZ ─── */
+.quiz-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2rem;
+  margin-bottom: 1.25rem;
+}
+
+.quiz-q {
+  font-family: 'Syne', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 1.25rem;
+  color: var(--text);
+}
+
+.quiz-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.quiz-opt {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0.7rem 1rem;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--muted);
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.2s;
+  width: 100%;
+}
+
+.quiz-opt:hover { border-color: var(--accent); color: var(--text); }
+.quiz-opt.correct { border-color: var(--accent3); color: var(--accent3); background: rgba(0,255,163,0.07); }
+.quiz-opt.wrong   { border-color: var(--warn); color: var(--warn); background: rgba(255,107,53,0.07); }
+
+.quiz-feedback {
+  margin-top: 0.75rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+  display: none;
+  font-family: 'Space Mono', monospace;
+}
+
+/* ─── FOOTNOTE / RESOURCES ─── */
+.resource-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+}
+
+.resource-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.9rem 1.25rem;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.resource-item:hover {
+  border-color: var(--accent);
+  background: rgba(0,200,255,0.04);
+}
+
+.resource-tag {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.25rem 0.5rem;
+  border-radius: 2px;
+  white-space: nowrap;
+}
+
+.tag-paper { background: rgba(0,200,255,0.1); color: var(--accent); border: 1px solid rgba(0,200,255,0.2); }
+.tag-code  { background: rgba(0,255,163,0.1); color: var(--accent3); border: 1px solid rgba(0,255,163,0.2); }
+.tag-video { background: rgba(255,107,53,0.1); color: var(--warn); border: 1px solid rgba(255,107,53,0.2); }
+
+.resource-text { font-size: 0.875rem; color: var(--text); }
+.resource-sub  { font-size: 0.75rem; color: var(--muted); font-family: 'Space Mono', monospace; }
+
+/* ─── FOOTER ─── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 2rem;
+  text-align: center;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+}
+
+/* ─── HIGHLIGHT BOX ─── */
+.highlight-box {
+  border-left: 3px solid var(--accent);
+  background: rgba(0,200,255,0.05);
+  padding: 1.25rem 1.5rem;
+  border-radius: 0 4px 4px 0;
+  margin: 1.5rem 0;
+}
+
+.highlight-box.warn {
+  border-left-color: var(--warn);
+  background: rgba(255,107,53,0.05);
+}
+
+.highlight-box.green {
+  border-left-color: var(--accent3);
+  background: rgba(0,255,163,0.05);
+}
+
+.highlight-box p { margin: 0; font-size: 0.9rem; }
+.highlight-box strong { color: var(--text); }
+
+/* ─── SECTION BG ACCENT ─── */
+.section-dark {
+  background: var(--bg2);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  max-width: 100%;
+  padding: 5rem 2rem;
+}
+
+.section-dark > .inner {
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+/* ─── PROGRESS BAR ─── */
+#readProgress {
+  position: fixed;
+  top: 56px; left: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  z-index: 99;
+  transition: width 0.1s;
+}
+
+/* ─── FADE IN ─── */
+.fade-in {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.fade-in.visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* ─── NERF VIZ LABELS ─── */
+.viz-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  color: var(--muted);
+  text-align: center;
+  margin-top: 0.75rem;
+  letter-spacing: 0.08em;
+}
+
+/* ─── MATH FORMULA ─── */
+.formula {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.9rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 1rem 1.5rem;
+  border-radius: 4px;
+  color: var(--accent3);
+  text-align: center;
+  margin: 1rem 0;
+  overflow-x: auto;
+}
+
+</style>
+</head>
+<body>
+
+<div id="readProgress"></div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">// NEURAL-SLAM</div>
+  <ul class="nav-links">
+    <li><a href="#prerequisites">Prereqs</a></li>
+    <li><a href="#imap">iMAP</a></li>
+    <li><a href="#niceslam">NICE-SLAM</a></li>
+    <li><a href="#demo">Demo</a></li>
+    <li><a href="#quiz">Quiz</a></li>
+    <li><a href="#resources">Resources</a></li>
+  </ul>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-grid"></div>
+  <div class="hero-orb orb1"></div>
+  <div class="hero-orb orb2"></div>
+
+  <div class="badge">Interactive Lecture · CVPR 2022</div>
+
+  <h1>
+    <span class="title-neural">Neural </span><br>
+    <span class="title-slam">SLAM</span>
+  </h1>
+
+  <div class="subtitle">From iMAP to NICE-SLAM</div>
+
+  <p class="hero-desc">
+    How neural implicit representations replaced classical voxel maps — and how NICE-SLAM solved the scalability crisis that crippled its predecessor.
+  </p>
+
+  <div class="hero-pills">
+    <span class="pill pill-iccv">iMAP · ICCV 2021</span>
+    <span class="pill pill-cvpr">NICE-SLAM · CVPR 2022</span>
+    <span class="pill pill-gpu">Live GPU Demo · H200</span>
+  </div>
+
+  <div class="scroll-hint">
+    scroll
+    <div class="scroll-line"></div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ═══════════════════════════════════ PREREQUISITES ═════════════════════════════════════ -->
+<section id="prerequisites" class="fade-in">
+  <div class="section-label">Section 01</div>
+  <h2>Background You Need</h2>
+  <p>Before diving in, make sure you have a mental model of these four concepts. Each card is a 60-second primer.</p>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="card-icon">🗺️</div>
+      <h3>Classical SLAM</h3>
+      <p>Simultaneous Localization And Mapping. A robot asks: <em>"where am I, and what does the world look like?"</em> — at the same time, from scratch. Traditional methods use voxels, point clouds, or occupancy grids.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">🧠</div>
+      <h3>Neural Implicit Representation</h3>
+      <p>Instead of storing a grid of values, we train a neural network <strong>f(x,y,z) → (density, color)</strong>. The network <em>is</em> the map. Compact, differentiable, and smooth.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">📷</div>
+      <h3>RGB-D Camera</h3>
+      <p>A camera that captures both color (RGB) and depth (D) per pixel. Used in both iMAP and NICE-SLAM as input. Think: Intel RealSense, Azure Kinect.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">🌊</div>
+      <h3>Volume Rendering</h3>
+      <p>Cast rays from the camera. Sample points along each ray. Ask the neural network what density and color each point has. Integrate to get the final pixel color — differentiable end-to-end.</p>
+    </div>
+  </div>
+
+  <div class="highlight-box" style="margin-top:2rem">
+    <p><strong>Key intuition:</strong> A NeRF-style network is essentially a <em>compressed, queryable 3D map</em>. SLAM systems learned to use this as their scene representation — and optimize it in real time.</p>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ═══════════════════════════════════ EVOLUTION TIMELINE ═════════════════════════════════ -->
+<section class="fade-in">
+  <div class="section-label">Context</div>
+  <h2>The Road to Neural SLAM</h2>
+
+  <div class="timeline">
+    <div class="timeline-item">
+      <div class="timeline-year">2020 — NeRF</div>
+      <h3>Neural Radiance Fields</h3>
+      <p>Mildenhall et al. show a simple MLP can represent an entire 3D scene for novel view synthesis. No SLAM — takes hours to train on a static scene.</p>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-year">2021 — iMAP (ICCV)</div>
+      <h3>First Neural Implicit SLAM</h3>
+      <p>Sucar et al. replace the voxel map with a single MLP. Train it live as the robot moves. Tracks at 10 Hz. Small rooms only — catastrophic forgetting at scale.</p>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-year">2022 — NICE-SLAM (CVPR)</div>
+      <h3>Hierarchical Grid + Neural Decoders</h3>
+      <p>Zhu, Peng et al. replace the single MLP with multi-scale feature grids + lightweight decoders. Local updates. Scales to entire apartments. Competitive tracking.</p>
+    </div>
+    <div class="timeline-item">
+      <div class="timeline-year">2022–2024 — The Wave</div>
+      <h3>ESLAM, Co-SLAM, Point-SLAM, MonoGS…</h3>
+      <p>NICE-SLAM sparked a wave of follow-ups: hash grids, Gaussian splatting, monocular depth — neural SLAM became a core research frontier.</p>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ═══════════════════════════════════ iMAP ═════════════════════════════════════════════ -->
+<section id="imap" class="fade-in">
+  <div class="section-label">Section 02 · ICCV 2021</div>
+  <h2>iMAP — The Pioneer</h2>
+  <p style="max-width:700px">
+    iMAP is the first system to use a single MLP as the <em>sole</em> scene representation in a real-time RGB-D SLAM pipeline. No point clouds, no voxels — just one network.
+  </p>
+
+  <div class="grid-2" style="margin-top:1.5rem">
+    <div>
+      <h3 style="color:var(--accent)">How It Works</h3>
+      <p style="font-size:0.9rem">
+        A fully-connected MLP with 4 hidden layers takes a 3D point <code>(x,y,z)</code> and returns <code>(occupancy, color)</code>. Volume rendering composites these samples along camera rays into predicted RGB and depth images.
+      </p>
+      <p style="font-size:0.9rem">
+        The system alternates between two processes:
+      </p>
+      <ul style="padding-left:1.25rem; color:#8aacca; font-size:0.9rem; line-height:2">
+        <li><strong style="color:var(--text)">Tracking</strong> — freeze the map, optimize camera pose</li>
+        <li><strong style="color:var(--text)">Mapping</strong> — freeze the pose, update the MLP weights</li>
+      </ul>
+
+      <div class="formula">f_θ(x, y, z) → (σ, c)</div>
+
+      <p style="font-size:0.85rem">Keyframes are stored and replayed to fight forgetting. Dynamic pixel sampling focuses compute on high-information regions.</p>
+    </div>
+
+    <div>
+      <h3 style="color:var(--warn)">The Limitations</h3>
+      <div class="highlight-box warn">
+        <p><strong>Catastrophic Forgetting</strong><br>A single global MLP must represent the entire scene. Updating one region degrades others.</p>
+      </div>
+      <div class="highlight-box warn" style="margin-top:0.75rem">
+        <p><strong>Over-smoothing</strong><br>The network's natural bias toward low-frequency functions produces blurry, detail-free geometry.</p>
+      </div>
+      <div class="highlight-box warn" style="margin-top:0.75rem">
+        <p><strong>No Scalability</strong><br>Mapping rate: ~2 Hz. Works for single small rooms. Falls apart for large or multi-room scenes.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="code-block" data-lang="python" style="margin-top:2rem">
+<span class="tok-comment"># iMAP: the core idea in pseudocode</span>
+<span class="tok-key">class</span> <span class="tok-fn">iMAPSystem</span>:
+    <span class="tok-key">def</span> <span class="tok-fn">__init__</span>(self):
+        <span class="tok-comment"># The ENTIRE map lives in one MLP</span>
+        self.map_network = <span class="tok-fn">MLP</span>(
+            input_dim=<span class="tok-num">3</span>,        <span class="tok-comment"># (x, y, z)</span>
+            hidden_dim=<span class="tok-num">256</span>,
+            output_dim=<span class="tok-num">4</span>         <span class="tok-comment"># (occupancy, R, G, B)</span>
+        )
+        self.keyframes = []
+
+    <span class="tok-key">def</span> <span class="tok-fn">tracking</span>(self, frame):
+        <span class="tok-comment"># Freeze network, optimize camera pose T</span>
+        T = <span class="tok-fn">optimize_pose</span>(frame, self.map_network)
+        <span class="tok-key">return</span> T
+
+    <span class="tok-key">def</span> <span class="tok-fn">mapping</span>(self, frame, T):
+        <span class="tok-comment"># Freeze pose, update ALL weights globally</span>
+        <span class="tok-comment"># ⚠ Updating room B corrupts room A!</span>
+        <span class="tok-fn">gradient_step</span>(self.map_network, frame, T)
+        <span class="tok-fn">replay_keyframes</span>(self.keyframes)   <span class="tok-comment"># fight forgetting</span>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ═══════════════════════════════════ NICE-SLAM ════════════════════════════════════════ -->
+<div class="section-dark" id="niceslam">
+<div class="inner">
+  <section class="fade-in" style="padding-top:0; padding-bottom:0">
+    <div class="section-label">Section 03 · CVPR 2022</div>
+    <h2>NICE-SLAM — The Fix</h2>
+    <p style="max-width:700px">
+      NICE-SLAM's core insight: <strong>decouple geometry storage from geometry decoding.</strong> Store features in a spatial grid (local), decode geometry with a small pre-trained network (global).
+    </p>
+
+    <div class="grid-2">
+      <div>
+        <h3 style="color:var(--accent)">The Hierarchical Representation</h3>
+        <p style="font-size:0.9rem">Three scales of feature grids cover the scene:</p>
+        <ul style="padding-left:1.25rem; color:#8aacca; font-size:0.9rem; line-height:2.2">
+          <li><strong style="color:var(--accent)">Coarse grid</strong> — low-res, for fast camera pose recovery</li>
+          <li><strong style="color:var(--accent2)">Mid grid</strong> — medium detail geometry</li>
+          <li><strong style="color:var(--accent3)">Fine grid</strong> — high-res fine geometry</li>
+          <li><strong style="color:var(--warn)">Color grid</strong> — separate appearance features</li>
+        </ul>
+        <p style="font-size:0.9rem; margin-top:0.75rem">
+          Each grid cell stores a small learnable feature vector. A shared, <em>pre-trained</em> decoder MLP reads features and outputs occupancy/color.
+        </p>
+        <div class="formula">F_grid(x) → feat → Decoder_θ(feat) → (σ, c)</div>
+      </div>
+
+      <div>
+        <h3 style="color:var(--accent3)">Why This Solves Everything</h3>
+        <div class="highlight-box green">
+          <p><strong>Local updates, no forgetting</strong><br>Updating a region only touches nearby grid cells. Other regions are completely untouched.</p>
+        </div>
+        <div class="highlight-box green" style="margin-top:0.75rem">
+          <p><strong>Sharp geometry</strong><br>Pre-trained priors on the decoder know what "flat wall" or "sharp edge" should look like before seeing a single frame.</p>
+        </div>
+        <div class="highlight-box green" style="margin-top:0.75rem">
+          <p><strong>Scales to apartments</strong><br>Just make the grid bigger. Storage grows with scene size, but compute stays local.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- COMPARISON TABLE -->
+    <table class="compare-table" style="margin-top:3rem">
+      <thead>
+        <tr>
+          <th>Property</th>
+          <th>iMAP</th>
+          <th>NICE-SLAM</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Scene Representation</td>
+          <td class="tag-bad">Single global MLP</td>
+          <td class="tag-good">Multi-scale feature grids + decoders</td>
+        </tr>
+        <tr>
+          <td>Update Locality</td>
+          <td class="tag-bad">Global (all weights)</td>
+          <td class="tag-good">Local (nearby grid cells only)</td>
+        </tr>
+        <tr>
+          <td>Catastrophic Forgetting</td>
+          <td class="tag-bad">Severe — needs keyframe replay</td>
+          <td class="tag-good">Minimal — grids are independent</td>
+        </tr>
+        <tr>
+          <td>Scene Scale</td>
+          <td class="tag-bad">Single small room</td>
+          <td class="tag-good">Multi-room apartments</td>
+        </tr>
+        <tr>
+          <td>Geometry Detail</td>
+          <td class="tag-bad">Over-smoothed, blurry</td>
+          <td class="tag-good">Sharp edges via geometric priors</td>
+        </tr>
+        <tr>
+          <td>Geometric Priors</td>
+          <td class="tag-bad">None (train from scratch)</td>
+          <td class="tag-good">Pre-trained on ShapeNet</td>
+        </tr>
+        <tr>
+          <td>Tracking Speed</td>
+          <td>~10 Hz</td>
+          <td>~10 Hz</td>
+        </tr>
+        <tr>
+          <td>Datasets Evaluated</td>
+          <td>2</td>
+          <td class="tag-good">5 (Replica, ScanNet, TUM, Co-fusion…)</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- ARCHITECTURE DIAGRAM -->
+    <div class="arch-wrap" style="margin-top:3rem">
+      <div class="section-label" style="margin-bottom:1.25rem">Architecture · NICE-SLAM Pipeline</div>
+      <svg viewBox="0 0 900 320" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:900px;display:block;margin:0 auto" font-family="Space Mono, monospace">
+
+        <!-- Background -->
+        <rect width="900" height="320" fill="none"/>
+
+        <!-- RGB-D Input -->
+        <rect x="10" y="120" width="100" height="80" rx="3" fill="#0d1a2b" stroke="#1e3050" stroke-width="1.5"/>
+        <text x="60" y="152" fill="#5a7a99" font-size="9" text-anchor="middle">INPUT</text>
+        <text x="60" y="168" fill="#dce8f5" font-size="11" text-anchor="middle" font-weight="bold">RGB-D</text>
+        <text x="60" y="184" fill="#5a7a99" font-size="9" text-anchor="middle">Camera</text>
+
+        <!-- Arrow -->
+        <line x1="110" y1="160" x2="155" y2="160" stroke="#1e3050" stroke-width="1.5" marker-end="url(#arr)"/>
+
+        <!-- Feature Grids -->
+        <rect x="158" y="30" width="130" height="260" rx="3" fill="#0d1a2b" stroke="#1e3050" stroke-width="1.5"/>
+        <text x="223" y="52" fill="#5a7a99" font-size="9" text-anchor="middle">FEATURE GRIDS</text>
+
+        <rect x="172" y="62" width="102" height="38" rx="2" fill="#060910" stroke="#00c8ff" stroke-width="1"/>
+        <text x="223" y="79" fill="#00c8ff" font-size="9" text-anchor="middle">Coarse Grid</text>
+        <text x="223" y="92" fill="#5a7a99" font-size="8" text-anchor="middle">Φ₀ — for tracking</text>
+
+        <rect x="172" y="108" width="102" height="38" rx="2" fill="#060910" stroke="#7b4fff" stroke-width="1"/>
+        <text x="223" y="125" fill="#7b4fff" font-size="9" text-anchor="middle">Mid Grid</text>
+        <text x="223" y="138" fill="#5a7a99" font-size="8" text-anchor="middle">Φ₁ — geometry</text>
+
+        <rect x="172" y="154" width="102" height="38" rx="2" fill="#060910" stroke="#00ffa3" stroke-width="1"/>
+        <text x="223" y="171" fill="#00ffa3" font-size="9" text-anchor="middle">Fine Grid</text>
+        <text x="223" y="184" fill="#5a7a99" font-size="8" text-anchor="middle">Φ₂ — fine detail</text>
+
+        <rect x="172" y="200" width="102" height="38" rx="2" fill="#060910" stroke="#ff6b35" stroke-width="1"/>
+        <text x="223" y="217" fill="#ff6b35" font-size="9" text-anchor="middle">Color Grid</text>
+        <text x="223" y="230" fill="#5a7a99" font-size="8" text-anchor="middle">Φ_c — appearance</text>
+
+        <text x="223" y="272" fill="#3d5a7a" font-size="8" text-anchor="middle">↑ optimized per region</text>
+        <text x="223" y="284" fill="#3d5a7a" font-size="8" text-anchor="middle">local update only</text>
+
+        <!-- Arrow to decoders -->
+        <line x1="290" y1="120" x2="335" y2="120" stroke="#1e3050" stroke-width="1.5" marker-end="url(#arr)"/>
+        <line x1="290" y1="173" x2="335" y2="200" stroke="#1e3050" stroke-width="1.5" marker-end="url(#arr)"/>
+
+        <!-- Decoders -->
+        <rect x="338" y="85" width="120" height="60" rx="3" fill="#0d1a2b" stroke="#00c8ff" stroke-width="1.5"/>
+        <text x="398" y="108" fill="#5a7a99" font-size="9" text-anchor="middle">GEO DECODER</text>
+        <text x="398" y="124" fill="#00c8ff" font-size="10" text-anchor="middle" font-weight="bold">Occupancy MLP</text>
+        <text x="398" y="138" fill="#3d5a7a" font-size="8" text-anchor="middle">pre-trained prior</text>
+
+        <rect x="338" y="175" width="120" height="60" rx="3" fill="#0d1a2b" stroke="#ff6b35" stroke-width="1.5"/>
+        <text x="398" y="198" fill="#5a7a99" font-size="9" text-anchor="middle">COLOR DECODER</text>
+        <text x="398" y="214" fill="#ff6b35" font-size="10" text-anchor="middle" font-weight="bold">Color MLP</text>
+        <text x="398" y="228" fill="#3d5a7a" font-size="8" text-anchor="middle">trained online</text>
+
+        <!-- Arrow to renderer -->
+        <line x1="458" y1="115" x2="503" y2="155" stroke="#1e3050" stroke-width="1.5" marker-end="url(#arr)"/>
+        <line x1="458" y1="205" x2="503" y2="165" stroke="#1e3050" stroke-width="1.5" marker-end="url(#arr)"/>
+
+        <!-- Volume Renderer -->
+        <rect x="506" y="120" width="120" height="60" rx="3" fill="#0d1a2b" stroke="#7b4fff" stroke-width="1.5"/>
+        <text x="566" y="143" fill="#5a7a99" font-size="9" text-anchor="middle">VOLUME</text>
+        <text x="566" y="158" fill="#7b4fff" font-size="10" text-anchor="middle" font-weight="bold">Renderer</text>
+        <text x="566" y="172" fill="#3d5a7a" font-size="8" text-anchor="middle">ray marching</text>
+
+        <!-- Arrow to output -->
+        <line x1="626" y1="150" x2="671" y2="150" stroke="#1e3050" stroke-width="1.5" marker-end="url(#arr)"/>
+
+        <!-- Loss -->
+        <rect x="674" y="100" width="100" height="100" rx="3" fill="#0d1a2b" stroke="#1e3050" stroke-width="1.5"/>
+        <text x="724" y="130" fill="#5a7a99" font-size="9" text-anchor="middle">LOSS</text>
+        <text x="724" y="148" fill="#dce8f5" font-size="10" text-anchor="middle" font-weight="bold">RGB + Depth</text>
+        <text x="724" y="164" fill="#3d5a7a" font-size="8" text-anchor="middle">vs observed</text>
+        <text x="724" y="180" fill="#00ffa3" font-size="9" text-anchor="middle">↓ gradient</text>
+
+        <!-- Feedback arrows -->
+        <path d="M774 150 Q840 150 840 50 Q840 18 223 18 Q170 18 170 60" fill="none" stroke="#1e3050" stroke-width="1" stroke-dasharray="4 3" marker-end="url(#arr2)"/>
+        <text x="840" y="85" fill="#3d5a7a" font-size="8" text-anchor="middle">update</text>
+        <text x="840" y="97" fill="#3d5a7a" font-size="8" text-anchor="middle">local grid</text>
+
+        <!-- Arrow markers -->
+        <defs>
+          <marker id="arr" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+            <path d="M0,0 L6,3 L0,6 Z" fill="#1e3050"/>
+          </marker>
+          <marker id="arr2" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+            <path d="M0,0 L6,3 L0,6 Z" fill="#00c8ff" opacity="0.5"/>
+          </marker>
+        </defs>
+
+      </svg>
+    </div>
+
+    <div class="code-block" data-lang="python" style="margin-top:2rem">
+<span class="tok-comment"># NICE-SLAM: the key architectural difference</span>
+<span class="tok-key">class</span> <span class="tok-fn">NICESLAMSystem</span>:
+    <span class="tok-key">def</span> <span class="tok-fn">__init__</span>(self, scene_bounds):
+        <span class="tok-comment"># Multi-scale feature grids (the map lives HERE)</span>
+        self.coarse_grid = <span class="tok-fn">FeatureGrid</span>(res=<span class="tok-num">32</span>,  feat_dim=<span class="tok-num">32</span>)
+        self.mid_grid    = <span class="tok-fn">FeatureGrid</span>(res=<span class="tok-num">128</span>, feat_dim=<span class="tok-num">32</span>)
+        self.fine_grid   = <span class="tok-fn">FeatureGrid</span>(res=<span class="tok-num">512</span>, feat_dim=<span class="tok-num">32</span>)
+        self.color_grid  = <span class="tok-fn">FeatureGrid</span>(res=<span class="tok-num">256</span>, feat_dim=<span class="tok-num">32</span>)
+
+        <span class="tok-comment"># Tiny decoders — shared, pre-trained on ShapeNet</span>
+        self.geo_decoder   = <span class="tok-fn">load_pretrained</span>(<span class="tok-str">'occupancy_prior'</span>)
+        self.color_decoder = <span class="tok-fn">MLP</span>(in=<span class="tok-num">32</span>, hidden=<span class="tok-num">32</span>, out=<span class="tok-num">3</span>)
+
+    <span class="tok-key">def</span> <span class="tok-fn">mapping</span>(self, frame, T, region):
+        <span class="tok-comment"># ✅ Only update grid cells near this frame!</span>
+        affected_cells = <span class="tok-fn">get_local_cells</span>(region)
+        <span class="tok-fn">gradient_step</span>(affected_cells, frame, T)
+        <span class="tok-comment"># Other regions: completely untouched → no forgetting</span>
+    </div>
+
+  </section>
+</div>
+</div>
+
+<!-- ═══════════════════════════════════ INTERACTIVE DEMO ══════════════════════════════════ -->
+<section id="demo" class="fade-in">
+  <div class="section-label">Section 04</div>
+  <h2>Interactive Demos</h2>
+
+  <!-- DEMO 1: Ray Sampling Visualizer -->
+  <div class="demo-container">
+    <div class="demo-header">
+      <div class="dot dot-r"></div>
+      <div class="dot dot-y"></div>
+      <div class="dot dot-g"></div>
+      <span style="margin-left:0.5rem">Demo 1 — Volume Rendering: Ray Sampling Visualizer</span>
+    </div>
+    <div class="demo-body">
+      <p style="font-size:0.875rem; margin-bottom:1rem; max-width:600px">
+        Click anywhere on the scene to cast a ray from the camera. Sampled points are queried by the neural network. Watch how density and color integrate into a final pixel.
+      </p>
+      <canvas id="rayCanvas" width="700" height="300"></canvas>
+      <p class="viz-label">Click the scene to cast rays · Toggle modes to compare sampling strategies</p>
+      <div class="demo-controls">
+        <button class="btn btn-primary" onclick="castRay()">Cast Ray</button>
+        <button class="btn btn-secondary" onclick="castMultipleRays()">Cast 20 Rays</button>
+        <button class="btn btn-green" onclick="clearCanvas()">Clear</button>
+        <button class="btn btn-primary" onclick="toggleSamplingMode()">Toggle: <span id="modeLabel">Uniform</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DEMO 2: iMAP vs NICE-SLAM grid viz -->
+  <div class="demo-container" style="margin-top:1.5rem">
+    <div class="demo-header">
+      <div class="dot dot-r"></div>
+      <div class="dot dot-y"></div>
+      <div class="dot dot-g"></div>
+      <span style="margin-left:0.5rem">Demo 2 — Update Locality: iMAP vs NICE-SLAM</span>
+    </div>
+    <div class="demo-body">
+      <p style="font-size:0.875rem; margin-bottom:1.5rem; max-width:640px">
+        Click a region of the scene to "update" it with new observations. Watch how iMAP corrupts the entire scene, while NICE-SLAM only updates nearby cells.
+      </p>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:1.5rem">
+        <div>
+          <div style="font-family:'Space Mono',monospace; font-size:0.7rem; color:var(--warn); margin-bottom:0.5rem; letter-spacing:0.08em">iMAP — GLOBAL UPDATE</div>
+          <canvas id="imapGrid" width="320" height="240" style="width:100%; border-radius:3px; cursor:crosshair"></canvas>
+        </div>
+        <div>
+          <div style="font-family:'Space Mono',monospace; font-size:0.7rem; color:var(--accent3); margin-bottom:0.5rem; letter-spacing:0.08em">NICE-SLAM — LOCAL UPDATE</div>
+          <canvas id="niceGrid" width="320" height="240" style="width:100%; border-radius:3px; cursor:crosshair"></canvas>
+        </div>
+      </div>
+      <div class="demo-controls">
+        <button class="btn btn-primary" onclick="resetGrids()">Reset</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- DEMO 3: GPU Run Results -->
+  <div class="demo-container" style="margin-top:1.5rem">
+    <div class="demo-header">
+      <div class="dot dot-r"></div>
+      <div class="dot dot-y"></div>
+      <div class="dot dot-g"></div>
+      <span style="margin-left:0.5rem">Demo 3 — Live GPU Results (H200 × 8)</span>
+    </div>
+    <div class="demo-body">
+      <div class="grid-2">
+        <div>
+          <div style="font-family:'Space Mono',monospace; font-size:0.7rem; color:var(--warn); margin-bottom:0.5rem; letter-spacing:0.08em">iMAP* — Replica Room 0</div>
+          <div class="video-placeholder" id="video-imap">
+            <div class="icon">🎬</div>
+            <div>Video coming after GPU run</div>
+            <div style="margin-top:0.5rem; color:var(--muted)">Replace this block with your recorded MP4</div>
+          </div>
+        </div>
+        <div>
+          <div style="font-family:'Space Mono',monospace; font-size:0.7rem; color:var(--accent3); margin-bottom:0.5rem; letter-spacing:0.08em">NICE-SLAM — Replica Room 0</div>
+          <div class="video-placeholder" id="video-nice">
+            <div class="icon">🎬</div>
+            <div>Video coming after GPU run</div>
+            <div style="margin-top:0.5rem; color:var(--muted)">Replace this block with your recorded MP4</div>
+          </div>
+        </div>
+      </div>
+      <div class="highlight-box" style="margin-top:1.5rem">
+        <p><strong>Next step:</strong> Run NICE-SLAM on your H200s, record the output videos, drop them in the <code>videos/</code> folder, and replace these placeholders with <code>&lt;video&gt;</code> tags. Step 3 of our guide covers this.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ═══════════════════════════════════ QUIZ ══════════════════════════════════════════════ -->
+<section id="quiz" class="fade-in">
+  <div class="section-label">Section 05</div>
+  <h2>Check Your Understanding</h2>
+  <p style="margin-bottom:2rem">Test yourself on the key concepts. Click an option to see if you're right.</p>
+
+  <!-- Q1 -->
+  <div class="quiz-card">
+    <div class="quiz-q">1. What is the primary advantage of NICE-SLAM's hierarchical feature grid over iMAP's single MLP?</div>
+    <div class="quiz-options">
+      <button class="quiz-opt" onclick="answer(this, false, 'q1')">A. It runs faster because it uses less GPU memory</button>
+      <button class="quiz-opt" onclick="answer(this, true, 'q1')">B. Updates are local — changing one region doesn't affect others</button>
+      <button class="quiz-opt" onclick="answer(this, false, 'q1')">C. It doesn't require any training data</button>
+      <button class="quiz-opt" onclick="answer(this, false, 'q1')">D. It produces color images, while iMAP only does geometry</button>
+    </div>
+    <div class="quiz-feedback" id="fb-q1">✓ Correct! Because features are stored spatially in a grid, gradient updates only affect nearby voxels. iMAP's global MLP weights are shared across the whole scene — updating any region modifies the entire representation.</div>
+  </div>
+
+  <!-- Q2 -->
+  <div class="quiz-card">
+    <div class="quiz-q">2. In volume rendering, what does a point with high density (σ) contribute to the final pixel color?</div>
+    <div class="quiz-options">
+      <button class="quiz-opt" onclick="answer(this, false, 'q2')">A. Nothing — only the last sample matters</button>
+      <button class="quiz-opt" onclick="answer(this, false, 'q2')">B. It blocks all samples behind it and makes the pixel black</button>
+      <button class="quiz-opt" onclick="answer(this, true, 'q2')">C. A large weighted contribution of its color to the final pixel</button>
+      <button class="quiz-opt" onclick="answer(this, false, 'q2')">D. It resets the ray and triggers a new sample</button>
+    </div>
+    <div class="quiz-feedback" id="fb-q2">✓ Correct! The volume rendering integral weights each sample's color by its transmittance × density. High-density points (surfaces) contribute strongly; empty space contributes almost nothing.</div>
+  </div>
+
+  <!-- Q3 -->
+  <div class="quiz-card">
+    <div class="quiz-q">3. NICE-SLAM's geometric decoder is "pre-trained." What does this mean and why does it help?</div>
+    <div class="quiz-options">
+      <button class="quiz-opt" onclick="answer(this, false, 'q3')">A. The decoder was trained on the target room before deployment</button>
+      <button class="quiz-opt" onclick="answer(this, false, 'q3')">B. The decoder is frozen and never updated during SLAM</button>
+      <button class="quiz-opt" onclick="answer(this, true, 'q3')">C. It was trained on ShapeNet 3D shapes, giving it geometric priors that produce sharp, plausible surfaces even from sparse observations</button>
+      <button class="quiz-opt" onclick="answer(this, false, 'q3')">D. It uses transfer learning from iMAP's network weights</button>
+    </div>
+    <div class="quiz-feedback" id="fb-q3">✓ Correct! Pre-training on ShapeNet teaches the decoder what surfaces look like. When SLAM begins, the decoder already understands geometry — so even with limited observations it produces clean, detailed reconstructions instead of blurry blobs.</div>
+  </div>
+
+  <!-- Q4 -->
+  <div class="quiz-card">
+    <div class="quiz-q">4. What is "catastrophic forgetting" in the context of iMAP?</div>
+    <div class="quiz-options">
+      <button class="quiz-opt" onclick="answer(this, false, 'q4')">A. The system crashes when it runs out of GPU memory</button>
+      <button class="quiz-opt" onclick="answer(this, true, 'q4')">B. Optimizing the MLP for new observations overwrites knowledge of previously-seen regions</button>
+      <button class="quiz-opt" onclick="answer(this, false, 'q4')">C. The tracking module loses the camera pose during fast motion</button>
+      <button class="quiz-opt" onclick="answer(this, false, 'q4')">D. The keyframe buffer fills up and old frames are deleted</button>
+    </div>
+    <div class="quiz-feedback" id="fb-q4">✓ Correct! This is the classic continual learning problem. A neural network trained sequentially on different data regions "forgets" earlier data. iMAP mitigates this with keyframe replay, but it's still a fundamental limitation of the single-MLP design.</div>
+  </div>
+</section>
+
+<div class="divider"></div>
+
+<!-- ═══════════════════════════════════ RESOURCES ════════════════════════════════════════ -->
+<section id="resources" class="fade-in">
+  <div class="section-label">Section 06</div>
+  <h2>Go Deeper</h2>
+  <p>Everything you need to read the papers, run the code, and explore follow-up work.</p>
+
+  <div class="resource-list">
+    <a class="resource-item" href="https://arxiv.org/abs/2103.12352" target="_blank">
+      <span class="resource-tag tag-paper">Paper</span>
+      <div>
+        <div class="resource-text">iMAP: Implicit Mapping and Positioning in Real-Time</div>
+        <div class="resource-sub">Sucar et al. · ICCV 2021 · arXiv:2103.12352</div>
+      </div>
+    </a>
+    <a class="resource-item" href="https://arxiv.org/abs/2112.12130" target="_blank">
+      <span class="resource-tag tag-paper">Paper</span>
+      <div>
+        <div class="resource-text">NICE-SLAM: Neural Implicit Scalable Encoding for SLAM</div>
+        <div class="resource-sub">Zhu, Peng et al. · CVPR 2022 · arXiv:2112.12130</div>
+      </div>
+    </a>
+    <a class="resource-item" href="https://github.com/cvg/nice-slam" target="_blank">
+      <span class="resource-tag tag-code">Code</span>
+      <div>
+        <div class="resource-text">NICE-SLAM Official GitHub Repository</div>
+        <div class="resource-sub">cvg/nice-slam · PyTorch implementation</div>
+      </div>
+    </a>
+    <a class="resource-item" href="https://edgarsucar.github.io/iMAP/" target="_blank">
+      <span class="resource-tag tag-video">Project</span>
+      <div>
+        <div class="resource-text">iMAP Project Page — Videos & Results</div>
+        <div class="resource-sub">edgarsucar.github.io/iMAP</div>
+      </div>
+    </a>
+    <a class="resource-item" href="https://pengsongyou.github.io/nice-slam" target="_blank">
+      <span class="resource-tag tag-video">Project</span>
+      <div>
+        <div class="resource-text">NICE-SLAM Project Page — Videos & Results</div>
+        <div class="resource-sub">pengsongyou.github.io/nice-slam</div>
+      </div>
+    </a>
+    <a class="resource-item" href="https://youtu.be/V5hYTz5os0M" target="_blank">
+      <span class="resource-tag tag-video">Video</span>
+      <div>
+        <div class="resource-text">NICE-SLAM Official Demo Video</div>
+        <div class="resource-sub">YouTube · Replica, ScanNet, Apartment results</div>
+      </div>
+    </a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div>Neural SLAM: From iMAP to NICE-SLAM · Interactive Lecture</div>
+  <div style="margin-top:0.5rem">Built for classmates · GitHub Pages · 8× H200 GPU Demo</div>
+</footer>
+
+<!-- ═══════════════════════════════════ SCRIPTS ═══════════════════════════════════════════ -->
+<script>
+// ─── READ PROGRESS BAR ───
+window.addEventListener('scroll', () => {
+  const scrolled = document.documentElement.scrollTop;
+  const total = document.documentElement.scrollHeight - window.innerHeight;
+  document.getElementById('readProgress').style.width = (scrolled / total * 100) + '%';
+});
+
+// ─── FADE IN ON SCROLL ───
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+}, { threshold: 0.1 });
+document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+// ─── QUIZ ───
+const answered = {};
+function answer(btn, correct, qid) {
+  if (answered[qid]) return;
+  answered[qid] = true;
+  const opts = btn.closest('.quiz-options').querySelectorAll('.quiz-opt');
+  opts.forEach(o => o.style.pointerEvents = 'none');
+  btn.classList.add(correct ? 'correct' : 'wrong');
+  const fb = document.getElementById('fb-' + qid);
+  fb.style.display = 'block';
+  if (!correct) {
+    // highlight correct
+    opts.forEach(o => {
+      if (o.onclick.toString().includes('true')) o.classList.add('correct');
+    });
+    fb.textContent = '✗ Not quite. ' + fb.textContent.slice(2);
+  }
+}
+
+// ─── RAY CANVAS ───
+const rayCanvas = document.getElementById('rayCanvas');
+const ctx = rayCanvas.getContext('2d');
+let samplingMode = 'uniform'; // or 'importance'
+
+// Scene objects for ray intersection
+const spheres = [
+  { x: 200, y: 150, r: 60, color: '#00c8ff', density: 0.9 },
+  { x: 420, y: 120, r: 45, color: '#7b4fff', density: 0.7 },
+  { x: 580, y: 170, r: 55, color: '#00ffa3', density: 0.8 },
+];
+
+function drawScene() {
+  ctx.fillStyle = '#040810';
+  ctx.fillRect(0, 0, 700, 300);
+
+  // Grid
+  ctx.strokeStyle = 'rgba(0,200,255,0.05)';
+  ctx.lineWidth = 1;
+  for (let x = 0; x < 700; x += 40) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,300); ctx.stroke(); }
+  for (let y = 0; y < 300; y += 40) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(700,y); ctx.stroke(); }
+
+  // Spheres (scene objects)
+  spheres.forEach(s => {
+    const grad = ctx.createRadialGradient(s.x-15, s.y-15, 5, s.x, s.y, s.r);
+    grad.addColorStop(0, s.color + 'aa');
+    grad.addColorStop(1, s.color + '22');
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.strokeStyle = s.color + '66';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  });
+
+  // Camera icon
+  ctx.fillStyle = '#dce8f5';
+  ctx.fillRect(5, 135, 20, 30);
+  ctx.fillStyle = '#00c8ff';
+  ctx.beginPath(); ctx.arc(15, 150, 8, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#040810';
+  ctx.beginPath(); ctx.arc(15, 150, 4, 0, Math.PI*2); ctx.fill();
+}
+
+function castRayToPoint(tx, ty) {
+  const ox = 15, oy = 150;
+  const dx = tx - ox, dy = ty - oy;
+  const len = Math.sqrt(dx*dx + dy*dy);
+  const nx = dx/len, ny = dy/len;
+
+  const steps = samplingMode === 'uniform' ? 12 : 20;
+  const samples = [];
+  if (samplingMode === 'uniform') {
+    for (let i = 0; i < steps; i++) {
+      const t = len * i / steps;
+      samples.push({ t, x: ox + nx*t, y: oy + ny*t });
+    }
+  } else {
+    // importance: denser near objects
+    for (let i = 0; i < steps; i++) {
+      const raw = Math.pow(Math.random(), 0.5);
+      const t = len * raw;
+      samples.push({ t, x: ox + nx*t, y: oy + ny*t });
+    }
+    samples.sort((a,b) => a.t - b.t);
+  }
+
+  // Draw ray
+  ctx.beginPath();
+  ctx.moveTo(ox, oy);
+  ctx.lineTo(tx, ty);
+  ctx.strokeStyle = 'rgba(255,200,50,0.3)';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4,3]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Draw samples
+  samples.forEach(s => {
+    // check density at sample point
+    let density = 0;
+    let hitColor = '#ffffff';
+    spheres.forEach(sp => {
+      const d = Math.sqrt((s.x-sp.x)**2 + (s.y-sp.y)**2);
+      if (d < sp.r) {
+        const w = 1 - d/sp.r;
+        density = Math.max(density, w * sp.density);
+        hitColor = sp.color;
+      }
+    });
+
+    const size = 2 + density * 5;
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, size, 0, Math.PI*2);
+    ctx.fillStyle = density > 0.1 ? hitColor + 'cc' : 'rgba(255,200,50,0.4)';
+    ctx.fill();
+
+    if (density > 0.3) {
+      ctx.beginPath(); ctx.arc(s.x, s.y, size+4, 0, Math.PI*2);
+      ctx.strokeStyle = hitColor + '44'; ctx.lineWidth=1; ctx.stroke();
+    }
+  });
+}
+
+function castRay() {
+  const tx = 100 + Math.random() * 580;
+  const ty = 20 + Math.random() * 260;
+  castRayToPoint(tx, ty);
+}
+
+function castMultipleRays() {
+  for (let i = 0; i < 20; i++) setTimeout(castRay, i * 60);
+}
+
+function clearCanvas() { drawScene(); }
+
+function toggleSamplingMode() {
+  samplingMode = samplingMode === 'uniform' ? 'importance' : 'uniform';
+  document.getElementById('modeLabel').textContent = samplingMode === 'uniform' ? 'Uniform' : 'Importance';
+}
+
+rayCanvas.addEventListener('click', (e) => {
+  const rect = rayCanvas.getBoundingClientRect();
+  const scaleX = 700 / rect.width;
+  const scaleY = 300 / rect.height;
+  const tx = (e.clientX - rect.left) * scaleX;
+  const ty = (e.clientY - rect.top) * scaleY;
+  castRayToPoint(tx, ty);
+});
+
+drawScene();
+
+// ─── GRID COMPARISON DEMO ───
+const ROWS = 8, COLS = 10;
+let imapState = Array.from({length:ROWS*COLS}, () => ({ quality: 0.3 + Math.random()*0.4, updated: false }));
+let niceState = Array.from({length:ROWS*COLS}, () => ({ quality: 0.3 + Math.random()*0.4, updated: false }));
+
+function drawGrid(canvasId, state, mode) {
+  const c = document.getElementById(canvasId);
+  const ctx2 = c.getContext('2d');
+  const W = c.width, H = c.height;
+  const cw = W / COLS, ch = H / ROWS;
+
+  ctx2.fillStyle = '#040810';
+  ctx2.fillRect(0,0,W,H);
+
+  for (let r = 0; r < ROWS; r++) {
+    for (let col = 0; col < COLS; col++) {
+      const idx = r*COLS + col;
+      const cell = state[idx];
+      const x = col*cw, y = r*ch;
+
+      const q = cell.quality;
+      const base = mode === 'imap'
+        ? `rgba(255,107,53,${q * 0.6})`
+        : `rgba(0,200,255,${q * 0.6})`;
+
+      ctx2.fillStyle = cell.updated
+        ? (mode === 'imap' ? `rgba(255,107,53,${0.4 + q*0.5})` : `rgba(0,255,163,${0.4 + q*0.5})`)
+        : base;
+      ctx2.fillRect(x+1, y+1, cw-2, ch-2);
+
+      ctx2.strokeStyle = mode === 'imap' ? 'rgba(255,107,53,0.2)' : 'rgba(0,200,255,0.15)';
+      ctx2.lineWidth = 0.5;
+      ctx2.strokeRect(x+1,y+1,cw-2,ch-2);
+
+      // quality bar
+      ctx2.fillStyle = mode === 'imap' ? 'rgba(255,107,53,0.8)' : 'rgba(0,255,163,0.8)';
+      ctx2.fillRect(x+2, y+ch-5, (cw-4)*q, 3);
+    }
+  }
+}
+
+function handleGridClick(e, canvasId, stateArr, mode) {
+  const c = document.getElementById(canvasId);
+  const rect = c.getBoundingClientRect();
+  const scaleX = c.width / rect.width;
+  const scaleY = c.height / rect.height;
+  const mx = (e.clientX - rect.left) * scaleX;
+  const my = (e.clientY - rect.top) * scaleY;
+  const cw = c.width/COLS, ch = c.height/ROWS;
+  const col = Math.floor(mx/cw), row = Math.floor(my/ch);
+
+  if (mode === 'imap') {
+    // Global update: degrade ALL cells slightly, boost clicked region
+    stateArr.forEach((cell, i) => {
+      const cr = Math.floor(i/COLS), cc = i%COLS;
+      const dist = Math.sqrt((cr-row)**2 + (cc-col)**2);
+      if (dist < 1.5) {
+        cell.quality = Math.min(1, cell.quality + 0.3);
+        cell.updated = true;
+      } else {
+        cell.quality = Math.max(0.1, cell.quality - 0.08); // forgetting!
+        cell.updated = false;
+      }
+    });
+  } else {
+    // Local update: only nearby cells change
+    stateArr.forEach((cell, i) => {
+      const cr = Math.floor(i/COLS), cc = i%COLS;
+      const dist = Math.sqrt((cr-row)**2 + (cc-col)**2);
+      if (dist < 2.0) {
+        cell.quality = Math.min(1, cell.quality + 0.3);
+        cell.updated = true;
+      }
+      // Far cells: completely unaffected
+    });
+  }
+
+  drawGrid(canvasId, stateArr, mode);
+}
+
+function resetGrids() {
+  imapState = Array.from({length:ROWS*COLS}, () => ({ quality: 0.3 + Math.random()*0.4, updated: false }));
+  niceState = Array.from({length:ROWS*COLS}, () => ({ quality: 0.3 + Math.random()*0.4, updated: false }));
+  drawGrid('imapGrid', imapState, 'imap');
+  drawGrid('niceGrid', niceState, 'nice');
+}
+
+document.getElementById('imapGrid').addEventListener('click', e => {
+  handleGridClick(e, 'imapGrid', imapState, 'imap');
+  drawGrid('imapGrid', imapState, 'imap');
+});
+
+document.getElementById('niceGrid').addEventListener('click', e => {
+  handleGridClick(e, 'niceGrid', niceState, 'nice');
+  drawGrid('niceGrid', niceState, 'nice');
+});
+
+resetGrids();
+</script>
+
+</body>
+</html>
