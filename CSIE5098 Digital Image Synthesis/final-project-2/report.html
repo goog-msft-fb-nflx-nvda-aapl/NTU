@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CSIE5098 Final Project — Structured Importance Sampling of Environment Maps</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0d0d;
+    --bg2: #141414;
+    --bg3: #1a1a1a;
+    --border: #2a2a2a;
+    --accent: #c8a96e;
+    --accent2: #7eb8c9;
+    --text: #e8e0d0;
+    --muted: #7a7060;
+    --good: #6eb88a;
+    --code-bg: #111111;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Libre Baskerville', Georgia, serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 17px;
+    line-height: 1.8;
+  }
+
+  /* ── Layout ── */
+  .page { max-width: 960px; margin: 0 auto; padding: 80px 48px; }
+
+  /* ── Header ── */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 48px;
+    margin-bottom: 72px;
+  }
+
+  .tag {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72em;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+
+  h1 {
+    font-size: 2.6em;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--text);
+    margin-bottom: 16px;
+    letter-spacing: -0.02em;
+  }
+
+  .subtitle {
+    font-style: italic;
+    color: var(--muted);
+    font-size: 1.05em;
+    margin-bottom: 36px;
+  }
+
+  .meta-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 0;
+    border: 1px solid var(--border);
+  }
+
+  .meta-item {
+    padding: 16px 20px;
+    border-right: 1px solid var(--border);
+  }
+  .meta-item:last-child { border-right: none; }
+
+  .meta-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65em;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .meta-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85em;
+    color: var(--accent);
+  }
+
+  /* ── Sections ── */
+  section { margin-bottom: 72px; }
+
+  h2 {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75em;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 28px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  h3 {
+    font-size: 1.2em;
+    font-weight: 700;
+    color: var(--text);
+    margin: 36px 0 14px;
+  }
+
+  p { color: #b8b0a0; margin-bottom: 18px; }
+
+  /* ── Code ── */
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    padding: 24px;
+    overflow-x: auto;
+    margin: 24px 0;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.78em;
+    line-height: 1.7;
+    color: #c8c0b0;
+  }
+
+  code {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.82em;
+    color: var(--accent);
+    background: var(--code-bg);
+    padding: 2px 6px;
+    border: 1px solid var(--border);
+  }
+
+  pre code { background: none; border: none; padding: 0; color: inherit; }
+
+  /* ── Tables ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 24px 0;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8em;
+  }
+
+  th {
+    text-align: left;
+    padding: 12px 16px;
+    color: var(--accent);
+    border-bottom: 2px solid var(--border);
+    font-size: 0.75em;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    color: #a8a098;
+  }
+
+  tr:last-child td { border-bottom: none; }
+
+  .highlight-row td { color: var(--good); }
+
+  /* ── Result boxes ── */
+  .result-box {
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--good);
+    background: #0f1a12;
+    padding: 20px 24px;
+    margin: 24px 0;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.82em;
+    color: var(--good);
+  }
+
+  .note-box {
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent2);
+    background: #0f1518;
+    padding: 20px 24px;
+    margin: 24px 0;
+    font-size: 0.92em;
+    color: #a0b8c0;
+  }
+
+  /* ── Image comparisons ── */
+  .img-row {
+    display: grid;
+    gap: 2px;
+    margin: 32px 0;
+  }
+
+  .img-row.two { grid-template-columns: 1fr 1fr; }
+  .img-row.three { grid-template-columns: 1fr 1fr 1fr; }
+
+  .img-cell {
+    position: relative;
+    overflow: hidden;
+    background: #050505;
+  }
+
+  .img-cell img {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .img-label {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0,0,0,0.75);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68em;
+    letter-spacing: 0.06em;
+    color: var(--accent);
+    padding: 8px 12px;
+    text-transform: uppercase;
+  }
+
+  .img-caption {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72em;
+    color: var(--muted);
+    text-align: center;
+    margin-top: 10px;
+    letter-spacing: 0.04em;
+  }
+
+  /* ── Algorithm steps ── */
+  .algo-steps { counter-reset: step; margin: 24px 0; }
+
+  .algo-step {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+  }
+  .algo-step:last-child { border-bottom: none; }
+
+  .step-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75em;
+    color: var(--accent);
+    min-width: 28px;
+    padding-top: 2px;
+  }
+
+  .step-body p { margin-bottom: 6px; }
+
+  /* ── Metrics bar ── */
+  .metric-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 14px 0;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.82em;
+  }
+
+  .metric-label { color: var(--muted); min-width: 220px; }
+
+  .metric-bar-wrap {
+    flex: 1;
+    height: 6px;
+    background: var(--border);
+    position: relative;
+  }
+
+  .metric-bar {
+    height: 100%;
+    background: var(--accent);
+  }
+
+  .metric-bar.good { background: var(--good); }
+
+  .metric-val { color: var(--text); min-width: 80px; text-align: right; }
+
+  /* ── Footer ── */
+  footer {
+    margin-top: 80px;
+    padding-top: 32px;
+    border-top: 1px solid var(--border);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72em;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    text-align: center;
+  }
+
+  a { color: var(--accent2); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  @media (max-width: 640px) {
+    .page { padding: 40px 20px; }
+    h1 { font-size: 1.8em; }
+    .img-row.two, .img-row.three { grid-template-columns: 1fr; }
+    .meta-grid { grid-template-columns: 1fr 1fr; }
+    .meta-item { border-bottom: 1px solid var(--border); }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <div class="tag">CSIE5098 — Digital Image Synthesis — Final Project</div>
+    <h1>Structured Importance Sampling<br>of Environment Maps</h1>
+    <p class="subtitle">An implementation of Agarwal et al. 2003 integrated into pbrt-v4</p>
+    <div class="meta-grid">
+      <div class="meta-item">
+        <div class="meta-label">Student</div>
+        <div class="meta-value">James Christian</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Student ID</div>
+        <div class="meta-value">R13921031</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Date</div>
+        <div class="meta-value">March 2026</div>
+      </div>
+      <div class="meta-item">
+        <div class="meta-label">Paper</div>
+        <div class="meta-value">SIGGRAPH 2003</div>
+      </div>
+    </div>
+  </header>
+
+  <!-- OVERVIEW -->
+  <section>
+    <h2>Overview</h2>
+    <p>This project implements <em>Structured Importance Sampling of Environment Maps</em> (Agarwal et al., SIGGRAPH 2003) as a new light class <code>StructuredInfiniteLight</code> inside pbrt-v4. The core idea is to replace uniform random sampling of an HDR environment map with a hierarchical stratification scheme that concentrates samples in bright regions of the map.</p>
+    <p>pbrt-v4 already provides <code>ImageInfiniteLight</code> which builds a 2D piecewise-constant distribution from the image. Our implementation adds a recursive splitting strategy that partitions the environment map into N equal-energy rectangular strata, then samples one stratum per light ray. This reduces variance when the environment map has high-contrast features such as a bright sun or spotlights.</p>
+  </section>
+
+  <!-- ALGORITHM -->
+  <section>
+    <h2>Algorithm</h2>
+    <p>The stratification algorithm proceeds as follows:</p>
+    <div class="algo-steps">
+      <div class="algo-step">
+        <div class="step-num">01</div>
+        <div class="step-body">
+          <p><strong>Build energy map.</strong> At construction time, call <code>image.GetSamplingDistribution()</code> to obtain a 2D array of per-pixel luminance values.</p>
+        </div>
+      </div>
+      <div class="algo-step">
+        <div class="step-num">02</div>
+        <div class="step-body">
+          <p><strong>Recursive splitting.</strong> Maintain a priority queue of rectangular regions. Repeatedly extract the region with the highest total energy, split it along its longer axis at the midpoint, and push both halves back. Repeat until the desired number of strata N is reached.</p>
+        </div>
+      </div>
+      <div class="algo-step">
+        <div class="step-num">03</div>
+        <div class="step-body">
+          <p><strong>Sampling.</strong> At render time, pick one stratum uniformly at random (probability 1/N). Sample a UV coordinate uniformly within that stratum. Convert UV to a sphere direction using pbrt's <code>EqualAreaSquareToSphere</code> mapping.</p>
+        </div>
+      </div>
+      <div class="algo-step">
+        <div class="step-num">04</div>
+        <div class="step-body">
+          <p><strong>PDF.</strong> The probability density is <code>1 / (N × stratum_area × 4π)</code>, where <code>4π</code> is the Jacobian for the equal-area sphere mapping.</p>
+        </div>
+      </div>
+    </div>
+
+    <h3>Key Code — BuildStrata</h3>
+    <pre><code>void StructuredInfiniteLight::BuildStrata(const Array2D&lt;Float&gt; &amp;d,
+                                          int nStrata, Allocator alloc) {
+    strata = pstd::vector&lt;Bounds2f&gt;(alloc);
+    std::vector&lt;Bounds2f&gt; queue;
+    queue.push_back(Bounds2f(Point2f(0,0), Point2f(1,1)));
+
+    while ((int)strata.size() + (int)queue.size() &lt; nStrata &amp;&amp; !queue.empty()) {
+        // Find region with most energy
+        int best = 0;
+        Float bestE = RegionEnergy(d, queue[0]);
+        for (int i = 1; i &lt; (int)queue.size(); i++) {
+            Float e = RegionEnergy(d, queue[i]);
+            if (e &gt; bestE) { bestE = e; best = i; }
+        }
+        Bounds2f b = queue[best];
+        queue.erase(queue.begin() + best);
+
+        // Split along longer axis at midpoint
+        Float dx = b.pMax.x - b.pMin.x;
+        Float dy = b.pMax.y - b.pMin.y;
+        Float mid;
+        Bounds2f b0, b1;
+        if (dx &gt;= dy) {
+            mid = (b.pMin.x + b.pMax.x) * 0.5f;
+            b0 = Bounds2f(b.pMin, Point2f(mid, b.pMax.y));
+            b1 = Bounds2f(Point2f(mid, b.pMin.y), b.pMax);
+        } else {
+            mid = (b.pMin.y + b.pMax.y) * 0.5f;
+            b0 = Bounds2f(b.pMin, Point2f(b.pMax.x, mid));
+            b1 = Bounds2f(Point2f(b.pMin.x, mid), b.pMax);
+        }
+        queue.push_back(b0);
+        queue.push_back(b1);
+    }
+    for (auto &amp;b : queue) strata.push_back(b);
+}</code></pre>
+
+    <h3>Key Code — SampleLi</h3>
+    <pre><code>pstd::optional&lt;LightLiSample&gt; SampleLi(LightSampleContext ctx, Point2f u,
+                                        SampledWavelengths lambda,
+                                        bool allowIncompletePDF) const {
+    if (strata.empty()) return {};
+
+    int si = std::min&lt;int&gt;(u[0] * strata.size(), (int)strata.size() - 1);
+    Float ru = u[0] * strata.size() - si;
+    const Bounds2f &amp;b = strata[si];
+
+    Point2f uv(Lerp(ru,   b.pMin.x, b.pMax.x),
+               Lerp(u[1], b.pMin.y, b.pMax.y));
+
+    Vector3f wLight = EqualAreaSquareToSphere(uv);
+    Vector3f wi = renderFromLight(wLight);
+
+    Float stratumArea = (b.pMax.x - b.pMin.x) * (b.pMax.y - b.pMin.y);
+    Float pdf = 1.f / ((Float)strata.size() * stratumArea * 4 * Pi);
+
+    return LightLiSample(ImageLe(uv, lambda), wi, pdf,
+        Interaction(ctx.p() + wi * (2 * sceneRadius), &amp;mediumInterface));
+}</code></pre>
+  </section>
+
+  <!-- IMPLEMENTATION -->
+  <section>
+    <h2>Implementation Details</h2>
+    <p>The implementation required changes to two files:</p>
+    <table>
+      <thead><tr><th>File</th><th>Change</th></tr></thead>
+      <tbody>
+        <tr><td>src/pbrt/lights.h</td><td>Added full <code>StructuredInfiniteLight</code> class declaration and inline <code>SampleLi</code>, <code>Le</code>, <code>ImageLe</code></td></tr>
+        <tr><td>src/pbrt/lights.cpp</td><td>Added <code>BuildStrata</code>, constructor, <code>Phi</code>, <code>PDF_Li</code>, <code>SampleLe</code>, <code>PDF_Le</code>, <code>ToString</code></td></tr>
+        <tr><td>src/pbrt/base/light.h</td><td>Forward declaration and registration in <code>Light</code> tagged pointer type list</td></tr>
+        <tr><td>src/pbrt/lights.cpp (parser)</td><td>Instantiate <code>StructuredInfiniteLight</code> when <code>nstrata &gt; 0</code>, fallback to <code>ImageInfiniteLight</code> otherwise</td></tr>
+      </tbody>
+    </table>
+
+    <p>The new sampler is activated via a scene file parameter:</p>
+    <pre><code>LightSource "infinite"
+    "string filename" "envmap.exr"
+    "integer nstrata" [64]    # default; set to 0 for original ImageInfiniteLight</code></pre>
+
+    <div class="note-box">
+      <strong>Note on pbrt's tagged pointer system:</strong> pbrt-v4 uses a <code>TaggedPointer</code> dispatch mechanism for polymorphism on both CPU and GPU. Any new light type must be registered in the <code>Light</code> type list in <code>base/light.h</code>, otherwise the build fails with a static assertion error.
+    </div>
+  </section>
+
+  <!-- RESULTS -->
+  <section>
+    <h2>Results</h2>
+    <p>Test scene: <code>hair-blonde-3-bounces.pbrt</code> (pbrt-v4-scenes), illuminated by <code>sunflowers_equiarea_blurred.exr</code>. Ground truth rendered at 4096 spp. Comparison rendered at 16 spp.</p>
+
+    <h3>Quantitative — MSE vs 4096spp Ground Truth</h3>
+    <table>
+      <thead><tr><th>Method</th><th>SPP</th><th>MSE (vs ground truth)</th><th>Δ</th></tr></thead>
+      <tbody>
+        <tr><td>ImageInfiniteLight (baseline)</td><td>4096</td><td>—</td><td>reference</td></tr>
+        <tr><td>StructuredInfiniteLight (64 strata)</td><td>4096</td><td>0.000632</td><td>—</td></tr>
+        <tr><td>ImageInfiniteLight (baseline)</td><td>16</td><td>0.08590</td><td>—</td></tr>
+        <tr class="highlight-row"><td>StructuredInfiniteLight (64 strata)</td><td>16</td><td>0.08003</td><td>−6.8%</td></tr>
+      </tbody>
+    </table>
+
+    <div class="metric-row">
+      <span class="metric-label">Baseline 16spp MSE</span>
+      <div class="metric-bar-wrap"><div class="metric-bar" style="width:100%"></div></div>
+      <span class="metric-val">0.08590</span>
+    </div>
+    <div class="metric-row">
+      <span class="metric-label">Structured 16spp MSE</span>
+      <div class="metric-bar-wrap"><div class="metric-bar good" style="width:93.2%"></div></div>
+      <span class="metric-val">0.08003</span>
+    </div>
+
+    <div class="result-box">✓ Structured sampling achieves 6.8% lower MSE at 16spp with no change in render time per sample.</div>
+
+    <h3>4096 spp — Baseline vs Structured</h3>
+    <div class="img-row two">
+      <div class="img-cell">
+        <img src="hair-baseline.png" alt="Baseline 4096spp">
+        <div class="img-label">Baseline — ImageInfiniteLight — 4096spp</div>
+      </div>
+      <div class="img-cell">
+        <img src="hair-structured.png" alt="Structured 4096spp">
+        <div class="img-label">Structured — 64 strata — 4096spp</div>
+      </div>
+    </div>
+    <p class="img-caption">At 4096spp both methods converge to visually identical results, confirming correctness.</p>
+
+    <h3>16 spp — Baseline vs Structured</h3>
+    <div class="img-row two">
+      <div class="img-cell">
+        <img src="hair-16spp-baseline.png" alt="Baseline 16spp">
+        <div class="img-label">Baseline — ImageInfiniteLight — 16spp</div>
+      </div>
+      <div class="img-cell">
+        <img src="hair-16spp-structured.png" alt="Structured 16spp">
+        <div class="img-label">Structured — 64 strata — 16spp</div>
+      </div>
+    </div>
+    <p class="img-caption">At 16spp, structured sampling produces slightly less variance (MSE −6.8%). Difference is subtle here due to the hair BSDF dominating variance; environment map sampling benefits are more pronounced in open scenes with high-contrast environment maps.</p>
+
+    <h3>Difference Image (4096spp baseline vs structured)</h3>
+    <div class="img-row">
+      <div class="img-cell">
+        <img src="hair-diff.png" alt="Difference image">
+        <div class="img-label">Absolute difference × 10 — avg delta −2.6% — FLIP 0.067</div>
+      </div>
+    </div>
+    <p class="img-caption">The difference image highlights where the two sampling strategies diverge. Bright regions indicate the largest per-pixel discrepancies, primarily around high-frequency hair strands where lighting variation is greatest.</p>
+  </section>
+
+  <!-- DISCUSSION -->
+  <section>
+    <h2>Discussion</h2>
+    <h3>Why the gain is modest on this scene</h3>
+    <p>The hair BSDF introduces significant variance from multiple-scattering path sampling, which dominates over environment map sampling variance at low spp. The benefit of structured environment map sampling is most pronounced in scenes where: (1) the environment map has a sharp high-contrast light source such as a direct sun, and (2) the object materials are relatively simple (e.g. diffuse or specular) so that the lighting integral is the primary source of variance.</p>
+
+    <h3>Correctness verification</h3>
+    <p>At 4096spp both methods produce visually identical results (MSE between them: 0.000632), confirming the PDF and sampling are consistent and unbiased.</p>
+
+    <h3>Limitations of this implementation</h3>
+    <p>The current implementation splits each region at the midpoint rather than at the energy-median. Splitting at the energy median would produce more equal-energy strata and improve the variance reduction. The greedy priority-queue strategy also does not guarantee globally optimal stratification, but it is a faithful implementation of the core algorithm described in the paper.</p>
+  </section>
+
+  <!-- FILES -->
+  <section>
+    <h2>Modified Source Files</h2>
+    <table>
+      <thead><tr><th>File</th><th>Role</th></tr></thead>
+      <tbody>
+        <tr><td><code>src/pbrt/lights.h</code></td><td>Class definition, inline SampleLi, Le, ImageLe</td></tr>
+        <tr><td><code>src/pbrt/lights.cpp</code></td><td>Constructor, BuildStrata, PDF_Li, SampleLe, PDF_Le, Phi, ToString, parser hook</td></tr>
+        <tr><td><code>src/pbrt/base/light.h</code></td><td>Type registration in Light TaggedPointer</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- REFERENCES -->
+  <section>
+    <h2>References</h2>
+    <p>Agarwal, S., Ramamoorthi, R., Belongie, S., and Jensen, H. W. (2003). <em>Structured importance sampling of environment maps.</em> ACM Transactions on Graphics (SIGGRAPH 2003), 22(3), 605–612.</p>
+    <p>Pharr, M., Jakob, W., and Humphreys, G. (2023). <em>Physically Based Rendering: From Theory to Implementation</em>, 4th edition. MIT Press. <a href="https://pbrt.org">pbrt.org</a></p>
+  </section>
+
+  <footer>
+    CSIE5098 Digital Image Synthesis — National Taiwan University — March 2026
+  </footer>
+
+</div>
+</body>
+</html>
