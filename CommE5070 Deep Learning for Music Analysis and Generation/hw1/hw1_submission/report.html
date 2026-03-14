@@ -1,0 +1,884 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HW1 — Singer Classification</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c10;
+    --surface: #10141c;
+    --border: #1e2535;
+    --accent: #00e5ff;
+    --accent2: #ff6b35;
+    --accent3: #a259ff;
+    --text: #e8eaf0;
+    --muted: #6b7280;
+    --green: #00ff9d;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    font-size: 16px;
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* Noise texture overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.5;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 6rem 4rem 4rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: -100px; right: -100px;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(0,229,255,0.07) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .waveform-bg {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    overflow: hidden;
+    z-index: 0;
+  }
+
+  .waveform-bg svg { width: 100%; height: 100%; opacity: 0.06; }
+
+  .hero-content { position: relative; z-index: 1; max-width: 900px; }
+
+  .tag {
+    display: inline-block;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+    border: 1px solid rgba(0,229,255,0.3);
+    padding: 0.3em 0.8em;
+    border-radius: 2px;
+    margin-bottom: 1.5rem;
+    animation: fadeUp 0.6s ease both;
+  }
+
+  h1 {
+    font-size: clamp(2.8rem, 7vw, 6rem);
+    font-weight: 800;
+    line-height: 1.0;
+    letter-spacing: -0.02em;
+    margin-bottom: 1.5rem;
+    animation: fadeUp 0.7s ease 0.1s both;
+  }
+
+  h1 span { color: var(--accent); }
+
+  .hero-sub {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--muted);
+    max-width: 600px;
+    animation: fadeUp 0.7s ease 0.2s both;
+  }
+
+  .hero-stats {
+    display: flex;
+    gap: 2.5rem;
+    margin-top: 3rem;
+    animation: fadeUp 0.7s ease 0.3s both;
+  }
+
+  .stat { border-left: 2px solid var(--accent); padding-left: 1rem; }
+  .stat-val { font-size: 2rem; font-weight: 800; color: var(--accent); line-height: 1; }
+  .stat-label { font-family: 'Space Mono', monospace; font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+
+  /* ── NAV ── */
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(10,12,16,0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 0 4rem;
+    display: flex;
+    gap: 0;
+  }
+
+  nav a {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    text-decoration: none;
+    padding: 1rem 1.2rem;
+    border-bottom: 2px solid transparent;
+    transition: color 0.2s, border-color 0.2s;
+  }
+
+  nav a:hover { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* ── SECTIONS ── */
+  section {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 5rem 4rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent2);
+    margin-bottom: 0.75rem;
+  }
+
+  h2 {
+    font-size: clamp(1.8rem, 4vw, 2.8rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 1.5rem;
+  }
+
+  h3 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    margin: 2rem 0 0.75rem;
+    color: var(--accent);
+  }
+
+  p { color: #b0b8c8; margin-bottom: 1rem; }
+
+  /* ── PIPELINE ── */
+  .pipeline {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin: 2.5rem 0;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .pipe-step {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 0.8rem 1.2rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--text);
+    border-radius: 4px;
+    position: relative;
+    white-space: nowrap;
+  }
+
+  .pipe-step.accent { border-color: var(--accent); color: var(--accent); }
+  .pipe-step.accent2 { border-color: var(--accent2); color: var(--accent2); }
+  .pipe-step.accent3 { border-color: var(--accent3); color: var(--accent3); }
+
+  .pipe-arrow {
+    font-size: 1.2rem;
+    color: var(--muted);
+    padding: 0 0.2rem;
+  }
+
+  /* ── CARDS ── */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2rem;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.8rem;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+
+  .card:hover { border-color: var(--accent); transform: translateY(-3px); }
+
+  .card-tag {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent3);
+    margin-bottom: 0.5rem;
+  }
+
+  .card h3 { margin-top: 0; font-size: 1.1rem; }
+
+  .card p { font-size: 0.88rem; margin-bottom: 0; }
+
+  /* ── ARCH BLOCK ── */
+  .arch-flow {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.5rem 2rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    color: #8892a4;
+    line-height: 2;
+    margin: 1.5rem 0;
+    white-space: pre;
+    overflow-x: auto;
+  }
+
+  .arch-flow .hl { color: var(--accent); }
+  .arch-flow .hl2 { color: var(--accent2); }
+  .arch-flow .hl3 { color: var(--accent3); }
+  .arch-flow .hl4 { color: var(--green); }
+
+  /* ── RESULTS TABLE ── */
+  .results-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 2rem 0;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.82rem;
+  }
+
+  .results-table th {
+    text-align: left;
+    padding: 0.7rem 1rem;
+    border-bottom: 2px solid var(--accent);
+    color: var(--accent);
+    font-size: 0.7rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .results-table td {
+    padding: 0.7rem 1rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+  }
+
+  .results-table tr:last-child td { border-bottom: none; }
+  .results-table tr.best td { color: var(--green); }
+  .results-table tr.best td:first-child { color: var(--green); font-weight: 700; }
+  .results-table td .bar {
+    display: inline-block;
+    height: 4px;
+    background: var(--accent);
+    border-radius: 2px;
+    vertical-align: middle;
+    margin-left: 0.5rem;
+    opacity: 0.6;
+  }
+
+  /* ── CHART ── */
+  .chart-container {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 2rem;
+    margin: 2rem 0;
+  }
+
+  .bar-chart { width: 100%; }
+
+  .bar-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1.2rem;
+    gap: 1rem;
+  }
+
+  .bar-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--muted);
+    width: 120px;
+    flex-shrink: 0;
+    text-align: right;
+  }
+
+  .bar-track { flex: 1; background: var(--border); border-radius: 3px; height: 22px; position: relative; overflow: hidden; }
+
+  .bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    display: flex;
+    align-items: center;
+    padding-left: 0.5rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--bg);
+    transition: width 1.5s cubic-bezier(0.16,1,0.3,1);
+  }
+
+  .bar-fill.top1 { background: linear-gradient(90deg, var(--accent), #0099bb); }
+  .bar-fill.top3 { background: linear-gradient(90deg, var(--accent2), #cc4400); }
+
+  .bar-group { display: flex; flex-direction: column; gap: 0.3rem; flex: 1; }
+
+  /* ── CONFUSION MATRIX ── */
+  .cm-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin: 2rem 0;
+  }
+
+  .cm-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.5rem;
+    text-align: center;
+  }
+
+  .cm-card img {
+    width: 100%;
+    border-radius: 4px;
+    margin-top: 0.75rem;
+    filter: brightness(0.95) contrast(1.05);
+  }
+
+  .cm-card .cm-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* ── FEATURES ── */
+  .feat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin: 1.5rem 0;
+  }
+
+  .feat-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1rem 1.2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .feat-name { font-size: 0.85rem; color: var(--text); }
+  .feat-dim {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--accent2);
+    background: rgba(255,107,53,0.1);
+    padding: 0.2em 0.5em;
+    border-radius: 3px;
+  }
+
+  /* ── ENSEMBLE ── */
+  .ensemble-weights {
+    display: flex;
+    gap: 1rem;
+    margin: 1.5rem 0;
+    flex-wrap: wrap;
+  }
+
+  .weight-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.5rem 2rem;
+    text-align: center;
+    flex: 1;
+    min-width: 140px;
+  }
+
+  .weight-val {
+    font-size: 3rem;
+    font-weight: 800;
+    color: var(--accent);
+    line-height: 1;
+    margin-bottom: 0.5rem;
+  }
+
+  .weight-label { font-family: 'Space Mono', monospace; font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em; }
+
+  /* ── MEL SPECTROGRAM ── */
+  .mel-fig {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin: 2rem 0;
+  }
+
+  .mel-fig img { width: 100%; display: block; }
+  .mel-fig figcaption {
+    padding: 0.8rem 1.2rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    text-align: center;
+    padding: 3rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+  }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  .reveal.visible { opacity: 1; transform: none; }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="waveform-bg">
+    <svg viewBox="0 0 1400 600" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <polyline fill="none" stroke="#00e5ff" stroke-width="1.5"
+        points="0,300 40,280 80,260 100,200 120,300 140,350 160,280 180,320 200,260 220,240 240,310 260,290 280,250 300,320 320,180 340,300 360,280 380,310 400,260 420,240 440,300 460,280 480,320 500,200 520,290 540,260 560,310 580,280 600,250 620,300 640,220 660,310 680,280 700,300 720,260 740,310 760,280 780,250 800,300 820,270 840,310 860,260 880,300 900,280 920,260 940,310 960,270 980,300 1000,280 1020,250 1040,310 1060,280 1080,260 1100,300 1120,220 1140,300 1160,280 1180,310 1200,260 1220,300 1240,270 1260,310 1280,280 1300,300 1320,260 1340,310 1360,280 1400,300"/>
+      <polyline fill="none" stroke="#ff6b35" stroke-width="0.8" opacity="0.5"
+        points="0,320 50,300 100,280 150,310 200,280 250,300 300,260 350,300 400,280 450,310 500,270 550,300 600,280 650,320 700,280 750,310 800,280 850,300 900,270 950,310 1000,280 1050,300 1100,260 1150,300 1200,280 1250,310 1300,270 1350,300 1400,280"/>
+    </svg>
+  </div>
+  <div class="hero-content">
+    <div class="tag">CommE5070 · HW1 · NTU 2024</div>
+    <h1>Singer<br><span>Classification</span></h1>
+    <p class="hero-sub">
+      Identifying 20 musical artists from raw audio using<br>
+      traditional ML and deep learning on mel-spectrograms.
+    </p>
+    <div class="hero-stats">
+      <div class="stat">
+        <div class="stat-val">20</div>
+        <div class="stat-label">Artists</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val">1413</div>
+        <div class="stat-label">Tracks</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val" style="color:var(--green)">82.5%</div>
+        <div class="stat-label">Val Top-1</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val" style="color:var(--accent2)">3</div>
+        <div class="stat-label">DL Models</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- NAV -->
+<nav>
+  <a href="#problem">Problem</a>
+  <a href="#task1">Task 1: ML</a>
+  <a href="#task2">Task 2: DL</a>
+  <a href="#results">Results</a>
+  <a href="#ensemble">Ensemble</a>
+  <a href="#refs">References</a>
+</nav>
+
+<!-- PROBLEM -->
+<section id="problem">
+  <div class="section-label">01 — Problem Statement</div>
+  <h2>Artist20 Dataset</h2>
+  <p>Given a full-length audio track, predict which of 20 artists performed it. The dataset contains 120 albums from 20 artists at 16kHz mono MP3 format. Splits are album-level to prevent leakage.</p>
+
+  <div class="cards reveal">
+    <div class="card">
+      <div class="card-tag">Dataset</div>
+      <h3>Artist20</h3>
+      <p>20 artists · 120 albums · 1413 tracks. Album-level split: 4 train / 1 val / 1 test per artist.</p>
+    </div>
+    <div class="card">
+      <div class="card-tag">Audio Format</div>
+      <h3>16kHz Mono MP3</h3>
+      <p>Full song length. Sample rate 16,000 Hz, single channel. Total dataset size: 1.28 GB.</p>
+    </div>
+    <div class="card">
+      <div class="card-tag">Evaluation</div>
+      <h3>Top-1 & Top-3 Accuracy</h3>
+      <p>Score = Top-1 + 0.5 × Top-3. Confusion matrix reported for all models on validation set.</p>
+    </div>
+  </div>
+
+  <h3>Full Pipeline</h3>
+  <div class="pipeline reveal">
+    <div class="pipe-step accent">Audio Input<br><span style="font-size:0.6rem;color:var(--muted)">16kHz MP3</span></div>
+    <span class="pipe-arrow">→</span>
+    <div class="pipe-step">Random Crop<br><span style="font-size:0.6rem;color:var(--muted)">10s segment</span></div>
+    <span class="pipe-arrow">→</span>
+    <div class="pipe-step accent3">Mel-Spectrogram<br><span style="font-size:0.6rem;color:var(--muted)">128 bins</span></div>
+    <span class="pipe-arrow">→</span>
+    <div class="pipe-step">SpecAugment<br><span style="font-size:0.6rem;color:var(--muted)">Time + Freq mask</span></div>
+    <span class="pipe-arrow">→</span>
+    <div class="pipe-step accent2">Model<br><span style="font-size:0.6rem;color:var(--muted)">CNN / CRNN</span></div>
+    <span class="pipe-arrow">→</span>
+    <div class="pipe-step">TTA × 10<br><span style="font-size:0.6rem;color:var(--muted)">avg segments</span></div>
+    <span class="pipe-arrow">→</span>
+    <div class="pipe-step" style="border-color:var(--green);color:var(--green)">Top-3 Pred</div>
+  </div>
+
+  <figure class="mel-fig reveal">
+    <img src="report_figs/mel_examples.png" alt="Mel-spectrogram examples for 4 artists">
+    <figcaption>Fig 1 — Mel-spectrogram examples (10s segments) for Beatles, Metallica, Madonna, Radiohead. Each artist shows distinct timbral and rhythmic patterns.</figcaption>
+  </figure>
+</section>
+
+<!-- TASK 1 -->
+<section id="task1">
+  <div class="section-label">02 — Task 1</div>
+  <h2>Traditional Machine Learning</h2>
+  <p>A classical pipeline: extract hand-crafted audio features with Librosa, standardize, and classify with SVM.</p>
+
+  <h3>Feature Extraction</h3>
+  <p>Three 5-second segments are extracted per track (start, middle, end). For each segment, the following features are computed then averaged across segments:</p>
+
+  <div class="feat-grid reveal">
+    <div class="feat-item"><span class="feat-name">MFCC (mean + std)</span><span class="feat-dim">80</span></div>
+    <div class="feat-item"><span class="feat-name">Delta MFCC (mean + std)</span><span class="feat-dim">80</span></div>
+    <div class="feat-item"><span class="feat-name">Delta² MFCC (mean + std)</span><span class="feat-dim">80</span></div>
+    <div class="feat-item"><span class="feat-name">Chroma (mean + std)</span><span class="feat-dim">24</span></div>
+    <div class="feat-item"><span class="feat-name">Spectral Contrast (mean + std)</span><span class="feat-dim">14</span></div>
+    <div class="feat-item"><span class="feat-name">Zero Crossing Rate (mean + std)</span><span class="feat-dim">2</span></div>
+    <div class="feat-item" style="border-color:var(--accent);"><span class="feat-name" style="color:var(--accent);font-weight:700;">Total Dimension</span><span class="feat-dim" style="color:var(--accent);background:rgba(0,229,255,0.1)">280</span></div>
+  </div>
+
+  <p>Features are standardized with <code style="font-family:Space Mono,monospace;color:var(--accent);font-size:0.85em">StandardScaler</code> (zero mean, unit variance) before training.</p>
+
+  <h3>Classifier: SVM with RBF Kernel</h3>
+  <div class="arch-flow reveal"><span class="hl">SVC</span>(kernel=<span class="hl2">'rbf'</span>, C=<span class="hl3">10</span>, gamma=<span class="hl2">'scale'</span>, probability=<span class="hl4">True</span>)
+
+280-dim feature vector → StandardScaler → RBF SVM → 20-class softmax probabilities</div>
+
+  <table class="results-table reveal">
+    <tr><th>Split</th><th>Top-1 Accuracy</th><th>Top-3 Accuracy</th></tr>
+    <tr><td>Train</td><td>1.000</td><td>1.000</td></tr>
+    <tr><td>Validation</td><td>0.312</td><td>0.594</td></tr>
+  </table>
+
+  <p>The SVM memorizes training tracks but struggles to generalize across albums — expected given the small dataset size (~950 training tracks).</p>
+</section>
+
+<!-- TASK 2 -->
+<section id="task2">
+  <div class="section-label">03 — Task 2</div>
+  <h2>Deep Learning Models</h2>
+  <p>Three architectures are trained from scratch on mel-spectrograms, each implementing ideas from recent singer identification literature.</p>
+
+  <div class="cards reveal">
+    <div class="card">
+      <div class="card-tag">IJCNN 2019</div>
+      <h3>Model A — CRNN</h3>
+      <p>CNN encoder + Bidirectional GRU + Attention pooling. Models both local spectral features and long-term temporal patterns.</p>
+    </div>
+    <div class="card">
+      <div class="card-tag">SE Networks</div>
+      <h3>Model B — SE-ResNet</h3>
+      <p>ResNet backbone with Squeeze-and-Excitation blocks. Recalibrates channel-wise features, focusing on discriminative frequency bands per artist.</p>
+    </div>
+    <div class="card">
+      <div class="card-tag">AAAI 2021</div>
+      <h3>Model C — Non-Local Net</h3>
+      <p>CNN with Non-Local blocks capturing long-range time-frequency dependencies via self-attention at multiple network layers.</p>
+    </div>
+  </div>
+
+  <!-- MODEL A -->
+  <h3>Model A: CRNN</h3>
+  <p>Reference: Nasrullah & Tan, <em>"Musical artist classification with convolutional recurrent neural networks,"</em> IJCNN 2019.</p>
+  <div class="arch-flow reveal"><span class="hl">Input</span>  (1 × 128 × T)  — mel-spectrogram
+  ↓
+<span class="hl2">ConvBlock</span> ×4  [64 → 128 → 256 → 256]  + MaxPool2d + Dropout2d
+  ↓
+<span class="hl3">Reshape</span>  →  (B, T', 1024)  time sequence
+  ↓
+<span class="hl">BiGRU</span>  hidden=256, layers=2, dropout=0.3
+  ↓
+<span class="hl4">Attention Pooling</span>  softmax(W·h) weighted sum  →  512-dim
+  ↓
+<span class="hl2">FC</span>(512→256) → ReLU → Dropout(0.5) → <span class="hl">FC</span>(256→20)</div>
+
+  <!-- MODEL B -->
+  <h3>Model B: SE-ResNet</h3>
+  <div class="arch-flow reveal"><span class="hl">Input</span>  (1 × 128 × T)
+  ↓
+<span class="hl2">Stem</span>  Conv7×7 stride=2 → BatchNorm → ELU → MaxPool3×3
+  ↓
+<span class="hl3">Layer 1–4</span>  ConvSEBlock ×2 per layer  [32→64→128→256→512]
+  ↓
+<span class="hl">ConvSEBlock</span> = Conv3×3 → BN → ELU → Conv3×3 → BN
+             + <span class="hl4">SE Block</span>: AvgPool → FC → ReLU → FC → Sigmoid
+             + Residual shortcut
+  ↓
+<span class="hl2">AdaptiveAvgPool</span>(1×1) → Dropout(0.5) → FC(512→256) → FC(256→20)</div>
+
+  <!-- MODEL C -->
+  <h3>Model C: Non-Local Network</h3>
+  <p>Reference: <em>"Positions, channels, and layers fully generalized non-local network for singer identification,"</em> AAAI 2021.</p>
+  <div class="arch-flow reveal"><span class="hl">Input</span>  (1 × 128 × T)
+  ↓
+<span class="hl2">Stem</span>  Conv7×7 + MaxPool
+  ↓
+<span class="hl3">Layer 1</span>  ConvBlock  [32→64]   (no non-local)
+<span class="hl3">Layer 2</span>  ConvBlock  [64→128]  + <span class="hl">NonLocalBlock</span>
+<span class="hl3">Layer 3</span>  ConvBlock  [128→256] + <span class="hl">NonLocalBlock</span>
+<span class="hl3">Layer 4</span>  ConvBlock  [256→512] + <span class="hl">NonLocalBlock</span>
+  ↓
+<span class="hl4">NonLocalBlock</span>: out = x + SE_ch(W·softmax(θ(x)ᵀφ(x))·g(x))
+  captures long-range time-frequency dependencies
+  ↓
+<span class="hl2">AdaptiveAvgPool</span> → Dropout(0.5) → FC(512→256) → FC(256→20)</div>
+
+  <h3>Training Details</h3>
+  <table class="results-table reveal">
+    <tr><th>Config</th><th>CRNN</th><th>SE-ResNet</th><th>Non-Local</th></tr>
+    <tr><td>Optimizer</td><td>AdamW</td><td>AdamW</td><td>AdamW</td></tr>
+    <tr><td>LR</td><td>3e-4</td><td>3e-4</td><td>3e-4</td></tr>
+    <tr><td>Scheduler</td><td>CosineAnnealing</td><td>OneCycleLR</td><td>CosineAnnealing</td></tr>
+    <tr><td>Epochs</td><td>150</td><td>120</td><td>120</td></tr>
+    <tr><td>Batch size</td><td>32</td><td>64</td><td>32</td></tr>
+    <tr><td>Segs/track/epoch</td><td>3</td><td>5</td><td>5</td></tr>
+    <tr><td>Segment length</td><td>10s</td><td>10s</td><td>10s</td></tr>
+    <tr><td>Label smoothing</td><td>0.1</td><td>0.1</td><td>0.1</td></tr>
+  </table>
+
+  <h3>Test-Time Augmentation (TTA)</h3>
+  <p>At inference, each track is split into <strong style="color:var(--accent)">10 random segments</strong>. Softmax probabilities are averaged before selecting top-3 predictions. This reduces single-segment variance and significantly boosts accuracy.</p>
+
+  <div class="pipeline reveal">
+    <div class="pipe-step accent">Track Audio</div>
+    <span class="pipe-arrow">→</span>
+    <div class="pipe-step">Segment ×10<br><span style="font-size:0.6rem;color:var(--muted)">random offsets</span></div>
+    <span class="pipe-arrow">→</span>
+    <div class="pipe-step accent3">Model Inference<br><span style="font-size:0.6rem;color:var(--muted)">softmax probs</span></div>
+    <span class="pipe-arrow">→</span>
+    <div class="pipe-step">Average<br><span style="font-size:0.6rem;color:var(--muted)">10 predictions</span></div>
+    <span class="pipe-arrow">→</span>
+    <div class="pipe-step" style="border-color:var(--green);color:var(--green)">Top-3</div>
+  </div>
+</section>
+
+<!-- RESULTS -->
+<section id="results">
+  <div class="section-label">04 — Results</div>
+  <h2>Validation Performance</h2>
+
+  <div class="chart-container reveal">
+    <div class="bar-chart">
+      <div class="bar-row">
+        <div class="bar-label">SVM (Task 1)</div>
+        <div class="bar-group">
+          <div class="bar-track"><div class="bar-fill top1" style="width:31.2%">0.312</div></div>
+          <div class="bar-track"><div class="bar-fill top3" style="width:59.4%">0.594</div></div>
+        </div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">CRNN</div>
+        <div class="bar-group">
+          <div class="bar-track"><div class="bar-fill top1" style="width:68.8%">0.688</div></div>
+          <div class="bar-track"><div class="bar-fill top3" style="width:85.0%">0.850</div></div>
+        </div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">SE-ResNet</div>
+        <div class="bar-group">
+          <div class="bar-track"><div class="bar-fill top1" style="width:67.5%">0.675</div></div>
+          <div class="bar-track"><div class="bar-fill top3" style="width:83.8%">0.838</div></div>
+        </div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">Non-Local Net</div>
+        <div class="bar-group">
+          <div class="bar-track"><div class="bar-fill top1" style="width:71.4%">0.714</div></div>
+          <div class="bar-track"><div class="bar-fill top3" style="width:82.5%">0.825</div></div>
+        </div>
+      </div>
+      <div class="bar-row">
+        <div class="bar-label">Ensemble ★</div>
+        <div class="bar-group">
+          <div class="bar-track"><div class="bar-fill top1" style="width:82.5%;background:linear-gradient(90deg,var(--green),#00bb77)">0.825</div></div>
+          <div class="bar-track"><div class="bar-fill top3" style="width:94.9%;background:linear-gradient(90deg,var(--green),#00bb77)">0.949</div></div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:1.5rem;margin-top:1rem;">
+      <div style="display:flex;align-items:center;gap:0.4rem;font-family:Space Mono,monospace;font-size:0.7rem;color:var(--muted)"><div style="width:16px;height:4px;background:var(--accent);border-radius:2px"></div>Top-1</div>
+      <div style="display:flex;align-items:center;gap:0.4rem;font-family:Space Mono,monospace;font-size:0.7rem;color:var(--muted)"><div style="width:16px;height:4px;background:var(--accent2);border-radius:2px"></div>Top-3</div>
+    </div>
+  </div>
+
+  <table class="results-table reveal">
+    <tr><th>Model</th><th>Top-1</th><th>Top-3</th><th>Score (T1 + 0.5·T3)</th></tr>
+    <tr><td>SVM</td><td>0.312</td><td>0.594</td><td>0.609</td></tr>
+    <tr><td>CRNN (+ TTA)</td><td>0.769</td><td>0.919</td><td>1.228</td></tr>
+    <tr><td>SE-ResNet (+ TTA)</td><td>0.761</td><td>0.923</td><td>1.222</td></tr>
+    <tr><td>Non-Local Net (+ TTA)</td><td>0.761</td><td>0.897</td><td>1.209</td></tr>
+    <tr class="best"><td>★ Ensemble (1, 2, 1)</td><td>0.825</td><td>0.949</td><td>1.299</td></tr>
+  </table>
+
+  <h3>Confusion Matrices</h3>
+  <div class="cm-grid reveal">
+    <div class="cm-card">
+      <div class="cm-title">CRNN</div>
+      <img src="report_figs/cm_crnn.png" alt="CRNN Confusion Matrix">
+    </div>
+    <div class="cm-card">
+      <div class="cm-title">SE-ResNet</div>
+      <img src="report_figs/cm_senet.png" alt="SENet Confusion Matrix">
+    </div>
+    <div class="cm-card">
+      <div class="cm-title">Non-Local Net</div>
+      <img src="report_figs/cm_nonlocal.png" alt="NonLocal Confusion Matrix">
+    </div>
+  </div>
+</section>
+
+<!-- ENSEMBLE -->
+<section id="ensemble">
+  <div class="section-label">05 — Ensemble & Analysis</div>
+  <h2>Ensemble Strategy</h2>
+  <p>Weighted averaging of softmax probabilities (post-TTA) from all three models. Weights determined by grid search on validation set.</p>
+
+  <div class="ensemble-weights reveal">
+    <div class="weight-block">
+      <div class="weight-val">1×</div>
+      <div class="weight-label">CRNN</div>
+    </div>
+    <div style="display:flex;align-items:center;font-size:2rem;color:var(--muted)">+</div>
+    <div class="weight-block" style="border-color:var(--accent)">
+      <div class="weight-val">2×</div>
+      <div class="weight-label">SE-ResNet</div>
+    </div>
+    <div style="display:flex;align-items:center;font-size:2rem;color:var(--muted)">+</div>
+    <div class="weight-block">
+      <div class="weight-val">1×</div>
+      <div class="weight-label">Non-Local</div>
+    </div>
+    <div style="display:flex;align-items:center;font-size:2rem;color:var(--muted)">=</div>
+    <div class="weight-block" style="border-color:var(--green)">
+      <div class="weight-val" style="color:var(--green)">0.825</div>
+      <div class="weight-label">Val Top-1</div>
+    </div>
+  </div>
+
+  <h3>Key Findings</h3>
+  <div class="cards reveal">
+    <div class="card">
+      <div class="card-tag">TTA Impact</div>
+      <h3>+8% from Averaging</h3>
+      <p>CRNN single-segment: 0.65 → TTA ×10: 0.77. Averaging over random crops dramatically reduces prediction variance.</p>
+    </div>
+    <div class="card">
+      <div class="card-tag">Best Single Model</div>
+      <h3>Non-Local Net: 0.714</h3>
+      <p>Long-range attention across time-frequency captures singer-specific patterns better than purely local convolutions.</p>
+    </div>
+    <div class="card">
+      <div class="card-tag">Ensemble Gain</div>
+      <h3>+6% over Best Single</h3>
+      <p>Combining complementary architectures (temporal vs channel vs non-local) yields consistent improvement across all metrics.</p>
+    </div>
+  </div>
+</section>
+
+<!-- REFERENCES -->
+<section id="refs">
+  <div class="section-label">06 — References</div>
+  <h2>References</h2>
+  <div style="font-family:'Space Mono',monospace;font-size:0.78rem;line-height:2.2;color:var(--muted)">
+    <p>[1] Nasrullah &amp; Tan, <em>"Musical artist classification with convolutional recurrent neural networks,"</em> IJCNN 2019.</p>
+    <p>[2] Hsieh et al., <em>"Addressing the confounds of accompaniments in singer identification,"</em> ICASSP 2020.</p>
+    <p>[3] <em>"Positions, channels, and layers fully generalized non-local network for singer identification,"</em> AAAI 2021.</p>
+    <p>[4] Hu et al., <em>"Squeeze-and-Excitation Networks,"</em> CVPR 2018.</p>
+    <p>[5] Wang et al., <em>"Non-local Neural Networks,"</em> CVPR 2018.</p>
+    <p>[6] Park et al., <em>"SpecAugment: A Simple Data Augmentation Method for ASR,"</em> Interspeech 2019.</p>
+  </div>
+</section>
+
+<footer>
+  CommE5070 · HW1 Singer Classification · NTU 2024 · Built with PyTorch + Librosa
+</footer>
+
+<script>
+  // Scroll reveal
+  const reveals = document.querySelectorAll('.reveal');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((e, i) => {
+      if (e.isIntersecting) {
+        setTimeout(() => e.target.classList.add('visible'), i * 80);
+        observer.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.1 });
+  reveals.forEach(el => observer.observe(el));
+
+  // Animate bars on scroll
+  const barFills = document.querySelectorAll('.bar-fill');
+  const barObserver = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        const el = e.target;
+        const w = el.style.width;
+        el.style.width = '0';
+        setTimeout(() => el.style.width = w, 100);
+        barObserver.unobserve(el);
+      }
+    });
+  }, { threshold: 0.3 });
+  barFills.forEach(el => barObserver.observe(el));
+</script>
+
+</body>
+</html>
