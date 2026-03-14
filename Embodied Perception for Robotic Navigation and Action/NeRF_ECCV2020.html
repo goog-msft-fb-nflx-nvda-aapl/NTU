@@ -1,0 +1,978 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>NeRF — Neural Radiance Fields Explained</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:ital,wght@0,300;0,400;1,300&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet"/>
+<style>
+/* ─── RESET & BASE ─────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:       #07080f;
+  --bg2:      #0d0f1c;
+  --bg3:      #13162a;
+  --surface:  #161929;
+  --border:   rgba(255,255,255,.07);
+  --cyan:     #00d4ff;
+  --amber:    #ffaa00;
+  --green:    #00e5a0;
+  --red:      #ff5c5c;
+  --text:     #e8eaf0;
+  --muted:    #6b7290;
+  --glow-c:   rgba(0,212,255,.18);
+  --glow-a:   rgba(255,170,0,.18);
+  --font-h:   'Syne', sans-serif;
+  --font-b:   'Lora', serif;
+  --font-m:   'DM Mono', monospace;
+  --r:        10px;
+}
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--font-b);
+  font-size:16px;
+  line-height:1.75;
+  overflow-x:hidden;
+}
+
+/* ─── SCROLLBAR ─────────────────────────────────────────── */
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--cyan);border-radius:2px}
+
+/* ─── CANVAS BACKGROUND ─────────────────────────────────── */
+#bg-canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.55}
+
+/* ─── LAYOUT ─────────────────────────────────────────────── */
+.wrap{position:relative;z-index:1;max-width:960px;margin:0 auto;padding:0 24px}
+
+/* ─── HERO ───────────────────────────────────────────────── */
+#hero{
+  min-height:100vh;display:flex;flex-direction:column;
+  justify-content:center;align-items:center;text-align:center;
+  padding:60px 24px;position:relative;z-index:1;
+}
+.hero-badge{
+  font-family:var(--font-m);font-size:.72rem;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--cyan);
+  border:1px solid var(--cyan);padding:4px 14px;border-radius:40px;
+  margin-bottom:28px;display:inline-block;
+  animation:fade-up .6s ease both;
+}
+#hero h1{
+  font-family:var(--font-h);font-size:clamp(2.4rem,6vw,4.4rem);
+  font-weight:800;line-height:1.08;letter-spacing:-.02em;
+  background:linear-gradient(135deg,#fff 30%,var(--cyan) 70%,var(--amber) 100%);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;max-width:820px;
+  animation:fade-up .7s .1s ease both;
+}
+.hero-sub{
+  margin-top:18px;font-size:1.0rem;color:var(--muted);max-width:600px;
+  font-style:italic;animation:fade-up .7s .2s ease both;
+}
+.hero-authors{
+  margin-top:14px;font-family:var(--font-m);font-size:.8rem;
+  color:var(--muted);animation:fade-up .7s .3s ease both;
+}
+.hero-links{
+  margin-top:30px;display:flex;gap:12px;flex-wrap:wrap;justify-content:center;
+  animation:fade-up .7s .4s ease both;
+}
+.btn{
+  font-family:var(--font-h);font-size:.82rem;font-weight:600;
+  padding:9px 22px;border-radius:40px;cursor:pointer;
+  text-decoration:none;transition:all .22s ease;display:inline-block;
+}
+.btn-primary{background:var(--cyan);color:var(--bg);border:2px solid var(--cyan)}
+.btn-primary:hover{background:transparent;color:var(--cyan);box-shadow:0 0 24px var(--glow-c)}
+.btn-ghost{background:transparent;color:var(--text);border:2px solid var(--border)}
+.btn-ghost:hover{border-color:var(--amber);color:var(--amber)}
+.scroll-hint{
+  position:absolute;bottom:36px;left:50%;transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  font-family:var(--font-m);font-size:.68rem;color:var(--muted);
+  animation:fade-up .7s .6s ease both;
+}
+.scroll-line{width:1px;height:44px;background:linear-gradient(to bottom,var(--cyan),transparent);animation:pulse-line 2s ease infinite}
+
+/* ─── NAV TABS ───────────────────────────────────────────── */
+#sticky-nav{
+  position:sticky;top:0;z-index:100;
+  background:rgba(7,8,15,.85);backdrop-filter:blur(16px);
+  border-bottom:1px solid var(--border);
+}
+.tab-bar{
+  display:flex;gap:0;overflow-x:auto;-ms-overflow-style:none;scrollbar-width:none;
+}
+.tab-bar::-webkit-scrollbar{display:none}
+.tab-btn{
+  font-family:var(--font-h);font-size:.78rem;font-weight:600;
+  letter-spacing:.06em;text-transform:uppercase;
+  padding:14px 20px;border:none;background:transparent;color:var(--muted);
+  cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;
+  transition:all .2s ease;
+}
+.tab-btn:hover{color:var(--text)}
+.tab-btn.active{color:var(--cyan);border-bottom-color:var(--cyan)}
+
+/* ─── SECTIONS ───────────────────────────────────────────── */
+.section{padding:80px 0 60px}
+.section-header{margin-bottom:48px}
+.tag{
+  font-family:var(--font-m);font-size:.7rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--amber);margin-bottom:10px;display:block;
+}
+.section-header h2{
+  font-family:var(--font-h);font-size:clamp(1.8rem,4vw,2.8rem);
+  font-weight:800;letter-spacing:-.02em;line-height:1.1;
+}
+.section-header p{margin-top:12px;color:var(--muted);max-width:640px;font-size:.95rem}
+hr.divider{border:none;border-top:1px solid var(--border);margin:60px 0}
+
+/* ─── CARDS ──────────────────────────────────────────────── */
+.cards{display:grid;gap:20px}
+.cards-2{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.cards-3{grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.card{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--r);padding:26px;transition:border-color .2s,transform .2s;
+}
+.card:hover{border-color:var(--cyan);transform:translateY(-2px)}
+.card-icon{font-size:1.7rem;margin-bottom:12px}
+.card h3{font-family:var(--font-h);font-size:1.05rem;font-weight:700;margin-bottom:8px}
+.card p{font-size:.9rem;color:var(--muted);line-height:1.6}
+
+/* ─── CALLOUT BOXES ──────────────────────────────────────── */
+.callout{
+  border-radius:var(--r);padding:22px 26px;margin:28px 0;
+  border-left:3px solid;font-size:.93rem;
+}
+.callout-cyan{background:rgba(0,212,255,.06);border-color:var(--cyan)}
+.callout-amber{background:rgba(255,170,0,.06);border-color:var(--amber)}
+.callout-green{background:rgba(0,229,160,.06);border-color:var(--green)}
+.callout-red{background:rgba(255,92,92,.06);border-color:var(--red)}
+.callout strong{font-family:var(--font-h);font-weight:700}
+
+/* ─── EQUATION BOX ───────────────────────────────────────── */
+.eq-box{
+  background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);
+  padding:22px 28px;margin:24px 0;text-align:center;overflow-x:auto;
+}
+.eq{font-family:var(--font-m);font-size:.95rem;color:var(--cyan);letter-spacing:.04em;line-height:2}
+.eq-label{font-family:var(--font-m);font-size:.72rem;color:var(--muted);margin-top:8px}
+
+/* ─── PIPELINE DIAGRAM ───────────────────────────────────── */
+#pipeline-svg-wrap{
+  background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);
+  padding:20px;margin:32px 0;overflow-x:auto;
+}
+#pipeline-svg-wrap svg{display:block;margin:0 auto;max-width:100%}
+
+/* ─── RESULTS TABLE ──────────────────────────────────────── */
+.results-table{width:100%;border-collapse:collapse;font-family:var(--font-m);font-size:.82rem;margin:28px 0}
+.results-table thead th{
+  font-family:var(--font-h);font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--muted);padding:10px 14px;border-bottom:1px solid var(--border);text-align:left;
+}
+.results-table tbody tr{transition:background .15s}
+.results-table tbody tr:hover{background:rgba(255,255,255,.03)}
+.results-table td{padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+.results-table .method-name{font-weight:400;color:var(--text)}
+.results-table .best{color:var(--green);font-weight:400}
+.results-table .worst{color:var(--red)}
+.metric-bar-wrap{display:flex;align-items:center;gap:10px}
+.metric-bar{height:6px;border-radius:3px;background:var(--border);flex:1;overflow:hidden;min-width:60px}
+.metric-fill{height:100%;border-radius:3px;transition:width 1s cubic-bezier(.4,0,.2,1)}
+.metric-val{font-family:var(--font-m);font-size:.78rem;min-width:46px;text-align:right}
+
+/* ─── ABLATION TABLE ─────────────────────────────────────── */
+.ablation-wrap{overflow-x:auto;margin:28px 0}
+.abl-table{width:100%;border-collapse:collapse;font-size:.82rem;font-family:var(--font-m)}
+.abl-table th{
+  font-family:var(--font-h);font-size:.72rem;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--muted);padding:10px 12px;border-bottom:1px solid var(--border);text-align:center;white-space:nowrap;
+}
+.abl-table th:first-child{text-align:left}
+.abl-table td{padding:9px 12px;border-bottom:1px solid var(--border);text-align:center}
+.abl-table td:first-child{text-align:left;color:var(--text)}
+.abl-table .full-row td{background:rgba(0,212,255,.05)}
+.abl-table .full-row td:first-child{color:var(--cyan);font-weight:400}
+.chip{
+  display:inline-block;font-size:.7rem;padding:2px 8px;border-radius:20px;
+  font-family:var(--font-h);font-weight:700;letter-spacing:.04em;
+}
+.chip-on{background:rgba(0,229,160,.15);color:var(--green)}
+.chip-off{background:rgba(255,92,92,.1);color:var(--red)}
+
+/* ─── CRITIQUE PANELS ────────────────────────────────────── */
+.critique-grid{display:grid;gap:18px;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));margin-top:32px}
+.crit-card{border-radius:var(--r);padding:24px;border:1px solid var(--border)}
+.crit-card.strength{border-color:rgba(0,229,160,.25);background:rgba(0,229,160,.04)}
+.crit-card.weakness{border-color:rgba(255,170,0,.25);background:rgba(255,170,0,.04)}
+.crit-card h4{font-family:var(--font-h);font-size:.95rem;font-weight:700;margin-bottom:10px;display:flex;gap:8px;align-items:center}
+.crit-card p{font-size:.87rem;color:var(--muted);line-height:1.65}
+.crit-label{font-family:var(--font-m);font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;display:block;margin-bottom:6px}
+
+/* ─── QUESTION BLOCKS ────────────────────────────────────── */
+.q-block{
+  border-left:2px solid var(--cyan);padding:16px 20px;margin:18px 0;
+  background:rgba(0,212,255,.04);border-radius:0 var(--r) var(--r) 0;
+}
+.q-block .q-num{font-family:var(--font-m);font-size:.75rem;color:var(--cyan);margin-bottom:6px}
+.q-block p{font-size:.9rem;line-height:1.65}
+
+/* ─── TIMELINE / IMPACT ──────────────────────────────────── */
+.timeline{position:relative;padding-left:28px;margin-top:32px}
+.timeline::before{content:'';position:absolute;left:7px;top:8px;bottom:8px;width:1px;background:linear-gradient(to bottom,var(--cyan),var(--amber),var(--green))}
+.tl-item{position:relative;margin-bottom:28px}
+.tl-dot{position:absolute;left:-24px;top:5px;width:10px;height:10px;border-radius:50%;background:var(--cyan);border:2px solid var(--bg);box-shadow:0 0 8px var(--glow-c)}
+.tl-item h4{font-family:var(--font-h);font-size:.95rem;font-weight:700;margin-bottom:4px}
+.tl-item p{font-size:.88rem;color:var(--muted);line-height:1.6}
+.tl-year{font-family:var(--font-m);font-size:.72rem;color:var(--amber);margin-bottom:4px;display:block}
+
+/* ─── FOOTER ─────────────────────────────────────────────── */
+footer{
+  border-top:1px solid var(--border);padding:36px 24px;text-align:center;
+  font-family:var(--font-m);font-size:.78rem;color:var(--muted);
+  position:relative;z-index:1;
+}
+
+/* ─── ANIMATIONS ─────────────────────────────────────────── */
+@keyframes fade-up{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse-line{0%,100%{opacity:.3}50%{opacity:1}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.reveal{opacity:0;transform:translateY(28px);transition:opacity .6s ease,transform .6s ease}
+.reveal.visible{opacity:1;transform:translateY(0)}
+
+/* ─── RESPONSIVE ─────────────────────────────────────────── */
+@media(max-width:640px){
+  .cards-3{grid-template-columns:1fr}
+  .tab-btn{padding:12px 14px;font-size:.72rem}
+}
+</style>
+</head>
+<body>
+
+<!-- ── RAY-MARCHING CANVAS ─────────────────────────────── -->
+<canvas id="bg-canvas"></canvas>
+
+<!-- ── HERO ──────────────────────────────────────────────── -->
+<section id="hero">
+  <div>
+    <span class="hero-badge">ECCV 2020 &nbsp;·&nbsp; arXiv 2003.08934</span>
+    <h1>Neural Radiance Fields for View Synthesis</h1>
+    <p class="hero-sub">Representing 3D scenes as continuous volumetric functions — learnable, compact, and photo-realistic.</p>
+    <p class="hero-authors">Ben Mildenhall · Pratul P. Srinivasan · Matthew Tancik · Jonathan T. Barron · Ravi Ramamoorthi · Ren Ng</p>
+    <div class="hero-links">
+      <a href="https://arxiv.org/abs/2003.08934" target="_blank" class="btn btn-primary">arXiv Paper ↗</a>
+      <a href="https://www.matthewtancik.com/nerf" target="_blank" class="btn btn-ghost">Project Page ↗</a>
+    </div>
+  </div>
+  <div class="scroll-hint">
+    <div class="scroll-line"></div>
+    <span>scroll to explore</span>
+  </div>
+</section>
+
+<!-- ── STICKY NAV ─────────────────────────────────────────── -->
+<div id="sticky-nav">
+  <div class="wrap">
+    <div class="tab-bar">
+      <button class="tab-btn active" data-tab="overview">Overview</button>
+      <button class="tab-btn" data-tab="method">Method</button>
+      <button class="tab-btn" data-tab="results">Results</button>
+      <button class="tab-btn" data-tab="critique">Critique</button>
+      <button class="tab-btn" data-tab="impact">Impact</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MAIN CONTENT ───────────────────────────────────────── -->
+<main>
+
+<!-- ════════════════ OVERVIEW ════════════════ -->
+<div id="tab-overview" class="tab-content">
+<div class="wrap">
+  <section class="section">
+    <div class="section-header reveal">
+      <span class="tag">The Big Picture</span>
+      <h2>What Problem Does NeRF Solve?</h2>
+      <p>Given a handful of photos of a scene, render photo-realistic images from <em>any new viewpoint</em> — without a mesh, without voxels, and with only 5 MB of storage.</p>
+    </div>
+
+    <div class="cards cards-3 reveal">
+      <div class="card">
+        <div class="card-icon">📷</div>
+        <h3>Input</h3>
+        <p>A sparse set of RGB images with known camera poses (position + orientation). For synthetic scenes: 100 views. For real scenes: 20–62 handheld photos.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">🧠</div>
+        <h3>Representation</h3>
+        <p>A small MLP (8 layers × 256 channels) whose weights encode the entire scene as a continuous 5D function of position and viewing direction.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">🎬</div>
+        <h3>Output</h3>
+        <p>Photo-realistic novel views from arbitrary camera positions, including specular highlights, fine-grained geometry, and translucent surfaces.</p>
+      </div>
+    </div>
+
+    <div class="callout callout-cyan reveal" style="margin-top:36px">
+      <strong>Core Insight</strong> — Instead of storing geometry as a mesh or voxel grid, encode the scene in the <em>weights of a neural network</em>. Query it at any continuous 3D point to get colour and density. This is compact, resolution-unlimited, and fully differentiable.
+    </div>
+
+    <hr class="divider"/>
+
+    <div class="section-header reveal">
+      <span class="tag">The 5D Function</span>
+      <h2>What the MLP Actually Does</h2>
+    </div>
+
+    <div class="cards cards-2 reveal">
+      <div class="card">
+        <h3>🔢 Inputs</h3>
+        <p style="margin-bottom:10px"><strong style="color:var(--cyan)">Spatial position x</strong> = (x, y, z) — where in 3D space?</p>
+        <p><strong style="color:var(--amber)">Viewing direction d</strong> = (θ, φ) — which direction are we looking from?</p>
+      </div>
+      <div class="card">
+        <h3>🎯 Outputs</h3>
+        <p style="margin-bottom:10px"><strong style="color:var(--green)">Volume density σ</strong> — how "solid" is this point? (depends only on x)</p>
+        <p><strong style="color:var(--red)">Emitted colour c</strong> = (r, g, b) — what colour does it emit toward direction d?</p>
+      </div>
+    </div>
+
+    <div class="eq-box reveal">
+      <div class="eq">F<sub>Θ</sub> : (x, d) ──→ (c, σ)</div>
+      <div class="eq-label">The core mapping. σ is predicted from x alone (view-independent geometry); c depends on both x and d (view-dependent appearance).</div>
+    </div>
+
+    <div class="callout callout-amber reveal">
+      <strong>Why separate σ and c?</strong> — Volume density must be consistent regardless of viewing angle (a rock is solid from all directions). But colour can change with angle — think of a wet surface that looks bright from one angle and dark from another. This split is what enables NeRF to capture specular effects.
+    </div>
+  </section>
+</div>
+</div>
+
+<!-- ════════════════ METHOD ════════════════ -->
+<div id="tab-method" class="tab-content" style="display:none">
+<div class="wrap">
+  <section class="section">
+    <div class="section-header reveal">
+      <span class="tag">Volume Rendering</span>
+      <h2>How a Pixel Colour is Computed</h2>
+      <p>NeRF uses classic volume rendering, tracing a ray through the scene and integrating colour and density along it.</p>
+    </div>
+
+    <!-- Pipeline SVG -->
+    <div id="pipeline-svg-wrap" class="reveal">
+      <svg viewBox="0 0 820 200" xmlns="http://www.w3.org/2000/svg" font-family="'DM Mono',monospace">
+        <!-- Background -->
+        <rect width="820" height="200" fill="#13162a" rx="8"/>
+        <!-- Steps -->
+        <!-- Step 1 -->
+        <rect x="20" y="40" width="140" height="120" rx="8" fill="#0d0f1c" stroke="#00d4ff" stroke-width="1.2"/>
+        <text x="90" y="72" text-anchor="middle" fill="#00d4ff" font-size="22">📡</text>
+        <text x="90" y="96" text-anchor="middle" fill="#e8eaf0" font-size="11" font-weight="600">Cast Rays</text>
+        <text x="90" y="115" text-anchor="middle" fill="#6b7290" font-size="9.5">Sample 3D points</text>
+        <text x="90" y="130" text-anchor="middle" fill="#6b7290" font-size="9.5">along each ray</text>
+        <text x="90" y="150" text-anchor="middle" fill="#00d4ff" font-size="9">Nc=64 coarse pts</text>
+        <!-- Arrow -->
+        <line x1="160" y1="100" x2="192" y2="100" stroke="#00d4ff" stroke-width="1.5"/>
+        <polygon points="192,95 202,100 192,105" fill="#00d4ff"/>
+        <!-- Step 2 -->
+        <rect x="202" y="40" width="150" height="120" rx="8" fill="#0d0f1c" stroke="#ffaa00" stroke-width="1.2"/>
+        <text x="277" y="72" text-anchor="middle" fill="#ffaa00" font-size="22">🧠</text>
+        <text x="277" y="96" text-anchor="middle" fill="#e8eaf0" font-size="11" font-weight="600">Query MLP</text>
+        <text x="277" y="115" text-anchor="middle" fill="#6b7290" font-size="9.5">γ(x), γ(d) → MLP</text>
+        <text x="277" y="130" text-anchor="middle" fill="#6b7290" font-size="9.5">8 layers, 256 ch.</text>
+        <text x="277" y="150" text-anchor="middle" fill="#ffaa00" font-size="9">→ (c, σ) per pt.</text>
+        <!-- Arrow -->
+        <line x1="352" y1="100" x2="384" y2="100" stroke="#ffaa00" stroke-width="1.5"/>
+        <polygon points="384,95 394,100 384,105" fill="#ffaa00"/>
+        <!-- Step 3 -->
+        <rect x="394" y="40" width="150" height="120" rx="8" fill="#0d0f1c" stroke="#00e5a0" stroke-width="1.2"/>
+        <text x="469" y="72" text-anchor="middle" fill="#00e5a0" font-size="22">∫</text>
+        <text x="469" y="96" text-anchor="middle" fill="#e8eaf0" font-size="11" font-weight="600">Volume Render</text>
+        <text x="469" y="115" text-anchor="middle" fill="#6b7290" font-size="9.5">Integrate along ray</text>
+        <text x="469" y="130" text-anchor="middle" fill="#6b7290" font-size="9.5">with transmittance T</text>
+        <text x="469" y="150" text-anchor="middle" fill="#00e5a0" font-size="9">→ pixel colour Ĉ(r)</text>
+        <!-- Arrow -->
+        <line x1="544" y1="100" x2="576" y2="100" stroke="#00e5a0" stroke-width="1.5"/>
+        <polygon points="576,95 586,100 576,105" fill="#00e5a0"/>
+        <!-- Step 4 -->
+        <rect x="586" y="40" width="150" height="120" rx="8" fill="#0d0f1c" stroke="#ff5c5c" stroke-width="1.2"/>
+        <text x="661" y="72" text-anchor="middle" fill="#ff5c5c" font-size="22">⬇</text>
+        <text x="661" y="96" text-anchor="middle" fill="#e8eaf0" font-size="11" font-weight="600">Compute Loss</text>
+        <text x="661" y="115" text-anchor="middle" fill="#6b7290" font-size="9.5">MSE(Ĉ, C_gt)</text>
+        <text x="661" y="130" text-anchor="middle" fill="#6b7290" font-size="9.5">for coarse + fine</text>
+        <text x="661" y="150" text-anchor="middle" fill="#ff5c5c" font-size="9">backprop → update Θ</text>
+        <!-- Labels -->
+        <text x="90" y="188" text-anchor="middle" fill="#6b7290" font-size="8.5">(a)</text>
+        <text x="277" y="188" text-anchor="middle" fill="#6b7290" font-size="8.5">(b)</text>
+        <text x="469" y="188" text-anchor="middle" fill="#6b7290" font-size="8.5">(c)</text>
+        <text x="661" y="188" text-anchor="middle" fill="#6b7290" font-size="8.5">(d)</text>
+      </svg>
+    </div>
+
+    <div class="eq-box reveal">
+      <div class="eq">Ĉ(r) = Σᵢ Tᵢ · (1 − exp(−σᵢ δᵢ)) · cᵢ</div>
+      <div class="eq" style="font-size:.82rem;margin-top:8px">where &nbsp; Tᵢ = exp(−Σⱼ﹤ᵢ σⱼ δⱼ)</div>
+      <div class="eq-label">Tᵢ = accumulated transmittance (probability ray travels without hitting anything). δᵢ = distance between samples.</div>
+    </div>
+
+    <hr class="divider"/>
+
+    <div class="section-header reveal">
+      <span class="tag">Key Trick #1</span>
+      <h2>Positional Encoding</h2>
+      <p>MLPs are biased toward low-frequency functions (Rahaman et al., 2018). Raw (x,y,z) coordinates produce blurry results. The fix: lift inputs into a high-frequency Fourier basis first.</p>
+    </div>
+
+    <div class="cards cards-2 reveal">
+      <div class="card">
+        <h3>🔇 Without Encoding</h3>
+        <p>The MLP only receives raw coordinates. It struggles to represent sharp edges, fine texture, and high-frequency geometry — everything looks over-smoothed (−2.24 dB PSNR in ablation row 2).</p>
+      </div>
+      <div class="card">
+        <h3>📡 With Encoding</h3>
+        <p>Each scalar coordinate p is expanded to sin(2⁰πp), cos(2⁰πp), …, sin(2^(L−1)πp), cos(2^(L−1)πp). For position: L=10 (60-D). For direction: L=4 (24-D).</p>
+      </div>
+    </div>
+
+    <div class="eq-box reveal">
+      <div class="eq">γ(p) = ( sin(2⁰πp), cos(2⁰πp), sin(2¹πp), cos(2¹πp), …, sin(2^(L−1)πp), cos(2^(L−1)πp) )</div>
+      <div class="eq-label">Applied separately to each of the 3 position coordinates and each of the 3 direction components.</div>
+    </div>
+
+    <hr class="divider"/>
+
+    <div class="section-header reveal">
+      <span class="tag">Key Trick #2</span>
+      <h2>Hierarchical Sampling</h2>
+      <p>Uniformly sampling 192 points per ray wastes compute on empty space. The solution: use a cheap coarse pass to find where matter is, then concentrate samples there.</p>
+    </div>
+
+    <div class="cards cards-3 reveal">
+      <div class="card">
+        <div class="card-icon">🔵</div>
+        <h3>Coarse Network</h3>
+        <p>64 stratified samples per ray. Estimates a rough density distribution — not meant to be high quality, just informative.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">📊</div>
+        <h3>Build PDF</h3>
+        <p>Normalise the coarse weights to get a piecewise-constant probability density function along the ray. Peaks = likely surfaces.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">🎯</div>
+        <h3>Fine Network</h3>
+        <p>Draw 128 more samples from the PDF via inverse transform sampling. Fine network sees all 64+128 = 192 samples and produces the final colour.</p>
+      </div>
+    </div>
+
+    <div class="callout callout-green reveal">
+      <strong>Why does the coarse loss matter?</strong> — Both networks are trained simultaneously. The coarse MSE loss ensures the coarse network's density estimates are meaningful, so the PDF it produces concentrates fine samples near actual surfaces rather than empty space.
+    </div>
+  </section>
+</div>
+</div>
+
+<!-- ════════════════ RESULTS ════════════════ -->
+<div id="tab-results" class="tab-content" style="display:none">
+<div class="wrap">
+  <section class="section">
+    <div class="section-header reveal">
+      <span class="tag">Quantitative Evaluation</span>
+      <h2>Benchmark Results</h2>
+      <p>Three datasets. Three metrics. NeRF leads on almost all of them — with 3000× less storage than LLFF.</p>
+    </div>
+
+    <!-- Interactive results -->
+    <div id="result-selector" class="reveal" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px">
+      <button class="btn btn-primary" data-dataset="synthetic-r" id="ds-btn-synthetic-r">Realistic Synthetic 360°</button>
+      <button class="btn btn-ghost" data-dataset="synthetic-d" id="ds-btn-synthetic-d">Diffuse Synthetic 360°</button>
+      <button class="btn btn-ghost" data-dataset="real" id="ds-btn-real">Real Forward-Facing</button>
+    </div>
+
+    <div id="results-container" class="reveal"></div>
+
+    <div class="callout callout-amber reveal" style="margin-top:20px" id="dataset-note">
+      <strong>Realistic Synthetic 360°</strong> — 8 path-traced objects with complex non-Lambertian materials (e.g., Ship, Lego, Drums). Each rendered at 800×800 px. 100 training views, 200 test views. NeRF surpasses all baselines by a large margin.
+    </div>
+
+    <hr class="divider"/>
+
+    <div class="section-header reveal">
+      <span class="tag">Ablation Study</span>
+      <h2>What Matters Most?</h2>
+      <p>Tested on Realistic Synthetic 360°. Each row removes or changes one component from the complete model (row 9).</p>
+    </div>
+
+    <div class="ablation-wrap reveal">
+      <table class="abl-table">
+        <thead>
+          <tr>
+            <th style="text-align:left">Configuration</th>
+            <th>PE</th>
+            <th>View Dep.</th>
+            <th>Hier.</th>
+            <th>#Images</th>
+            <th>L (freqs)</th>
+            <th>PSNR ↑</th>
+            <th>SSIM ↑</th>
+            <th>LPIPS ↓</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>1) No PE, View Dep., Hier.</td>
+            <td><span class="chip chip-off">✗</span></td>
+            <td><span class="chip chip-off">✗</span></td>
+            <td><span class="chip chip-off">✗</span></td>
+            <td>100</td><td>—</td>
+            <td style="color:var(--red)">26.67</td><td>0.906</td><td>0.136</td>
+          </tr>
+          <tr>
+            <td>2) No Positional Encoding</td>
+            <td><span class="chip chip-off">✗</span></td>
+            <td><span class="chip chip-on">✓</span></td>
+            <td><span class="chip chip-on">✓</span></td>
+            <td>100</td><td>—</td>
+            <td style="color:var(--red)">28.77</td><td>0.924</td><td>0.108</td>
+          </tr>
+          <tr>
+            <td>3) No View Dependence</td>
+            <td><span class="chip chip-on">✓</span></td>
+            <td><span class="chip chip-off">✗</span></td>
+            <td><span class="chip chip-on">✓</span></td>
+            <td>100</td><td>10</td>
+            <td style="color:var(--red)">27.66</td><td>0.925</td><td>0.117</td>
+          </tr>
+          <tr>
+            <td>4) No Hierarchical Sampling</td>
+            <td><span class="chip chip-on">✓</span></td>
+            <td><span class="chip chip-on">✓</span></td>
+            <td><span class="chip chip-off">✗</span></td>
+            <td>100</td><td>10</td>
+            <td>30.06</td><td>0.938</td><td>0.109</td>
+          </tr>
+          <tr>
+            <td>5) Only 25 Images</td>
+            <td><span class="chip chip-on">✓</span></td>
+            <td><span class="chip chip-on">✓</span></td>
+            <td><span class="chip chip-on">✓</span></td>
+            <td style="color:var(--amber)">25</td><td>10</td>
+            <td>27.78</td><td>0.925</td><td>0.107</td>
+          </tr>
+          <tr>
+            <td>6) Only 50 Images</td>
+            <td><span class="chip chip-on">✓</span></td>
+            <td><span class="chip chip-on">✓</span></td>
+            <td><span class="chip chip-on">✓</span></td>
+            <td style="color:var(--amber)">50</td><td>10</td>
+            <td>29.79</td><td>0.940</td><td>0.096</td>
+          </tr>
+          <tr>
+            <td>7) L=5 Frequencies</td>
+            <td><span class="chip chip-on">✓</span></td>
+            <td><span class="chip chip-on">✓</span></td>
+            <td><span class="chip chip-on">✓</span></td>
+            <td>100</td><td style="color:var(--amber)">5</td>
+            <td>30.59</td><td>0.944</td><td>0.088</td>
+          </tr>
+          <tr>
+            <td>8) L=15 Frequencies</td>
+            <td><span class="chip chip-on">✓</span></td>
+            <td><span class="chip chip-on">✓</span></td>
+            <td><span class="chip chip-on">✓</span></td>
+            <td>100</td><td style="color:var(--amber)">15</td>
+            <td>30.81</td><td>0.946</td><td>0.096</td>
+          </tr>
+          <tr class="full-row">
+            <td>9) ✦ Complete Model</td>
+            <td><span class="chip chip-on">✓</span></td>
+            <td><span class="chip chip-on">✓</span></td>
+            <td><span class="chip chip-on">✓</span></td>
+            <td>100</td><td>10</td>
+            <td style="color:var(--green);font-weight:700">31.01</td>
+            <td style="color:var(--green)">0.947</td>
+            <td style="color:var(--green)">0.081</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout callout-cyan reveal">
+      <strong>Key takeaway from ablation:</strong> Positional encoding (+2.24 dB) and view dependence (+3.35 dB vs. no-PE-VD-H baseline) are the biggest contributors. Even at 25 images, NeRF (27.78 dB) beats all baselines at 100 images. Frequencies saturate at L=10 — pushing to L=15 gives no benefit.
+    </div>
+  </section>
+</div>
+</div>
+
+<!-- ════════════════ CRITIQUE ════════════════ -->
+<div id="tab-critique" class="tab-content" style="display:none">
+<div class="wrap">
+  <section class="section">
+    <div class="section-header reveal">
+      <span class="tag">Paper Review</span>
+      <h2>Strengths &amp; Weaknesses</h2>
+      <p>A reviewer-style critique grounded in the paper's actual claims, tables, and appendices.</p>
+    </div>
+
+    <div class="critique-grid reveal">
+      <div class="crit-card strength">
+        <span class="crit-label" style="color:var(--green)">Strength S1</span>
+        <h4><span>💡</span> Principled Ray Integration</h4>
+        <p>Unlike SRN, which returns a single colour per ray, NeRF integrates the full density field. This produces dense, well-conditioned gradients and explains why NeRF recovers thin structures and semi-transparent surfaces that surface-based methods cannot.</p>
+      </div>
+      <div class="crit-card strength">
+        <span class="crit-label" style="color:var(--green)">Strength S2</span>
+        <h4><span>📊</span> Transparent Ablation</h4>
+        <p>The 9-row ablation (Table 2) cleanly isolates every design choice with exact numbers. Rare and valuable — gives reviewers and readers a causal account of what matters and by how much.</p>
+      </div>
+      <div class="crit-card weakness">
+        <span class="crit-label" style="color:var(--amber)">Weakness W1</span>
+        <h4><span>⏱</span> 30 Seconds Per Frame</h4>
+        <p>150–200M MLP queries per frame on a V100. Training: 1–2 days per scene. The paper hides this in an appendix paragraph and never compares wall-clock time against baselines — a significant omission for a "practical" view synthesis method.</p>
+      </div>
+      <div class="crit-card weakness">
+        <span class="crit-label" style="color:var(--amber)">Weakness W2</span>
+        <h4><span>🔄</span> No Generalisation Across Scenes</h4>
+        <p>A brand-new MLP is trained from scratch for every scene. LLFF trains once and runs on new scenes in under 10 minutes. The paper never tests warm-starting from a previous scene's weights or compares to generalisation-capable baselines.</p>
+      </div>
+      <div class="crit-card weakness" style="grid-column:span 1">
+        <span class="crit-label" style="color:var(--amber)">Weakness W3</span>
+        <h4><span>👁</span> LPIPS Regression on Real Scenes</h4>
+        <p>NeRF's LPIPS on Real Forward-Facing (0.250) is <em>worse</em> than LLFF (0.212). The caption dismisses this with a pointer to the supplementary video — no per-scene breakdown, no analysis of when and why the perceptual quality drops.</p>
+      </div>
+    </div>
+
+    <hr class="divider"/>
+
+    <div class="section-header reveal">
+      <span class="tag">Open Questions</span>
+      <h2>Questions for the Authors</h2>
+    </div>
+
+    <div class="reveal">
+      <div class="q-block">
+        <div class="q-num">Q1</div>
+        <p><strong>Coarse loss vs. sampling quality.</strong> The coarse network is trained with the same pixel-colour MSE as the fine network, but its <em>purpose</em> is to produce a good importance-sampling PDF. Could optimising for rendering quality in the coarse pass harm the quality of the PDF — e.g., by sharpening density around texture rather than geometry? Has a dedicated sampling-quality loss been considered?</p>
+      </div>
+      <div class="q-block">
+        <div class="q-num">Q2</div>
+        <p><strong>NDC robustness.</strong> The NDC reparameterisation (Appendix C) assumes forward-facing captures and f→∞. How does the method behave when this assumption breaks (lateral parallax, overhead views, 360° phone captures)? No such results are reported, leaving the boundary conditions of NDC unclear.</p>
+      </div>
+      <div class="q-block">
+        <div class="q-num">Q3</div>
+        <p><strong>Architecture sensitivity.</strong> The 8-layer, 256-channel MLP with a skip at layer 5 is borrowed directly from DeepSDF — a model for signed-distance regression, a structurally different task. Was any architecture search performed for NeRF's output domain (bounded density + RGB), and how sensitive are the reported numbers to depth, width, or skip placement?</p>
+      </div>
+    </div>
+
+    <hr class="divider"/>
+
+    <div class="section-header reveal">
+      <span class="tag">Future Work</span>
+      <h2>Potential Extensions</h2>
+    </div>
+    <div class="cards cards-2 reveal">
+      <div class="card">
+        <div class="card-icon">⚡</div>
+        <h3>Speed: Hash Grids</h3>
+        <p>Replace the MLP with a multi-resolution hash grid (Instant-NGP, 2022) to reduce per-sample cost by 100–1000×, enabling real-time rendering.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">🌍</div>
+        <h3>Generalisation</h3>
+        <p>Condition on image-encoded latents for feed-forward reconstruction at test time — no per-scene optimisation. (pixelNeRF, IBRNet, 2021.)</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">🎞</div>
+        <h3>Dynamic Scenes</h3>
+        <p>Add a temporal coordinate or learn a canonical NeRF + deformation field from video for 4D reconstruction and novel view synthesis of moving objects.</p>
+      </div>
+      <div class="card">
+        <div class="card-icon">💡</div>
+        <h3>Relighting</h3>
+        <p>Decompose radiance into BRDF and illumination for material editing, relighting, and physically-based rendering from casual captures.</p>
+      </div>
+    </div>
+  </section>
+</div>
+</div>
+
+<!-- ════════════════ IMPACT ════════════════ -->
+<div id="tab-impact" class="tab-content" style="display:none">
+<div class="wrap">
+  <section class="section">
+    <div class="section-header reveal">
+      <span class="tag">Legacy</span>
+      <h2>NeRF's Impact on the Field</h2>
+      <p>Published March 2020. Within four years it spawned hundreds of papers and reshaped how the community thinks about 3D scene representation.</p>
+    </div>
+
+    <div class="timeline reveal">
+      <div class="tl-item">
+        <div class="tl-dot"></div>
+        <span class="tl-year">2020</span>
+        <h4>NeRF (original)</h4>
+        <p>Establishes the paradigm: continuous 5D MLP + volume rendering + positional encoding. ECCV 2020 Best Paper Honourable Mention.</p>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot" style="background:var(--amber)"></div>
+        <span class="tl-year">2021</span>
+        <h4>Generalisation wave</h4>
+        <p>pixelNeRF, IBRNet, MVSNeRF add encoders for feed-forward multi-scene inference. NeRF-W handles in-the-wild, uncontrolled photo collections.</p>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot" style="background:var(--green)"></div>
+        <span class="tl-year">2022</span>
+        <h4>Speed breakthrough</h4>
+        <p>Instant-NGP (NVIDIA) reduces training to seconds with hash grids. Mip-NeRF 360 handles unbounded outdoor scenes. Thousands of NeRF variants in the literature.</p>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot" style="background:var(--red)"></div>
+        <span class="tl-year">2023</span>
+        <h4>3D Gaussian Splatting</h4>
+        <p>Replaces implicit MLP with explicit 3D Gaussians for real-time rendering — partially displacing NeRF for interactive applications, while keeping its differentiable-rendering philosophy.</p>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot" style="background:var(--cyan)"></div>
+        <span class="tl-year">2024–</span>
+        <h4>Foundation models & generative NeRF</h4>
+        <p>DreamFusion, Zero-1-to-3, and others combine diffusion priors with NeRF-like representations to generate 3D content from text or single images.</p>
+      </div>
+    </div>
+
+    <hr class="divider"/>
+
+    <div class="section-header reveal">
+      <span class="tag">Applications</span>
+      <h2>Where Is NeRF Used?</h2>
+    </div>
+    <div class="cards cards-3 reveal">
+      <div class="card"><div class="card-icon">🎮</div><h3>VR / AR Content</h3><p>Capture real-world locations and reconstruct them as immersive 3D environments for headsets.</p></div>
+      <div class="card"><div class="card-icon">🏛</div><h3>Cultural Heritage</h3><p>Digitise artefacts, sculptures, and historical sites from photographs at far higher fidelity than photogrammetry.</p></div>
+      <div class="card"><div class="card-icon">🤖</div><h3>Robotics & SLAM</h3><p>Use implicit scene representations as a map for navigation and manipulation — denser and more accurate than point clouds.</p></div>
+      <div class="card"><div class="card-icon">🛍</div><h3>E-Commerce</h3><p>Reconstruct product 3D models from a few smartphone photos for interactive 360° product viewers.</p></div>
+      <div class="card"><div class="card-icon">🎥</div><h3>Visual Effects</h3><p>Reconstruct on-set geometry for compositing, relighting actors and props into new environments.</p></div>
+      <div class="card"><div class="card-icon">🧬</div><h3>Medical Imaging</h3><p>Implicit neural representations applied to novel-view synthesis from sparse CT/MRI projections, reducing radiation dose.</p></div>
+    </div>
+
+    <div class="callout callout-cyan reveal" style="margin-top:36px">
+      <strong>Why does this paper matter for your study?</strong> — NeRF is a masterclass in combining classical computer graphics (volume rendering) with modern deep learning (MLP, gradient descent, positional encoding) to solve a hard problem with surprisingly simple code. The design choices are minimal but deliberate, and the ablation study shows exactly why each one is needed. It is a blueprint for how to write a convincing methods paper.
+    </div>
+  </section>
+</div>
+</div>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    Interactive explainer for <strong style="color:var(--text)">NeRF: Representing Scenes as Neural Radiance Fields for View Synthesis</strong>
+    &nbsp;·&nbsp; Mildenhall et al., ECCV 2020 &nbsp;·&nbsp;
+    <a href="https://arxiv.org/abs/2003.08934" target="_blank" style="color:var(--cyan);text-decoration:none">arXiv 2003.08934</a>
+  </div>
+</footer>
+
+<script>
+/* ─── CANVAS RAY ANIMATION ──────────────────────────────── */
+(function(){
+  const cv = document.getElementById('bg-canvas');
+  const ctx = cv.getContext('2d');
+  let W,H,rays=[],stars=[];
+
+  function resize(){W=cv.width=innerWidth;H=cv.height=innerHeight;init()}
+  function rnd(a,b){return a+Math.random()*(b-a)}
+
+  function init(){
+    stars=[];
+    for(let i=0;i<140;i++) stars.push({x:rnd(0,W),y:rnd(0,H),r:rnd(.4,1.4),a:rnd(.2,.8)});
+    rays=[];
+    for(let i=0;i<18;i++) addRay();
+  }
+
+  function addRay(){
+    const fromLeft=Math.random()>.5;
+    rays.push({
+      ox: fromLeft ? rnd(-40,W*.3) : rnd(W*.7,W+40),
+      oy: rnd(H*.1,H*.9),
+      dx: fromLeft ? rnd(.4,1) : rnd(-1,-.4),
+      dy: rnd(-.25,.25),
+      len: rnd(80,260),
+      speed: rnd(.5,1.8),
+      t: 0,
+      alpha: rnd(.12,.32),
+      hue: Math.random()>.5 ? '0,212,255' : '255,170,0',
+      life: rnd(80,240),
+      age: 0
+    });
+  }
+
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+
+    // stars
+    stars.forEach(s=>{
+      ctx.beginPath();
+      ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(255,255,255,${s.a})`;
+      ctx.fill();
+    });
+
+    // rays
+    rays.forEach((r,i)=>{
+      r.age++;
+      if(r.age>r.life){ rays.splice(i,1); addRay(); return; }
+      r.t += r.speed;
+      const fade = Math.min(1, Math.min(r.age/20, (r.life-r.age)/20));
+      const x2 = r.ox + r.dx*r.t;
+      const y2 = r.oy + r.dy*r.t;
+      const x1 = x2 - r.dx*r.len;
+      const y1 = y2 - r.dy*r.len;
+      const grad = ctx.createLinearGradient(x1,y1,x2,y2);
+      grad.addColorStop(0,`rgba(${r.hue},0)`);
+      grad.addColorStop(.5,`rgba(${r.hue},${r.alpha*fade})`);
+      grad.addColorStop(1,`rgba(${r.hue},0)`);
+      ctx.beginPath();
+      ctx.moveTo(x1,y1);
+      ctx.lineTo(x2,y2);
+      ctx.strokeStyle=grad;
+      ctx.lineWidth=1.2;
+      ctx.stroke();
+    });
+
+    requestAnimationFrame(draw);
+  }
+  window.addEventListener('resize',resize);
+  resize();draw();
+})();
+
+/* ─── TAB NAVIGATION ─────────────────────────────────────── */
+const tabBtns = document.querySelectorAll('.tab-btn');
+const tabContents = document.querySelectorAll('.tab-content');
+
+tabBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const target = btn.dataset.tab;
+    tabBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    tabContents.forEach(tc => {
+      tc.style.display = tc.id === `tab-${target}` ? 'block' : 'none';
+    });
+    window.scrollTo({top: document.getElementById('sticky-nav').offsetTop - 10, behavior:'smooth'});
+    triggerReveal();
+  });
+});
+
+/* ─── RESULTS DATA & RENDER ──────────────────────────────── */
+const datasetsData = {
+  'synthetic-r': {
+    note: '<strong>Realistic Synthetic 360°</strong> — 8 path-traced objects with complex non-Lambertian materials. 100 training views at 800×800 px. NeRF surpasses all baselines by a large margin.',
+    rows: [
+      {m:'SRN',    psnr:22.26, ssim:.846, lpips:.170},
+      {m:'NV',     psnr:26.05, ssim:.893, lpips:.160},
+      {m:'LLFF',   psnr:24.88, ssim:.911, lpips:.114},
+      {m:'NeRF ✦', psnr:31.01, ssim:.947, lpips:.081, best:true},
+    ]
+  },
+  'synthetic-d': {
+    note: '<strong>Diffuse Synthetic 360°</strong> — 4 Lambertian objects with simple geometry from the DeepVoxels dataset. 479 training views at 512×512 px. NeRF dominates.',
+    rows: [
+      {m:'SRN',    psnr:33.20, ssim:.963, lpips:.073},
+      {m:'NV',     psnr:29.62, ssim:.929, lpips:.099},
+      {m:'LLFF',   psnr:34.38, ssim:.985, lpips:.048},
+      {m:'NeRF ✦', psnr:40.15, ssim:.991, lpips:.023, best:true},
+    ]
+  },
+  'real': {
+    note: '<strong>Real Forward-Facing</strong> — 8 scenes captured with a handheld cellphone. 20–62 images per scene. Note: NeRF\'s LPIPS (0.250) is slightly <em>worse</em> than LLFF (0.212) — a genuine weakness.',
+    rows: [
+      {m:'SRN',    psnr:22.84, ssim:.668, lpips:.378},
+      {m:'LLFF',   psnr:24.13, ssim:.798, lpips:.212},
+      {m:'NeRF ✦', psnr:26.50, ssim:.811, lpips:.250, best:true, lpips_note:true},
+    ]
+  }
+};
+
+function renderResults(dsKey) {
+  const ds = datasetsData[dsKey];
+  const psnrs = ds.rows.map(r=>r.psnr), maxP=Math.max(...psnrs), minP=Math.min(...psnrs);
+  const ssims = ds.rows.map(r=>r.ssim), maxS=Math.max(...ssims);
+  const lpips = ds.rows.map(r=>r.lpips), minL=Math.min(...lpips), maxL=Math.max(...lpips);
+
+  let html = `<table class="results-table"><thead><tr>
+    <th>Method</th>
+    <th colspan="2">PSNR ↑ (dB)</th>
+    <th colspan="2">SSIM ↑</th>
+    <th colspan="2">LPIPS ↓</th>
+  </tr></thead><tbody>`;
+
+  ds.rows.forEach(r => {
+    const pct_p = ((r.psnr-minP)/(maxP-minP)*100).toFixed(1);
+    const pct_s = (r.ssim/maxS*100).toFixed(1);
+    const pct_l = ((maxL-r.lpips)/(maxL-minL)*100).toFixed(1);
+    const isBest = r.best;
+    const pColor = isBest ? 'var(--green)' : (r.psnr===Math.min(...psnrs)?'var(--red)':'var(--cyan)');
+    const lBad = r.lpips_note ? ' style="color:var(--amber)"' : '';
+    html += `<tr>
+      <td class="method-name" style="${isBest?'color:var(--cyan);font-weight:700':''}'">${r.m}</td>
+      <td><div class="metric-bar-wrap">
+        <div class="metric-bar"><div class="metric-fill" style="width:0%;background:${pColor}" data-w="${pct_p}"></div></div>
+        <span class="metric-val" style="color:${pColor}">${r.psnr.toFixed(2)}</span>
+      </div></td><td></td>
+      <td><div class="metric-bar-wrap">
+        <div class="metric-bar"><div class="metric-fill" style="width:0%;background:var(--amber)" data-w="${pct_s}"></div></div>
+        <span class="metric-val" style="color:var(--amber)">${r.ssim.toFixed(3)}</span>
+      </div></td><td></td>
+      <td><div class="metric-bar-wrap">
+        <div class="metric-bar"><div class="metric-fill" style="width:0%;background:var(--green)" data-w="${pct_l}"></div></div>
+        <span class="metric-val"${lBad}>${r.lpips.toFixed(3)}</span>
+      </div></td><td></td>
+    </tr>`;
+  });
+
+  html += '</tbody></table>';
+  document.getElementById('results-container').innerHTML = html;
+  document.getElementById('dataset-note').innerHTML = ds.note;
+
+  // Animate bars after a tick
+  setTimeout(() => {
+    document.querySelectorAll('.metric-fill').forEach(el => {
+      el.style.width = el.dataset.w + '%';
+    });
+  }, 80);
+}
+
+// Dataset selector buttons
+document.querySelectorAll('[data-dataset]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-dataset]').forEach(b => {
+      b.classList.remove('btn-primary'); b.classList.add('btn-ghost');
+    });
+    btn.classList.remove('btn-ghost'); btn.classList.add('btn-primary');
+    renderResults(btn.dataset.dataset);
+  });
+});
+renderResults('synthetic-r');
+
+/* ─── SCROLL REVEAL ──────────────────────────────────────── */
+function triggerReveal(){
+  const els = document.querySelectorAll('.reveal:not(.visible)');
+  const obs = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if(e.isIntersecting){ e.target.classList.add('visible'); obs.unobserve(e.target); }
+    });
+  }, {threshold:.1});
+  els.forEach(el => obs.observe(el));
+}
+triggerReveal();
+</script>
+</body>
+</html>
