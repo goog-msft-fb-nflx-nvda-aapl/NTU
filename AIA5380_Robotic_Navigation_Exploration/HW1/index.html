@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HW1 — Path Planning</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600;1,9..144,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #13161d;
+    --surface2: #1a1e28;
+    --border: #252a38;
+    --accent: #5b8dee;
+    --accent2: #e8a44a;
+    --accent3: #5ecfa0;
+    --text: #d4d8e8;
+    --muted: #6b7394;
+    --heading: #eef0f8;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 14px;
+    line-height: 1.8;
+    overflow-x: hidden;
+  }
+
+  /* ── grid overlay ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(91,141,238,.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(91,141,238,.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── layout ── */
+  .wrap {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 2rem;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── hero ── */
+  header {
+    padding: 5rem 0 3rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .eyebrow {
+    font-size: 11px;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 1.2rem;
+    opacity: 0;
+    animation: fadeUp .6s .1s forwards;
+  }
+
+  h1 {
+    font-family: 'Fraunces', serif;
+    font-size: clamp(2.4rem, 6vw, 4rem);
+    font-weight: 600;
+    color: var(--heading);
+    line-height: 1.1;
+    letter-spacing: -.02em;
+    opacity: 0;
+    animation: fadeUp .6s .2s forwards;
+  }
+
+  h1 em {
+    font-style: italic;
+    font-weight: 300;
+    color: var(--accent2);
+  }
+
+  .meta {
+    margin-top: 1.4rem;
+    color: var(--muted);
+    font-size: 12px;
+    opacity: 0;
+    animation: fadeUp .6s .35s forwards;
+  }
+
+  .meta span { margin-right: 2rem; }
+  .meta span::before { content: '— '; }
+
+  /* ── pill badges ── */
+  .pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem;
+    margin-top: 1.6rem;
+    opacity: 0;
+    animation: fadeUp .6s .45s forwards;
+  }
+
+  .pill {
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    padding: .3rem .8rem;
+    border-radius: 2px;
+    border: 1px solid;
+  }
+
+  .pill-blue  { border-color: var(--accent);  color: var(--accent); }
+  .pill-gold  { border-color: var(--accent2); color: var(--accent2); }
+  .pill-green { border-color: var(--accent3); color: var(--accent3); }
+
+  /* ── sections ── */
+  section {
+    padding: 4rem 0;
+    border-bottom: 1px solid var(--border);
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity .5s, transform .5s;
+  }
+
+  section.visible {
+    opacity: 1;
+    transform: none;
+  }
+
+  .section-label {
+    font-size: 10px;
+    letter-spacing: .25em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 1.6rem;
+  }
+
+  h2 {
+    font-family: 'Fraunces', serif;
+    font-size: 1.9rem;
+    font-weight: 600;
+    color: var(--heading);
+    margin-bottom: 1.4rem;
+    letter-spacing: -.01em;
+  }
+
+  h3 {
+    font-family: 'Fraunces', serif;
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: var(--heading);
+    margin: 2rem 0 .8rem;
+  }
+
+  p { color: var(--text); margin-bottom: 1rem; }
+
+  /* ── callout box ── */
+  .callout {
+    background: var(--surface);
+    border-left: 3px solid var(--accent);
+    padding: 1.2rem 1.4rem;
+    margin: 1.6rem 0;
+    border-radius: 0 4px 4px 0;
+  }
+
+  .callout.gold  { border-color: var(--accent2); }
+  .callout.green { border-color: var(--accent3); }
+
+  .callout-title {
+    font-size: 11px;
+    letter-spacing: .15em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: .6rem;
+  }
+
+  .callout.gold  .callout-title { color: var(--accent2); }
+  .callout.green .callout-title { color: var(--accent3); }
+
+  /* ── formula ── */
+  .formula {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 1.2rem 1.6rem;
+    margin: 1.4rem 0;
+    border-radius: 4px;
+    font-size: 1.05rem;
+    color: var(--heading);
+    text-align: center;
+    letter-spacing: .04em;
+  }
+
+  /* ── steps ── */
+  .steps { counter-reset: step; margin: 1.2rem 0; }
+
+  .step {
+    display: grid;
+    grid-template-columns: 2.4rem 1fr;
+    gap: 0 1rem;
+    margin-bottom: 1rem;
+    counter-increment: step;
+  }
+
+  .step::before {
+    content: counter(step);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--bg);
+    background: var(--accent);
+    width: 1.6rem;
+    height: 1.6rem;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: .2rem;
+    flex-shrink: 0;
+  }
+
+  .step.gold::before  { background: var(--accent2); }
+  .step.green::before { background: var(--accent3); }
+
+  .step-body { color: var(--text); }
+  .step-body strong { color: var(--heading); font-weight: 500; }
+
+  /* ── results table ── */
+  .results-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 1.6rem 0;
+  }
+
+  .result-card {
+    background: var(--surface);
+    padding: 1.4rem;
+  }
+
+  .result-card .algo {
+    font-size: 10px;
+    letter-spacing: .2em;
+    text-transform: uppercase;
+    margin-bottom: .8rem;
+  }
+
+  .result-card.astar .algo  { color: var(--accent); }
+  .result-card.rrtstar .algo { color: var(--accent2); }
+
+  .result-card .map-name {
+    font-family: 'Fraunces', serif;
+    font-size: 1.1rem;
+    color: var(--heading);
+    margin-bottom: .8rem;
+  }
+
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 12px;
+    border-bottom: 1px solid var(--border);
+    padding: .3rem 0;
+  }
+
+  .stat-row:last-child { border-bottom: none; }
+  .stat-key { color: var(--muted); }
+  .stat-val { color: var(--heading); font-weight: 500; }
+
+  /* ── vis grid ── */
+  .vis-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.2rem;
+    margin: 1.6rem 0;
+  }
+
+  .vis-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .vis-card img {
+    width: 100%;
+    display: block;
+  }
+
+  .vis-caption {
+    padding: .6rem 1rem;
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: .06em;
+    border-top: 1px solid var(--border);
+  }
+
+  .vis-caption span {
+    float: right;
+  }
+
+  .vis-caption .astar-tag  { color: var(--accent); }
+  .vis-caption .rrt-tag    { color: var(--accent2); }
+
+  /* ── ta clarifications ── */
+  .ta-list { list-style: none; margin: 1rem 0; }
+
+  .ta-list li {
+    display: grid;
+    grid-template-columns: 1.8rem 1fr;
+    gap: .5rem;
+    padding: .7rem 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+
+  .ta-list li:last-child { border-bottom: none; }
+
+  .ta-num {
+    color: var(--accent3);
+    font-weight: 500;
+    font-size: 11px;
+    padding-top: .15rem;
+  }
+
+  /* ── legend ── */
+  .legend {
+    display: flex;
+    gap: 1.6rem;
+    flex-wrap: wrap;
+    margin-top: .8rem;
+    font-size: 12px;
+  }
+
+  .legend-item { display: flex; align-items: center; gap: .5rem; }
+
+  .dot {
+    width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+  }
+
+  /* ── footer ── */
+  footer {
+    padding: 3rem 0;
+    color: var(--muted);
+    font-size: 12px;
+    opacity: 0;
+    animation: fadeUp .6s .6s forwards;
+  }
+
+  /* ── animations ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  /* ── responsive ── */
+  @media (max-width: 640px) {
+    .results-grid, .vis-grid { grid-template-columns: 1fr; }
+    h1 { font-size: 2rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <!-- ── HERO ── -->
+  <header>
+    <p class="eyebrow">Robotic Navigation and Exploration · HW1</p>
+    <h1>Path Planning:<br><em>A* and RRT*</em></h1>
+    <p class="meta">
+      <span>James Christian · R13921031</span>
+      <span>Dept. of EE, NTU</span>
+      <span>2026-03-16</span>
+    </p>
+    <div class="pills">
+      <span class="pill pill-blue">A* Algorithm</span>
+      <span class="pill pill-gold">RRT* Algorithm</span>
+      <span class="pill pill-green">Python 3.12</span>
+      <span class="pill pill-green">NumPy · OpenCV</span>
+    </div>
+  </header>
+
+  <!-- ── PROBLEM ── -->
+  <section id="problem">
+    <p class="section-label">01 · Problem</p>
+    <h2>Task Definition</h2>
+    <p>
+      Given a 2D map image with obstacles, a start pose, and a goal pose,
+      compute a valid <strong>collision-free path</strong> between them.
+      Two planners are required — one grid-based (A*) and one
+      sampling-based (RRT*).
+    </p>
+
+    <div class="callout">
+      <p class="callout-title">Map Format</p>
+      <p>
+        Each map is a PNG image accompanied by an <code>info.json</code>
+        specifying pixel coordinates for start and goal.
+        White pixels are free space; black pixels are obstacles.
+        The raw image is converted to a boolean occupancy map for
+        collision queries.
+      </p>
+    </div>
+
+    <h3>Collision Detection</h3>
+    <p>
+      All collision checks use the <strong>Bresenham line algorithm</strong>
+      to rasterise a segment between two nodes and test every pixel against
+      the occupancy map.  This ensures no path segment passes through an
+      obstacle even at oblique angles.
+    </p>
+
+    <h3>Parameters</h3>
+    <div class="callout gold">
+      <p class="callout-title">Shared</p>
+      <p><code>goal_threshold = 50 px</code> — a node is considered
+      to have reached the goal when its L2 distance to the goal coordinate
+      falls within this radius.</p>
+    </div>
+    <div class="callout">
+      <p class="callout-title">A* specific</p>
+      <p><code>grid_size = 50 px</code> — spacing between candidate
+      neighbour nodes in the 8-directional grid expansion.</p>
+    </div>
+    <div class="callout gold">
+      <p class="callout-title">RRT* specific</p>
+      <p><code>step_size = 50 px</code> — maximum steering distance per
+      iteration.<br>
+      <code>search_radius = 200 px</code> — neighbourhood radius for
+      re-parenting and rewiring.</p>
+    </div>
+  </section>
+
+  <!-- ── A* ── -->
+  <section id="astar">
+    <p class="section-label">02 · A* Implementation</p>
+    <h2>A* Planner</h2>
+
+    <p>
+      A* is a best-first graph search that guarantees the <strong>optimal
+      path</strong> under the given grid resolution.  It combines a
+      Dijkstra-style accumulated cost with an admissible heuristic to
+      focus search toward the goal.
+    </p>
+
+    <div class="formula">F(v) = g(v) + h(v)</div>
+
+    <p>
+      <strong>g(v)</strong> is the true accumulated cost from the start
+      node to v. <strong>h(v)</strong> is the L2 (Euclidean) distance from
+      v to the goal — an admissible heuristic that never overestimates,
+      guaranteeing optimality.
+    </p>
+
+    <h3>Data Structures</h3>
+    <div class="callout">
+      <p class="callout-title">Open list</p>
+      <p>A min-heap of <code>(f, g, node)</code> tuples via Python's
+      <code>heapq</code>. Ties in f are broken by g, preferring the
+      lower actual cost. Because heapq does not support in-place updates,
+      <strong>lazy deletion</strong> is used — stale entries are skipped
+      when popped if the node is already in the closed set.</p>
+    </div>
+    <div class="callout gold">
+      <p class="callout-title">Closed set</p>
+      <p>A <code>set</code> of confirmed nodes that will not be
+      re-expanded. A node enters the closed set when it is popped from
+      the heap and confirmed as having the minimum cost path.</p>
+    </div>
+
+    <h3>Algorithm Steps</h3>
+    <div class="steps">
+      <div class="step"><div class="step-body"><strong>Initialise</strong> — push start node with g=0, h=distance to goal onto the heap.</div>
+      </div>
+      <div class="step"><div class="step-body"><strong>Pop minimum-f node</strong> from heap. Skip if already in closed set (lazy deletion).</div>
+      </div>
+      <div class="step"><div class="step-body"><strong>Goal check</strong> — if distance to goal ≤ goal_threshold, set goal's parent and terminate.</div>
+      </div>
+      <div class="step"><div class="step-body"><strong>Expand neighbours</strong> — 8-directional grid at stride grid_size. Invalid (out-of-bounds, obstacle) neighbours are filtered by the base planner.</div>
+      </div>
+      <div class="step"><div class="step-body"><strong>Relax edges</strong> — if the new g-value through current is better than the stored value, update the neighbour's parent, cost, and push a new heap entry.</div>
+      </div>
+    </div>
+
+    <div class="callout green">
+      <p class="callout-title">Correctness guarantee</p>
+      <p>Because h(v) = L2 distance is admissible and the graph is
+      non-negative, A* is guaranteed to return the shortest path
+      expressible on the grid_size grid.</p>
+    </div>
+  </section>
+
+  <!-- ── RRT* ── -->
+  <section id="rrtstar">
+    <p class="section-label">03 · RRT* Implementation</p>
+    <h2>RRT* Planner</h2>
+
+    <p>
+      RRT* is a sampling-based planner that builds a tree of collision-free
+      configurations by iteratively sampling random points, steering toward
+      them, and <strong>rewiring</strong> nearby tree nodes to maintain
+      near-optimal connections.
+    </p>
+
+    <h3>Key Differences from RRT</h3>
+    <div class="callout gold">
+      <p class="callout-title">Re-parenting</p>
+      <p>Before inserting a new node, the best parent among all nodes within
+      search_radius is selected — the one minimising total path cost,
+      not just the nearest node.</p>
+    </div>
+    <div class="callout gold">
+      <p class="callout-title">Rewiring</p>
+      <p>After insertion, nearby nodes are checked: if routing through the
+      new node gives a lower cost, their parent pointer is updated.
+      Cost updates are <strong>propagated to all descendants</strong> via
+      BFS to keep every node's stored cost consistent with its true
+      path cost from the start.</p>
+    </div>
+
+    <h3>Algorithm Steps</h3>
+    <div class="steps">
+      <div class="step gold"><div class="step-body"><strong>Sample</strong> — draw a random node (30% goal bias, 70% uniform). The provided <code>sample_random_node()</code> must be used for reproducibility.</div>
+      </div>
+      <div class="step gold"><div class="step-body"><strong>Nearest</strong> — find the tree node with minimum Euclidean distance to the sample. No collision check at this stage; the nearest node only determines steering direction.</div>
+      </div>
+      <div class="step gold"><div class="step-body"><strong>Steer</strong> — move from nearest toward the sample by at most step_size. If the sample is closer, use it directly.</div>
+      </div>
+      <div class="step gold"><div class="step-body"><strong>Collision check</strong> — run Bresenham check on the segment from nearest to new node. Discard if blocked.</div>
+      </div>
+      <div class="step gold"><div class="step-body"><strong>Best parent</strong> — among all nodes within search_radius, select the collision-free one minimising cost(parent) + dist(parent, new).</div>
+      </div>
+      <div class="step gold"><div class="step-body"><strong>Insert</strong> — add new node to the tree with the chosen parent and its true cumulative cost.</div>
+      </div>
+      <div class="step gold"><div class="step-body"><strong>Rewire + propagate</strong> — re-parent cheaper neighbours; BFS-propagate updated costs to their descendants.</div>
+      </div>
+      <div class="step gold"><div class="step-body"><strong>Goal check</strong> — if new node is within goal_threshold and the connection is collision-free, record the goal and <em>stop immediately</em>.</div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <p class="callout-title">TA Clarification — stopping condition</p>
+      <p>Execution terminates on the <strong>first</strong> valid goal
+      arrival. No further iterations are run to improve cost (per TA
+      discussion forum response to Q3).</p>
+    </div>
+  </section>
+
+  <!-- ── TA CLARIFICATIONS ── -->
+  <section id="clarifications">
+    <p class="section-label">04 · TA Clarifications</p>
+    <h2>Discussion Forum Updates</h2>
+    <p>The following clarifications were issued after the initial assignment
+    release and are reflected in the implementation.</p>
+
+    <ul class="ta-list">
+      <li>
+        <span class="ta-num">Q1</span>
+        <span>Both the returned <code>path</code> and <code>visited_nodes</code>
+        are graded. <code>visited_nodes</code> must form a valid tree with
+        correct parent pointers and true cumulative costs at every node.</span>
+      </li>
+      <li>
+        <span class="ta-num">Q2</span>
+        <span>A* must return the <strong>optimal</strong> path under the
+        given grid_size. For RRT*, any valid collision-free path following
+        correct algorithmic mechanics is acceptable.</span>
+      </li>
+      <li>
+        <span class="ta-num">Q3</span>
+        <span>RRT* must <strong>stop immediately</strong> on first goal
+        arrival. No continued iteration for cost improvement.</span>
+      </li>
+      <li>
+        <span class="ta-num">Q4</span>
+        <span>The A* heuristic h(v) is the L2 Euclidean distance to the
+        goal, computed via <code>calculate_node_distance()</code>.</span>
+      </li>
+      <li>
+        <span class="ta-num">Q5</span>
+        <span><code>nearest()</code> in RRT* uses pure Euclidean distance
+        only — no collision check. A sampled node behind an obstacle is
+        still valid as a steering target; collision is checked only after
+        <code>steer()</code>.</span>
+      </li>
+    </ul>
+  </section>
+
+  <!-- ── RESULTS ── -->
+  <section id="results">
+    <p class="section-label">05 · Results</p>
+    <h2>Quantitative Results</h2>
+    <p>All runs use <code>random.seed(9999)</code> for reproducibility.
+    Parameters: goal_threshold = 50 px, grid_size = 50 px,
+    step_size = 50 px, search_radius = 200 px.</p>
+
+    <div class="results-grid">
+
+      <div class="result-card astar">
+        <p class="algo">A*</p>
+        <p class="map-name">map1</p>
+        <div class="stat-row"><span class="stat-key">Path length</span><span class="stat-val">1652.36 px</span></div>
+        <div class="stat-row"><span class="stat-key">Path nodes</span><span class="stat-val">31</span></div>
+        <div class="stat-row"><span class="stat-key">Visited nodes</span><span class="stat-val">148</span></div>
+        <div class="stat-row"><span class="stat-key">Runtime</span><span class="stat-val">0.037 s</span></div>
+      </div>
+
+      <div class="result-card rrtstar">
+        <p class="algo">RRT*</p>
+        <p class="map-name">map1</p>
+        <div class="stat-row"><span class="stat-key">Path length</span><span class="stat-val">1617.40 px</span></div>
+        <div class="stat-row"><span class="stat-key">Path nodes</span><span class="stat-val">14</span></div>
+        <div class="stat-row"><span class="stat-key">Visited nodes</span><span class="stat-val">152</span></div>
+        <div class="stat-row"><span class="stat-key">Runtime</span><span class="stat-val">0.117 s</span></div>
+      </div>
+
+      <div class="result-card astar">
+        <p class="algo">A*</p>
+        <p class="map-name">map2</p>
+        <div class="stat-row"><span class="stat-key">Path length</span><span class="stat-val">1683.02 px</span></div>
+        <div class="stat-row"><span class="stat-key">Path nodes</span><span class="stat-val">29</span></div>
+        <div class="stat-row"><span class="stat-key">Visited nodes</span><span class="stat-val">176</span></div>
+        <div class="stat-row"><span class="stat-key">Runtime</span><span class="stat-val">0.029 s</span></div>
+      </div>
+
+      <div class="result-card rrtstar">
+        <p class="algo">RRT*</p>
+        <p class="map-name">map2</p>
+        <div class="stat-row"><span class="stat-key">Path length</span><span class="stat-val">1529.47 px</span></div>
+        <div class="stat-row"><span class="stat-key">Path nodes</span><span class="stat-val">17</span></div>
+        <div class="stat-row"><span class="stat-key">Visited nodes</span><span class="stat-val">655</span></div>
+        <div class="stat-row"><span class="stat-key">Runtime</span><span class="stat-val">1.945 s</span></div>
+      </div>
+
+      <div class="result-card astar">
+        <p class="algo">A*</p>
+        <p class="map-name">map3</p>
+        <div class="stat-row"><span class="stat-key">Path length</span><span class="stat-val">1492.91 px</span></div>
+        <div class="stat-row"><span class="stat-key">Path nodes</span><span class="stat-val">26</span></div>
+        <div class="stat-row"><span class="stat-key">Visited nodes</span><span class="stat-val">100</span></div>
+        <div class="stat-row"><span class="stat-key">Runtime</span><span class="stat-val">0.018 s</span></div>
+      </div>
+
+      <div class="result-card rrtstar">
+        <p class="algo">RRT*</p>
+        <p class="map-name">map3</p>
+        <div class="stat-row"><span class="stat-key">Path length</span><span class="stat-val">1441.34 px</span></div>
+        <div class="stat-row"><span class="stat-key">Path nodes</span><span class="stat-val">14</span></div>
+        <div class="stat-row"><span class="stat-key">Visited nodes</span><span class="stat-val">102</span></div>
+        <div class="stat-row"><span class="stat-key">Runtime</span><span class="stat-val">0.081 s</span></div>
+      </div>
+
+    </div>
+
+    <h3>Observations</h3>
+    <p>A* is consistently fast (18–37 ms) — the grid constrains the search
+    space and the heuristic guides expansion efficiently toward the goal.
+    RRT* produces fewer path nodes (14–17 vs. 26–31) because it steers
+    continuously rather than snapping to a fixed grid, enabling longer
+    diagonal segments. RRT* runtime varies widely depending on how quickly
+    random sampling finds a valid corridor; map2's narrow passages require
+    far more iterations (655 visited nodes, ~2 s) before a path is found.</p>
+  </section>
+
+  <!-- ── VISUALISATIONS ── -->
+  <section id="vis">
+    <p class="section-label">06 · Visualisations</p>
+    <h2>Output Maps</h2>
+
+    <div class="legend">
+      <div class="legend-item"><div class="dot" style="background:#4488ff"></div><span>Planned path</span></div>
+      <div class="legend-item"><div class="dot" style="background:#e05555"></div><span>Start node</span></div>
+      <div class="legend-item"><div class="dot" style="background:#44cc77"></div><span>Goal node</span></div>
+      <div class="legend-item"><div class="dot" style="background:#888"></div><span>Visited nodes / tree edges</span></div>
+    </div>
+
+    <div class="vis-grid" style="margin-top:1.4rem">
+
+      <div class="vis-card">
+        <img src="output_a_star_map1.png" alt="A* map1">
+        <p class="vis-caption">map1 <span class="astar-tag">A*</span></p>
+      </div>
+      <div class="vis-card">
+        <img src="output_rrt_star_map1.png" alt="RRT* map1">
+        <p class="vis-caption">map1 <span class="rrt-tag">RRT*</span></p>
+      </div>
+
+      <div class="vis-card">
+        <img src="output_a_star_map2.png" alt="A* map2">
+        <p class="vis-caption">map2 <span class="astar-tag">A*</span></p>
+      </div>
+      <div class="vis-card">
+        <img src="output_rrt_star_map2.png" alt="RRT* map2">
+        <p class="vis-caption">map2 <span class="rrt-tag">RRT*</span></p>
+      </div>
+
+      <div class="vis-card">
+        <img src="output_a_star_map3.png" alt="A* map3">
+        <p class="vis-caption">map3 <span class="astar-tag">A*</span></p>
+      </div>
+      <div class="vis-card">
+        <img src="output_rrt_star_map3.png" alt="RRT* map3">
+        <p class="vis-caption">map3 <span class="rrt-tag">RRT*</span></p>
+      </div>
+
+    </div>
+  </section>
+
+  <footer>
+    <p>HW1 · Robotic Navigation and Exploration · NTHU CS · 2026</p>
+  </footer>
+
+</div>
+
+<script>
+  // intersection observer for section fade-in
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('visible');
+        observer.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.08 });
+
+  document.querySelectorAll('section').forEach(s => observer.observe(s));
+</script>
+
+</body>
+</html>
