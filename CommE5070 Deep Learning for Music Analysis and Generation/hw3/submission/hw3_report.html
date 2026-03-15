@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HW3: Symbolic Music Generation</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --bg2: #111118;
+    --bg3: #1a1a24;
+    --accent: #7c6aff;
+    --accent2: #ff6a9b;
+    --accent3: #6affcb;
+    --text: #e8e8f0;
+    --text2: #8888aa;
+    --border: #2a2a3a;
+    --card: #13131e;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    overflow-x: hidden;
+    line-height: 1.6;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(124,106,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(124,106,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 2rem;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 6rem 0 4rem;
+    position: relative;
+  }
+
+  .hero-tag {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.2s forwards;
+  }
+
+  .hero h1 {
+    font-size: clamp(2.8rem, 7vw, 5.5rem);
+    font-weight: 800;
+    line-height: 1.05;
+    letter-spacing: -0.02em;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.35s forwards;
+  }
+
+  .hero h1 span {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-sub {
+    margin-top: 1.5rem;
+    font-size: 1.1rem;
+    color: var(--text2);
+    max-width: 560px;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.5s forwards;
+  }
+
+  .hero-meta {
+    margin-top: 3rem;
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.65s forwards;
+  }
+
+  .meta-pill {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    padding: 0.4rem 0.9rem;
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    color: var(--text2);
+    letter-spacing: 0.1em;
+  }
+
+  .hero-scroll {
+    position: absolute;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    opacity: 0;
+    animation: fadeUp 0.6s 1s forwards;
+  }
+
+  .hero-scroll span {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    color: var(--text2);
+  }
+
+  .scroll-line {
+    width: 1px;
+    height: 40px;
+    background: linear-gradient(to bottom, var(--accent), transparent);
+    animation: scrollPulse 1.5s ease-in-out infinite;
+  }
+
+  /* ── SECTIONS ── */
+  section {
+    padding: 5rem 0;
+    border-top: 1px solid var(--border);
+  }
+
+  .section-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+
+  .section-title {
+    font-size: clamp(1.8rem, 4vw, 2.8rem);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    margin-bottom: 1.5rem;
+    line-height: 1.1;
+  }
+
+  .section-body {
+    color: var(--text2);
+    font-size: 1rem;
+    max-width: 720px;
+    line-height: 1.75;
+  }
+
+  /* ── OVERVIEW GRID ── */
+  .overview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    margin-top: 3rem;
+  }
+
+  .overview-card {
+    background: var(--card);
+    padding: 2rem;
+    transition: background 0.2s;
+  }
+
+  .overview-card:hover { background: var(--bg3); }
+
+  .ov-icon {
+    font-size: 1.8rem;
+    margin-bottom: 1rem;
+  }
+
+  .ov-title {
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 0.5rem;
+    color: var(--text);
+  }
+
+  .ov-body {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--text2);
+    line-height: 1.7;
+  }
+
+  /* ── ARCHITECTURE ── */
+  .arch-diagram {
+    margin-top: 3rem;
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 2.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .arch-diagram::before {
+    content: 'ARCHITECTURE';
+    position: absolute;
+    top: 1rem;
+    right: 1.5rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    color: var(--border);
+  }
+
+  .arch-flow {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .arch-block {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    padding: 1.2rem 1.5rem;
+    text-align: center;
+    min-width: 130px;
+    position: relative;
+  }
+
+  .arch-block.highlight {
+    border-color: var(--accent);
+    background: rgba(124,106,255,0.08);
+  }
+
+  .arch-block-title {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 0.3rem;
+  }
+
+  .arch-block-sub {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text2);
+    line-height: 1.5;
+  }
+
+  .arch-arrow {
+    font-size: 1.2rem;
+    color: var(--accent);
+    padding: 0 0.5rem;
+    flex-shrink: 0;
+  }
+
+  .arch-specs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1rem;
+    margin-top: 2rem;
+  }
+
+  .spec-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .spec-key {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text2);
+    letter-spacing: 0.05em;
+  }
+
+  .spec-val {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--accent3);
+    font-weight: 700;
+  }
+
+  /* ── RESULTS TABLE ── */
+  .results-section { padding: 5rem 0; border-top: 1px solid var(--border); }
+
+  .table-wrap {
+    margin-top: 2.5rem;
+    overflow-x: auto;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.78rem;
+  }
+
+  thead tr {
+    background: var(--bg3);
+    border-bottom: 2px solid var(--accent);
+  }
+
+  th {
+    padding: 1rem 1.2rem;
+    text-align: left;
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text2);
+    white-space: nowrap;
+  }
+
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+
+  tbody tr:hover { background: var(--bg3); }
+
+  tbody tr.best-row { background: rgba(124,106,255,0.06); }
+  tbody tr.real-row { background: rgba(106,255,203,0.04); }
+
+  td {
+    padding: 0.85rem 1.2rem;
+    color: var(--text);
+    white-space: nowrap;
+  }
+
+  .badge {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    font-size: 0.6rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border-radius: 2px;
+  }
+
+  .badge-best { background: rgba(124,106,255,0.2); color: var(--accent); border: 1px solid var(--accent); }
+  .badge-real { background: rgba(106,255,203,0.15); color: var(--accent3); border: 1px solid var(--accent3); }
+
+  .metric-val { color: var(--accent2); font-weight: 700; }
+  .metric-best { color: var(--accent3); font-weight: 700; }
+
+  /* ── BAR CHART ── */
+  .chart-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-top: 2.5rem;
+  }
+
+  @media (max-width: 640px) { .chart-grid { grid-template-columns: 1fr; } }
+
+  .chart-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 1.5rem;
+  }
+
+  .chart-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text2);
+    margin-bottom: 1.5rem;
+  }
+
+  .bar-row {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .bar-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text2);
+    width: 60px;
+    flex-shrink: 0;
+    text-align: right;
+  }
+
+  .bar-track {
+    flex: 1;
+    height: 6px;
+    background: var(--border);
+    border-radius: 0;
+    overflow: hidden;
+  }
+
+  .bar-fill {
+    height: 100%;
+    border-radius: 0;
+    transition: width 1s cubic-bezier(0.4,0,0.2,1);
+  }
+
+  .bar-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text);
+    width: 45px;
+    flex-shrink: 0;
+  }
+
+  /* ── TASK2 ── */
+  .task2-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    margin-top: 2.5rem;
+  }
+
+  @media (max-width: 700px) { .task2-grid { grid-template-columns: 1fr; } }
+
+  .song-card {
+    background: var(--card);
+    padding: 2rem;
+  }
+
+  .song-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    color: var(--accent);
+    margin-bottom: 0.8rem;
+  }
+
+  .song-title {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+  }
+
+  .config-list {
+    list-style: none;
+  }
+
+  .config-list li {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--text2);
+    padding: 0.4rem 0;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .config-list li:last-child { border-bottom: none; }
+  .config-list li.best-cfg { color: var(--accent3); }
+
+  /* ── REMI VIZ ── */
+  .token-viz {
+    margin-top: 2.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+  }
+
+  .token {
+    padding: 0.3rem 0.6rem;
+    border-radius: 2px;
+    white-space: nowrap;
+  }
+
+  .tok-bar     { background: rgba(124,106,255,0.2); color: var(--accent); border: 1px solid rgba(124,106,255,0.4); }
+  .tok-pos     { background: rgba(255,106,155,0.15); color: var(--accent2); border: 1px solid rgba(255,106,155,0.3); }
+  .tok-tempo   { background: rgba(106,255,203,0.1); color: var(--accent3); border: 1px solid rgba(106,255,203,0.25); }
+  .tok-vel     { background: rgba(255,200,80,0.1); color: #ffc850; border: 1px solid rgba(255,200,80,0.25); }
+  .tok-note    { background: rgba(255,255,255,0.06); color: var(--text); border: 1px solid var(--border); }
+  .tok-dur     { background: rgba(150,100,255,0.12); color: #b09aff; border: 1px solid rgba(150,100,255,0.3); }
+
+  /* ── FOOTER ── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 2.5rem 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  footer .foot-left {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--text2);
+    line-height: 1.8;
+  }
+
+  footer .foot-right {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--border);
+    letter-spacing: 0.1em;
+  }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes scrollPulse {
+    0%, 100% { opacity: 0.3; transform: scaleY(1); }
+    50%       { opacity: 1;   transform: scaleY(1.1); }
+  }
+
+  .reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  .reveal.visible {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* ── AUDIO PLAYER ── */
+  .audio-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1rem;
+    margin-top: 2.5rem;
+  }
+
+  .audio-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 1.5rem;
+    transition: border-color 0.2s;
+  }
+
+  .audio-card:hover { border-color: var(--accent); }
+
+  .audio-card-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 0.4rem;
+  }
+
+  .audio-card-title {
+    font-size: 0.9rem;
+    font-weight: 700;
+    margin-bottom: 0.3rem;
+  }
+
+  .audio-card-meta {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--text2);
+    margin-bottom: 1rem;
+  }
+
+  audio {
+    width: 100%;
+    height: 32px;
+    outline: none;
+    filter: invert(1) hue-rotate(200deg) brightness(0.85);
+    border-radius: 0;
+  }
+
+  .audio-card.task2-card .audio-card-label { color: var(--accent2); }
+  .audio-card.best-tag .audio-card-label::after {
+    content: ' ★ BEST';
+    color: var(--accent3);
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="container">
+    <div class="hero-tag">CommE5070 · Homework 3</div>
+    <h1>Symbolic<br><span>Music Generation</span></h1>
+    <p class="hero-sub">Training a GPT-2 transformer on the Pop1K7 dataset to generate and continue piano music in REMI token representation.</p>
+    <div class="hero-meta">
+      <div class="meta-pill">GPT-2 · 12L · 512D</div>
+      <div class="meta-pill">REMI Tokenization</div>
+      <div class="meta-pill">Pop1K7 · 1747 MIDI</div>
+      <div class="meta-pill">200 Epochs</div>
+    </div>
+  </div>
+  <div class="hero-scroll">
+    <span>SCROLL</span>
+    <div class="scroll-line"></div>
+  </div>
+</div>
+
+<!-- OVERVIEW -->
+<section>
+  <div class="container">
+    <div class="reveal">
+      <div class="section-label">01 · Overview</div>
+      <h2 class="section-title">Problem & Approach</h2>
+      <p class="section-body">
+        Given a dataset of 1747 pop piano MIDI files, we train an autoregressive transformer to generate 32-bar symbolic music unconditionally (Task 1), and continue 8-bar prompts for 24 additional bars (Task 2). Music is represented as REMI token sequences and evaluated with pitch entropy (H4) and groove similarity (GS) metrics.
+      </p>
+    </div>
+
+    <div class="overview-grid reveal">
+      <div class="overview-card">
+        <div class="ov-icon">🎵</div>
+        <div class="ov-title">Dataset</div>
+        <div class="ov-body">Pop1K7<br>1747 MIDI files<br>~108 hours<br>4/4 time signature</div>
+      </div>
+      <div class="overview-card">
+        <div class="ov-icon">🔤</div>
+        <div class="ov-title">Representation</div>
+        <div class="ov-body">REMI tokens<br>Vocab size: 249<br>Context: 1024<br>No chord tokens</div>
+      </div>
+      <div class="overview-card">
+        <div class="ov-icon">🧠</div>
+        <div class="ov-title">Model</div>
+        <div class="ov-body">GPT-2<br>12 layers · 8 heads<br>d_model = 512<br>~42M parameters</div>
+      </div>
+      <div class="overview-card">
+        <div class="ov-icon">⚙️</div>
+        <div class="ov-title">Training</div>
+        <div class="ov-body">200 epochs<br>batch size 16<br>AdamW + CosineLR<br>8× H200 GPUs</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TOKENIZATION -->
+<section>
+  <div class="container">
+    <div class="reveal">
+      <div class="section-label">02 · Tokenization</div>
+      <h2 class="section-title">REMI Representation</h2>
+      <p class="section-body">
+        Each MIDI file is converted into a sequence of REMI events: Bar markers delimit measures, Position tokens encode 1/16th-note grid positions, Tempo Class/Value encode BPM, Note Velocity encodes dynamics (32 bins), Note On encodes pitch (MIDI 0–127), and Note Duration encodes length (60ms–3840ms, 64 bins).
+      </p>
+    </div>
+
+    <div class="token-viz reveal">
+      <span class="token tok-bar">Bar</span>
+      <span class="token tok-pos">Position 1/16</span>
+      <span class="token tok-tempo">Tempo Class mid</span>
+      <span class="token tok-tempo">Tempo Value 46</span>
+      <span class="token tok-pos">Position 1/16</span>
+      <span class="token tok-note">Note On 64</span>
+      <span class="token tok-vel">Note Velocity 14</span>
+      <span class="token tok-dur">Note Duration 7</span>
+      <span class="token tok-pos">Position 3/16</span>
+      <span class="token tok-note">Note On 67</span>
+      <span class="token tok-vel">Note Velocity 12</span>
+      <span class="token tok-dur">Note Duration 3</span>
+      <span class="token tok-pos">Position 5/16</span>
+      <span class="token tok-note">Note On 71</span>
+      <span class="token tok-vel">Note Velocity 13</span>
+      <span class="token tok-dur">Note Duration 7</span>
+      <span class="token tok-bar">Bar</span>
+      <span class="token tok-pos">Position 1/16</span>
+      <span class="token tok-tempo">Tempo Class mid</span>
+      <span class="token tok-tempo">Tempo Value 43</span>
+      <span class="token tok-pos">Position 1/16</span>
+      <span class="token tok-note">Note On 60</span>
+      <span class="token tok-vel">Note Velocity 11</span>
+      <span class="token tok-dur">Note Duration 15</span>
+    </div>
+
+    <div style="margin-top:1.5rem; display:flex; flex-wrap:wrap; gap:0.6rem;" class="reveal">
+      <span style="font-family:'Space Mono',monospace;font-size:0.65rem;color:var(--text2);display:flex;align-items:center;gap:0.4rem;"><span class="token tok-bar" style="padding:0.2rem 0.4rem;">■</span> Bar marker</span>
+      <span style="font-family:'Space Mono',monospace;font-size:0.65rem;color:var(--text2);display:flex;align-items:center;gap:0.4rem;"><span class="token tok-pos" style="padding:0.2rem 0.4rem;">■</span> Position (1/16 grid)</span>
+      <span style="font-family:'Space Mono',monospace;font-size:0.65rem;color:var(--text2);display:flex;align-items:center;gap:0.4rem;"><span class="token tok-tempo" style="padding:0.2rem 0.4rem;">■</span> Tempo</span>
+      <span style="font-family:'Space Mono',monospace;font-size:0.65rem;color:var(--text2);display:flex;align-items:center;gap:0.4rem;"><span class="token tok-vel" style="padding:0.2rem 0.4rem;">■</span> Velocity</span>
+      <span style="font-family:'Space Mono',monospace;font-size:0.65rem;color:var(--text2);display:flex;align-items:center;gap:0.4rem;"><span class="token tok-note" style="padding:0.2rem 0.4rem;">■</span> Note On (pitch)</span>
+      <span style="font-family:'Space Mono',monospace;font-size:0.65rem;color:var(--text2);display:flex;align-items:center;gap:0.4rem;"><span class="token tok-dur" style="padding:0.2rem 0.4rem;">■</span> Duration</span>
+    </div>
+  </div>
+</section>
+
+<!-- ARCHITECTURE -->
+<section>
+  <div class="container">
+    <div class="reveal">
+      <div class="section-label">03 · Architecture</div>
+      <h2 class="section-title">GPT-2 Model</h2>
+      <p class="section-body">
+        We use a GPT-2 causal language model trained to predict the next token in a REMI sequence. The model uses a sliding window of 1024 tokens during both training and inference. Multi-GPU training with DataParallel across 8 H200 GPUs.
+      </p>
+    </div>
+
+    <div class="arch-diagram reveal">
+      <div class="arch-flow">
+        <div class="arch-block">
+          <div class="arch-block-title">MIDI File</div>
+          <div class="arch-block-sub">.mid input</div>
+        </div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-block">
+          <div class="arch-block-title">REMI Events</div>
+          <div class="arch-block-sub">Bar / Position<br>Tempo / Note</div>
+        </div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-block">
+          <div class="arch-block-title">Token IDs</div>
+          <div class="arch-block-sub">vocab = 249<br>ctx = 1024</div>
+        </div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-block highlight">
+          <div class="arch-block-title">GPT-2</div>
+          <div class="arch-block-sub">12L · 8H · 512D<br>~42M params</div>
+        </div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-block">
+          <div class="arch-block-title">Sampling</div>
+          <div class="arch-block-sub">temperature<br>top-k</div>
+        </div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-block">
+          <div class="arch-block-title">MIDI Out</div>
+          <div class="arch-block-sub">32 bars<br>.mid file</div>
+        </div>
+      </div>
+
+      <div class="arch-specs">
+        <div>
+          <div class="spec-row"><span class="spec-key">n_layers</span><span class="spec-val">12</span></div>
+          <div class="spec-row"><span class="spec-key">n_heads</span><span class="spec-val">8</span></div>
+          <div class="spec-row"><span class="spec-key">d_model</span><span class="spec-val">512</span></div>
+          <div class="spec-row"><span class="spec-key">d_ffn</span><span class="spec-val">2048</span></div>
+        </div>
+        <div>
+          <div class="spec-row"><span class="spec-key">vocab_size</span><span class="spec-val">249</span></div>
+          <div class="spec-row"><span class="spec-key">context_len</span><span class="spec-val">1024</span></div>
+          <div class="spec-row"><span class="spec-key">dropout</span><span class="spec-val">0.1</span></div>
+          <div class="spec-row"><span class="spec-key">parameters</span><span class="spec-val">~42M</span></div>
+        </div>
+        <div>
+          <div class="spec-row"><span class="spec-key">optimizer</span><span class="spec-val">AdamW</span></div>
+          <div class="spec-row"><span class="spec-key">lr</span><span class="spec-val">2e-4</span></div>
+          <div class="spec-row"><span class="spec-key">scheduler</span><span class="spec-val">CosineAnnealing</span></div>
+          <div class="spec-row"><span class="spec-key">batch_size</span><span class="spec-val">16</span></div>
+        </div>
+        <div>
+          <div class="spec-row"><span class="spec-key">epochs</span><span class="spec-val">200</span></div>
+          <div class="spec-row"><span class="spec-key">gpus</span><span class="spec-val">8× H200</span></div>
+          <div class="spec-row"><span class="spec-key">stride</span><span class="spec-val">x_len / 2</span></div>
+          <div class="spec-row"><span class="spec-key">final_loss</span><span class="spec-val">0.1224</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- RESULTS -->
+<section class="results-section">
+  <div class="container">
+    <div class="reveal">
+      <div class="section-label">04 · Task 1 Results</div>
+      <h2 class="section-title">Unconditional Generation</h2>
+      <p class="section-body">
+        Three inference configurations were evaluated on 20 generated MIDI files each (32 bars). Metrics: H4 = 4-bar pitch-class histogram entropy (higher = more varied pitch usage); GS = grooving pattern similarity (higher = more consistent rhythm). Real data baseline computed on Pop1K7/src_001.
+      </p>
+    </div>
+
+    <div class="table-wrap reveal">
+      <table>
+        <thead>
+          <tr>
+            <th>Config</th>
+            <th>Model</th>
+            <th>Repr.</th>
+            <th>Temperature</th>
+            <th>Top-k</th>
+            <th>H1</th>
+            <th>H4</th>
+            <th>GS</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="best-row">
+            <td>Config 1</td>
+            <td>GPT-2</td>
+            <td>REMI</td>
+            <td>1.2</td>
+            <td>5</td>
+            <td class="metric-best">2.0000</td>
+            <td class="metric-best">2.6574</td>
+            <td>0.7120</td>
+            <td><span class="badge badge-best">BEST H4</span></td>
+          </tr>
+          <tr>
+            <td>Config 2</td>
+            <td>GPT-2</td>
+            <td>REMI</td>
+            <td>1.5</td>
+            <td>10</td>
+            <td>1.8749</td>
+            <td>2.5883</td>
+            <td>0.7128</td>
+            <td></td>
+          </tr>
+          <tr>
+            <td>Config 3</td>
+            <td>GPT-2</td>
+            <td>REMI</td>
+            <td>0.9</td>
+            <td>3</td>
+            <td class="metric-val">2.0000</td>
+            <td class="metric-val">2.6280</td>
+            <td class="metric-best">0.7303</td>
+            <td><span class="badge badge-best">BEST GS</span></td>
+          </tr>
+          <tr class="real-row">
+            <td>Real Data</td>
+            <td>—</td>
+            <td>Pop1K7</td>
+            <td>—</td>
+            <td>—</td>
+            <td>2.1749</td>
+            <td>2.6718</td>
+            <td>0.7182</td>
+            <td><span class="badge badge-real">REFERENCE</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="chart-grid reveal">
+      <div class="chart-card">
+        <div class="chart-title">H4 — Pitch Entropy (4-bar)</div>
+        <div class="bar-row">
+          <div class="bar-label">Config 1</div>
+          <div class="bar-track"><div class="bar-fill" style="width:99.5%;background:linear-gradient(90deg,var(--accent),var(--accent2))"></div></div>
+          <div class="bar-num">2.6574</div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label">Config 2</div>
+          <div class="bar-track"><div class="bar-fill" style="width:96.9%;background:var(--text2)"></div></div>
+          <div class="bar-num">2.5883</div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label">Config 3</div>
+          <div class="bar-track"><div class="bar-fill" style="width:98.4%;background:var(--text2)"></div></div>
+          <div class="bar-num">2.6280</div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label">Real</div>
+          <div class="bar-track"><div class="bar-fill" style="width:100%;background:var(--accent3)"></div></div>
+          <div class="bar-num">2.6718</div>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-title">GS — Groove Similarity</div>
+        <div class="bar-row">
+          <div class="bar-label">Config 1</div>
+          <div class="bar-track"><div class="bar-fill" style="width:97.5%;background:linear-gradient(90deg,var(--accent),var(--accent2))"></div></div>
+          <div class="bar-num">0.7120</div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label">Config 2</div>
+          <div class="bar-track"><div class="bar-fill" style="width:97.6%;background:var(--text2)"></div></div>
+          <div class="bar-num">0.7128</div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label">Config 3</div>
+          <div class="bar-track"><div class="bar-fill" style="width:100%;background:linear-gradient(90deg,var(--accent),var(--accent3))"></div></div>
+          <div class="bar-num">0.7303</div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label">Real</div>
+          <div class="bar-track"><div class="bar-fill" style="width:98.4%;background:var(--accent3)"></div></div>
+          <div class="bar-num">0.7182</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TASK 2 -->
+<section>
+  <div class="container">
+    <div class="reveal">
+      <div class="section-label">05 · Task 2</div>
+      <h2 class="section-title">Continuation Generation</h2>
+      <p class="section-body">
+        Given 3 prompt MIDI files (8 bars each), we generate 24-bar continuations using the same checkpoint. Three inference configurations were tested per prompt; the best-sounding result was selected as the final submission per song.
+      </p>
+    </div>
+
+    <div class="task2-grid reveal">
+      <div class="song-card">
+        <div class="song-num">PROMPT · 01</div>
+        <div class="song-title">Song 1</div>
+        <ul class="config-list">
+          <li><span>temp=1.2, k=5</span><span>Config A</span></li>
+          <li><span>temp=1.5, k=10</span><span>Config B</span></li>
+          <li class="best-cfg"><span>temp=0.9, k=3</span><span>★ BEST</span></li>
+        </ul>
+      </div>
+      <div class="song-card">
+        <div class="song-num">PROMPT · 02</div>
+        <div class="song-title">Song 2</div>
+        <ul class="config-list">
+          <li class="best-cfg"><span>temp=1.2, k=5</span><span>★ BEST</span></li>
+          <li><span>temp=1.5, k=10</span><span>Config B</span></li>
+          <li><span>temp=0.9, k=3</span><span>Config C</span></li>
+        </ul>
+      </div>
+      <div class="song-card">
+        <div class="song-num">PROMPT · 03</div>
+        <div class="song-title">Song 3</div>
+        <ul class="config-list">
+          <li class="best-cfg"><span>temp=1.2, k=5</span><span>★ BEST</span></li>
+          <li><span>temp=1.5, k=10</span><span>Config B</span></li>
+          <li><span>temp=0.9, k=3</span><span>Config C</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <div style="margin-top:2rem;padding:1.2rem 1.5rem;background:var(--card);border:1px solid var(--border);border-left:3px solid var(--accent);" class="reveal">
+      <p style="font-family:'Space Mono',monospace;font-size:0.72rem;color:var(--text2);line-height:1.8;">
+        <strong style="color:var(--text)">Inference pipeline:</strong> Prompt MIDI → extract first 8 bars → tokenize to REMI → feed as context to GPT-2 → autoregressively generate 24 bars → decode back to MIDI → append to original prompt.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ANALYSIS -->
+<section>
+  <div class="container">
+    <div class="reveal">
+      <div class="section-label">06 · Analysis</div>
+      <h2 class="section-title">Discussion</h2>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-top:2rem;" class="reveal">
+      <div style="background:var(--card);border:1px solid var(--border);padding:1.8rem;">
+        <div style="font-size:0.8rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:1rem;color:var(--accent)">H4 Observation</div>
+        <p style="font-size:0.85rem;color:var(--text2);line-height:1.75;">
+          Config 1 (temp=1.2, k=5) achieves H4=2.6574, the closest to the real data reference of 2.6718. Higher temperature (Config 2) slightly reduces pitch variety, while lower temperature (Config 3) is comparable. The model captures the pitch-class distribution of Pop1K7 well.
+        </p>
+      </div>
+      <div style="background:var(--card);border:1px solid var(--border);padding:1.8rem;">
+        <div style="font-size:0.8rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:1rem;color:var(--accent2)">GS Observation</div>
+        <p style="font-size:0.85rem;color:var(--text2);line-height:1.75;">
+          Config 3 (temp=0.9, k=3) achieves the highest groove similarity (0.7303), even exceeding real data (0.7182). Lower temperature produces more repetitive rhythmic patterns, which increases GS. Config 1 and Config 2 are more rhythmically varied but still close to the reference.
+        </p>
+      </div>
+      <div style="background:var(--card);border:1px solid var(--border);padding:1.8rem;">
+        <div style="font-size:0.8rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:1rem;color:var(--accent3)">Best Config</div>
+        <p style="font-size:0.85rem;color:var(--text2);line-height:1.75;">
+          Config 1 (temperature=1.2, top-k=5) is selected as the best overall configuration — it achieves the best H4 score closest to real data, and maintains competitive GS. The 20 generated MIDI/WAV files from this config are submitted as listening samples.
+        </p>
+      </div>
+      <div style="background:var(--card);border:1px solid var(--border);padding:1.8rem;">
+        <div style="font-size:0.8rem;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:1rem;color:#ffc850">Limitations</div>
+        <p style="font-size:0.85rem;color:var(--text2);line-height:1.75;">
+          The model does not use chord tokens or explicit structural tokens. Longer-range structure (SI metric) was not evaluated. Future work: add chord extraction, use REMI+ or CP Word representation, train with BPE tokenization to reduce sequence length and allow longer context.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- LISTENING SAMPLES TASK 1 -->
+<section>
+  <div class="container">
+    <div class="reveal">
+      <div class="section-label">07 · Listening Samples</div>
+      <h2 class="section-title">Task 1 — Unconditional</h2>
+      <p class="section-body">
+        3 samples from Config 1 (temperature=1.2, top-k=5) — the best-performing configuration by H4 metric. Each sample is 32 bars of generated pop piano.
+      </p>
+    </div>
+
+    <div class="audio-grid reveal">
+      <div class="audio-card best-tag">
+        <div class="audio-card-label">Config 1 · Sample 01</div>
+        <div class="audio-card-title">Generated Piano #01</div>
+        <div class="audio-card-meta">32 bars · temp=1.2 · top-k=5 · GPT-2 REMI</div>
+        <audio controls>
+          <source src="results/task1/wav/gen_01_t1.2_k5.wav" type="audio/wav">
+          Your browser does not support audio.
+        </audio>
+      </div>
+      <div class="audio-card">
+        <div class="audio-card-label">Config 1 · Sample 02</div>
+        <div class="audio-card-title">Generated Piano #02</div>
+        <div class="audio-card-meta">32 bars · temp=1.2 · top-k=5 · GPT-2 REMI</div>
+        <audio controls>
+          <source src="results/task1/wav/gen_02_t1.2_k5.wav" type="audio/wav">
+          Your browser does not support audio.
+        </audio>
+      </div>
+      <div class="audio-card">
+        <div class="audio-card-label">Config 1 · Sample 03</div>
+        <div class="audio-card-title">Generated Piano #03</div>
+        <div class="audio-card-meta">32 bars · temp=1.2 · top-k=5 · GPT-2 REMI</div>
+        <audio controls>
+          <source src="results/task1/wav/gen_03_t1.2_k5.wav" type="audio/wav">
+          Your browser does not support audio.
+        </audio>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- LISTENING SAMPLES TASK 2 -->
+<section>
+  <div class="container">
+    <div class="reveal">
+      <div class="section-label">08 · Listening Samples</div>
+      <h2 class="section-title">Task 2 — Continuation</h2>
+      <p class="section-body">
+        Best continuation for each of the 3 prompt songs (8-bar prompt + 24 generated bars = 32 bars total). Each file contains the original prompt seamlessly continued by the model.
+      </p>
+    </div>
+
+    <div class="audio-grid reveal">
+      <div class="audio-card task2-card best-tag">
+        <div class="audio-card-label">Song 1 · Best Config</div>
+        <div class="audio-card-title">Prompt Song 1 Continuation</div>
+        <div class="audio-card-meta">8+24 bars · temp=0.9 · top-k=3</div>
+        <audio controls>
+          <source src="results/task2/wav/song1_t0.9_k3.wav" type="audio/wav">
+          Your browser does not support audio.
+        </audio>
+      </div>
+      <div class="audio-card task2-card best-tag">
+        <div class="audio-card-label">Song 2 · Best Config</div>
+        <div class="audio-card-title">Prompt Song 2 Continuation</div>
+        <div class="audio-card-meta">8+24 bars · temp=1.2 · top-k=5</div>
+        <audio controls>
+          <source src="results/task2/wav/song2_t1.2_k5.wav" type="audio/wav">
+          Your browser does not support audio.
+        </audio>
+      </div>
+      <div class="audio-card task2-card best-tag">
+        <div class="audio-card-label">Song 3 · Best Config</div>
+        <div class="audio-card-title">Prompt Song 3 Continuation</div>
+        <div class="audio-card-meta">8+24 bars · temp=1.2 · top-k=5</div>
+        <audio controls>
+          <source src="results/task2/wav/song3_t1.2_k5.wav" type="audio/wav">
+          Your browser does not support audio.
+        </audio>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<div class="container">
+  <footer class="reveal">
+    <div class="foot-left">
+      CommE5070 · Homework 3 · Symbolic Music Generation<br>
+      Department of Computer Science · University of Texas at Austin
+    </div>
+    <div class="foot-right">GPT-2 · REMI · Pop1K7</div>
+  </footer>
+</div>
+
+<script>
+  // Scroll reveal
+  const reveals = document.querySelectorAll('.reveal');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry, i) => {
+      if (entry.isIntersecting) {
+        setTimeout(() => entry.target.classList.add('visible'), i * 80);
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.1 });
+  reveals.forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
