@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HW2 Problem 3 — ControlNet Report</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --border: #2a2a3a;
+    --accent: #7c6fff;
+    --accent2: #ff6f91;
+    --text: #e8e8f0;
+    --muted: #7070a0;
+    --code-bg: #1a1a28;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'IBM Plex Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    font-size: 15px;
+  }
+
+  /* Header */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 3rem 0 2rem;
+    text-align: center;
+    background: linear-gradient(180deg, #0d0d1a 0%, var(--bg) 100%);
+    position: relative;
+    overflow: hidden;
+  }
+  header::before {
+    content: '';
+    position: absolute;
+    top: -80px; left: 50%; transform: translateX(-50%);
+    width: 600px; height: 300px;
+    background: radial-gradient(ellipse, rgba(124,111,255,0.12) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .badge {
+    display: inline-block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    padding: 2px 10px;
+    border-radius: 2px;
+    letter-spacing: 2px;
+    margin-bottom: 1rem;
+    text-transform: uppercase;
+  }
+  h1 {
+    font-size: 2.4rem;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+    margin-bottom: 0.5rem;
+  }
+  .subtitle {
+    color: var(--muted);
+    font-size: 14px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  /* Layout */
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 2rem;
+  }
+
+  /* Sections */
+  section {
+    padding: 3rem 0;
+    border-bottom: 1px solid var(--border);
+  }
+  section:last-child { border-bottom: none; }
+
+  .section-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 0.75rem;
+  }
+  h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    letter-spacing: -0.3px;
+  }
+  h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--accent);
+    margin: 1.5rem 0 0.75rem;
+  }
+  p { margin-bottom: 1rem; color: #c8c8e0; }
+
+  /* Score card */
+  .score-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin: 1.5rem 0;
+  }
+  .score-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1.25rem;
+    text-align: center;
+  }
+  .score-card .val {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 2rem;
+    font-weight: 600;
+    color: var(--accent);
+  }
+  .score-card .label {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 0.25rem;
+  }
+  .score-card.highlight {
+    border-color: var(--accent);
+    background: rgba(124,111,255,0.07);
+  }
+  .score-card.highlight .val { color: #a0f0a0; }
+
+  /* Code blocks */
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 4px;
+    padding: 1rem 1.25rem;
+    overflow-x: auto;
+    margin: 1rem 0;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: #c8d0ff;
+  }
+
+  /* Architecture diagram */
+  .arch-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    line-height: 1.8;
+    color: #a0a8d0;
+  }
+  .arch-box .highlight { color: var(--accent); }
+  .arch-box .highlight2 { color: var(--accent2); }
+
+  /* Image grid */
+  .img-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin: 1.5rem 0;
+  }
+  .img-cell {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .img-cell img {
+    width: 100%;
+    display: block;
+    aspect-ratio: 1;
+    object-fit: cover;
+  }
+  .img-cell .cap {
+    font-size: 10px;
+    color: var(--muted);
+    padding: 4px 6px;
+    font-family: 'IBM Plex Mono', monospace;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Triplet grid: source | generated | target */
+  .triplet-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin: 1.5rem 0;
+  }
+  .triplet-col { text-align: center; }
+  .triplet-col .col-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 6px;
+    letter-spacing: 1px;
+  }
+  .triplet-col img {
+    width: 100%;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    margin-bottom: 6px;
+  }
+  .triplet-col .prompt-text {
+    font-size: 11px;
+    color: var(--muted);
+    font-style: italic;
+  }
+
+  /* Circle experiment */
+  .circle-experiment {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin: 1.5rem 0;
+  }
+  .circle-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1rem;
+  }
+  .circle-card h4 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--accent2);
+    margin-bottom: 0.75rem;
+    letter-spacing: 1px;
+  }
+  .circle-card .img-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 0.75rem;
+  }
+  .circle-card img {
+    width: 100%;
+    border-radius: 3px;
+    border: 1px solid var(--border);
+  }
+  .circle-card .img-label {
+    font-size: 10px;
+    color: var(--muted);
+    text-align: center;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .circle-card p {
+    font-size: 13px;
+    color: #a0a0c0;
+    margin: 0;
+  }
+
+  /* Table */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 1rem 0;
+    font-size: 13px;
+  }
+  th {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    text-align: left;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 1px;
+  }
+  td {
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    color: #c0c0e0;
+  }
+  tr:hover td { background: rgba(124,111,255,0.04); }
+
+  /* Tags */
+  .tag {
+    display: inline-block;
+    background: rgba(124,111,255,0.15);
+    color: var(--accent);
+    border: 1px solid rgba(124,111,255,0.3);
+    border-radius: 3px;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-family: 'IBM Plex Mono', monospace;
+    margin: 2px;
+  }
+
+  /* Callout */
+  .callout {
+    background: rgba(124,111,255,0.07);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 4px 4px 0;
+    padding: 1rem 1.25rem;
+    margin: 1rem 0;
+    font-size: 14px;
+    color: #c0c0e0;
+  }
+  .callout.warn {
+    background: rgba(255,111,145,0.07);
+    border-color: var(--accent2);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <div class="badge">DLCV 2025 Fall · HW2</div>
+    <h1>Problem 3: ControlNet</h1>
+    <p class="subtitle">Conditional Image Generation with Structural Control · Fill50K Dataset</p>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- 1. Problem Description -->
+  <section>
+    <div class="section-label">01 · Overview</div>
+    <h2>Problem Description</h2>
+    <p>
+      The goal of this problem is to implement <strong>ControlNet</strong>, a neural network architecture that adds spatial conditioning control to large pre-trained text-to-image diffusion models (Stable Diffusion v1.5). Given a control image (a black-and-white circle mask) and a text prompt, the model must generate an image that matches both the structural layout of the control image and the color/content described by the prompt.
+    </p>
+    <p>
+      The evaluation uses the <strong>Fill50K</strong> dataset, which contains circle shape images with various color prompts. Generated images are evaluated using:
+    </p>
+    <ul style="margin: 0.5rem 0 1rem 1.5rem; color: #c0c0e0;">
+      <li><strong>SAM2 mIoU</strong> — segmentation shape fidelity between generated and ground truth images</li>
+      <li><strong>CLIP text-image similarity</strong> — how well the generated image matches the text prompt</li>
+      <li>Final score = CLIP × mIoU, evaluated on top-10 of 20 generated images</li>
+    </ul>
+
+    <div class="score-grid">
+      <div class="score-card">
+        <div class="val">0.45</div>
+        <div class="label">Simple Baseline</div>
+      </div>
+      <div class="score-card">
+        <div class="val">0.61</div>
+        <div class="label">Strong Baseline</div>
+      </div>
+      <div class="score-card highlight">
+        <div class="val">0.663</div>
+        <div class="label">Our Score ✓</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. Dataset -->
+  <section>
+    <div class="section-label">02 · Dataset</div>
+    <h2>Fill50K Dataset</h2>
+    <p>
+      The Fill50K dataset consists of paired <em>source</em> (control) and <em>target</em> images along with text prompts. Each source image contains a black circle on white background, and each target image is the colored version according to the prompt.
+    </p>
+    <table>
+      <tr><th>Split</th><th>Images</th><th>Format</th></tr>
+      <tr><td>Training</td><td>49,800</td><td>source/, target/, prompt.json</td></tr>
+      <tr><td>Testing</td><td>20</td><td>source/, target/, prompt.json</td></tr>
+    </table>
+    <p>Each prompt.json line follows the format:</p>
+    <pre>{"source": "0.png", "target": "0.png", "prompt": "orange red circle with pale golden rod background"}</pre>
+    <p>
+      Source images are normalized to <code>[0, 1]</code> (control hints), target images to <code>[-1, 1]</code> (training targets).
+    </p>
+  </section>
+
+  <!-- 3. Model Architecture -->
+  <section>
+    <div class="section-label">03 · Architecture</div>
+    <h2>ControlNet Architecture</h2>
+    <p>
+      ControlNet (<a href="https://arxiv.org/abs/2302.05543" style="color:var(--accent)">Zhang et al., 2023</a>) augments a frozen pre-trained diffusion UNet with a trainable copy of its encoder. The key idea is:
+    </p>
+
+    <div class="arch-box">
+<span class="highlight">Input</span>: x_noisy (latent), t (timestep), text prompt, hint image (control)
+<br><br>
+<span class="highlight2">ControlNet (trainable copy of SD encoder):</span>
+  hint → input_hint_block (8 conv layers, 8× downsample) → latent hint
+  x_noisy + latent hint → encoder blocks (12 blocks) → zero_convs → control signals
+  middle block → zero_conv → control signal (middle)
+<br><br>
+<span class="highlight">Frozen SD UNet decoder:</span>
+  encoder hidden states + control signals → decoder blocks → x_pred
+<br><br>
+<span class="highlight2">Zero convolutions</span>: 1×1 conv initialized to zero, ensuring ControlNet starts
+  as an identity and gradually learns to inject control without disrupting SD.
+    </div>
+
+    <h3>Model Details</h3>
+    <table>
+      <tr><th>Component</th><th>Parameters</th><th>Trainable</th></tr>
+      <tr><td>SD UNet (DiffusionWrapper)</td><td>859.5 M</td><td>No (frozen)</td></tr>
+      <tr><td>VAE (AutoencoderKL)</td><td>83.7 M</td><td>No (frozen)</td></tr>
+      <tr><td>CLIP Text Encoder</td><td>123 M</td><td>No (frozen)</td></tr>
+      <tr><td>ControlNet</td><td>361.3 M</td><td><strong>Yes</strong></td></tr>
+      <tr><td><strong>Total</strong></td><td><strong>1.43 B</strong></td><td>361.3 M</td></tr>
+    </table>
+
+    <h3>Implementation</h3>
+    <p>
+      We used the official ControlNet implementation (<a href="https://github.com/lllyasviel/ControlNet" style="color:var(--accent)">lllyasviel/ControlNet</a>) with the <code>cldm_v15.yaml</code> config on top of Stable Diffusion v1.5. The base SD weights were used to initialize the ControlNet encoder via <code>tool_add_control.py</code>.
+    </p>
+    <div style="margin: 0.75rem 0;">
+      <span class="tag">Stable Diffusion v1.5</span>
+      <span class="tag">ControlNet</span>
+      <span class="tag">DDIM Sampler</span>
+      <span class="tag">PyTorch Lightning</span>
+      <span class="tag">Fill50K</span>
+    </div>
+  </section>
+
+  <!-- 4. Training Details -->
+  <section>
+    <div class="section-label">04 · Training</div>
+    <h2>Training Details</h2>
+    <table>
+      <tr><th>Hyperparameter</th><th>Value</th></tr>
+      <tr><td>Base model</td><td>Stable Diffusion v1.5 (v1-5-pruned.ckpt)</td></tr>
+      <tr><td>Optimizer</td><td>AdamW</td></tr>
+      <tr><td>Learning rate</td><td>1e-5</td></tr>
+      <tr><td>Batch size</td><td>8 (per GPU) × 8 GPUs = 64 effective</td></tr>
+      <tr><td>Epochs</td><td>8</td></tr>
+      <tr><td>Steps per epoch</td><td>780 (DDP)</td></tr>
+      <tr><td>Precision</td><td>fp32</td></tr>
+      <tr><td>Hardware</td><td>8× NVIDIA H200 (143 GB each)</td></tr>
+      <tr><td>Training time</td><td>~85 minutes total</td></tr>
+      <tr><td>SD weights frozen</td><td>Yes (sd_locked=True)</td></tr>
+      <tr><td>only_mid_control</td><td>False</td></tr>
+      <tr><td>Inference steps (DDIM)</td><td>50</td></tr>
+      <tr><td>Guidance scale</td><td>9.0</td></tr>
+      <tr><td>Control strength</td><td>1.0</td></tr>
+      <tr><td>Seed</td><td>42</td></tr>
+    </table>
+
+    <h3>Training Loss</h3>
+    <p>
+      The training loss (simple diffusion loss) converged from ~0.007 at the start of epoch 0 to ~0.005 by epoch 7, indicating stable training with no divergence.
+    </p>
+    <pre>Epoch 0, step   0: loss=0.00698, loss_simple=0.00486
+Epoch 7, step 779: loss=0.00506, loss_simple=0.00238</pre>
+  </section>
+
+  <!-- 5. Implementation Details & Difficulties -->
+  <section>
+    <div class="section-label">05 · Report Q1</div>
+    <h2>Implementation Details &amp; Difficulties</h2>
+
+    <h3>Implementation Approach</h3>
+    <p>
+      The implementation followed the official ControlNet repository. The key components are:
+    </p>
+    <ul style="margin: 0.5rem 0 1rem 1.5rem; color: #c0c0e0;">
+      <li><strong>ControlNet module</strong> (<code>cldm/cldm.py</code>): A trainable copy of the SD UNet encoder with an additional <code>input_hint_block</code> that downsamples the 512×512 control image to latent space size via 8 strided convolutions. Each encoder block output passes through a <em>zero convolution</em> before being added to the frozen UNet decoder's skip connections.</li>
+      <li><strong>ControlledUNet</strong>: The frozen SD UNet decoder is modified to accept the 13 control signals (12 encoder + 1 middle) and add them to the corresponding skip connections.</li>
+      <li><strong>Initialization</strong>: The ControlNet encoder weights are copied from the pretrained SD UNet encoder via <code>tool_add_control.py</code>, ensuring the model starts in a stable state.</li>
+      <li><strong>Dataset</strong>: The Fill50K dataset loader normalizes source images to [0,1] and target images to [-1,1], consistent with the diffusion model's expected input range.</li>
+    </ul>
+
+    <h3>Difficulties Encountered</h3>
+
+    <div class="callout">
+      <strong>Environment compatibility issues:</strong> The codebase targets PyTorch ~1.11 and pytorch-lightning 1.4.2, but the available environment runs Python 3.12 with PyTorch 2.6+. This caused several breaking changes: <code>np.Inf</code> removed in NumPy 2.0, <code>torch.load</code> defaulting to <code>weights_only=True</code>, and gradient checkpointing incompatibilities. Each required targeted fixes.
+    </div>
+
+    <div class="callout warn">
+      <strong>VectorQuantizer import error:</strong> The installed <code>taming-transformers</code> package renamed <code>VectorQuantizer2</code> to <code>VectorQuantizer</code>. Fixed by patching the import in <code>ldm/models/autoencoder.py</code>.
+    </div>
+
+    <div class="callout">
+      <strong>Multi-GPU training:</strong> Using DDP across 8 H200 GPUs with pytorch-lightning 1.4.2 required using <code>accelerator='ddp'</code> and <code>gpus=8</code>, which reduced steps per epoch from 12,475 (single GPU) to 780, dramatically speeding up training.
+    </div>
+  </section>
+
+  <!-- 6. Results -->
+  <section>
+    <div class="section-label">06 · Results</div>
+    <h2>Generated Image Results</h2>
+    <p>Below are sample triplets: <em>control image → generated image → ground truth</em>.</p>
+
+    <div class="triplet-grid">
+      <div class="triplet-col">
+        <div class="col-label">CONTROL (SOURCE)</div>
+        <img src="report_images/source/0.png" alt="source 0">
+        <img src="report_images/source/1.png" alt="source 1">
+        <img src="report_images/source/2.png" alt="source 2">
+        <img src="report_images/source/3.png" alt="source 3">
+      </div>
+      <div class="triplet-col">
+        <div class="col-label">GENERATED</div>
+        <img src="output_controlnet/0.png" alt="gen 0">
+        <img src="output_controlnet/1.png" alt="gen 1">
+        <img src="output_controlnet/2.png" alt="gen 2">
+        <img src="output_controlnet/3.png" alt="gen 3">
+        <div class="prompt-text">orange red / sea green / mint cream / gray</div>
+      </div>
+      <div class="triplet-col">
+        <div class="col-label">GROUND TRUTH</div>
+        <img src="report_images/target/0.png" alt="gt 0">
+        <img src="report_images/target/1.png" alt="gt 1">
+        <img src="report_images/target/2.png" alt="gt 2">
+        <img src="report_images/target/3.png" alt="gt 3">
+      </div>
+    </div>
+
+    <div class="score-grid">
+      <div class="score-card highlight">
+        <div class="val">0.663</div>
+        <div class="label">Final Score (Top-10)</div>
+      </div>
+      <div class="score-card">
+        <div class="val">50</div>
+        <div class="label">DDIM Steps</div>
+      </div>
+      <div class="score-card">
+        <div class="val">20</div>
+        <div class="label">Generated Images</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7. Circle Experiment -->
+  <section>
+    <div class="section-label">07 · Report Q2</div>
+    <h2>Control Image Experiment: Two Circles</h2>
+    <p>
+      We generated images using ControlNet with control images containing <strong>two circles</strong> to analyze whether ControlNet can handle multi-object control conditions that differ from the single-circle training distribution.
+    </p>
+
+    <div class="circle-experiment">
+      <div class="circle-card">
+        <h4>EXPERIMENT 1 — Two separate circles</h4>
+        <div class="img-row">
+          <div>
+            <img src="report_circles/two_circles_1.png" alt="control 1">
+            <div class="img-label">Control image</div>
+          </div>
+          <div>
+            <!-- <img src="report_circles/two_circles_1.png" alt="generated 1"> -->
+            <img src="report_circles/gen_two_circles_1.png" alt="generated 1">
+            <div class="img-label">Generated</div>
+          </div>
+        </div>
+        <p><em>Prompt: "red circle and blue circle with white background"</em></p>
+      </div>
+      <div class="circle-card">
+        <h4>EXPERIMENT 2 — Overlapping circles</h4>
+        <div class="img-row">
+          <div>
+            <img src="report_circles/two_circles_2.png" alt="control 2">
+            <div class="img-label">Control image</div>
+          </div>
+          <div>
+            <!-- <img src="report_circles/two_circles_2.png" alt="generated 2"> -->
+            <img src="report_circles/gen_two_circles_2.png" alt="generated 2">
+            <div class="img-label">Generated</div>
+          </div>
+        </div>
+        <p><em>Prompt: "yellow circle and green circle with white background"</em></p>
+      </div>
+    </div>
+
+    <h3>Discussion</h3>
+    <div class="callout warn">
+      <strong>Experiment 1 (two separate circles): Complete failure.</strong> The model generates noisy, incoherent textures with no recognizable structure. Two disconnected black regions on white are entirely out-of-distribution — the model cannot reconcile two separate shapes with its single-circle prior learned during training.
+    </div>
+    <div class="callout">
+      <strong>Experiment 2 (overlapping circles): Partial success.</strong> The model generates two distinct color regions (yellow/green) that roughly follow the merged boundary. Since the overlapping circles appear as one large shape, the model treats them as a single object but partially follows the two-color text prompt.
+    </div>
+    <p>
+      <strong>Possible reasons for failure/weak control:</strong>
+    </p>
+    <ul style="margin: 0.5rem 0 1rem 1.5rem; color: #c0c0e0;">
+      <li><strong>Out-of-distribution input:</strong> The model was trained exclusively on single-circle images. Two separate circles are outside the training distribution, causing complete breakdown of the control signal.</li>
+      <li><strong>Control signal ambiguity:</strong> The binary mask cannot encode object identity — the model cannot determine how many distinct objects are present from shape alone.</li>
+      <li><strong>Text-control misalignment:</strong> The model's learned association between prompt and control was built on single-color, single-circle pairs. Multi-object prompts cannot override the shape prior.</li>
+      <li><strong>Overlapping shapes as workaround:</strong> When circles overlap and form a connected region, the model can at least generate a coherent output, suggesting the connectivity of the control mask is critical.</li>
+    </ul>
+  </section>
+
+</div>
+
+<footer style="text-align:center; padding: 2rem; color: var(--muted); font-family: 'IBM Plex Mono', monospace; font-size: 12px; border-top: 1px solid var(--border);">
+  DLCV Fall 2025 · HW2 Problem 3 · ControlNet on Fill50K
+</footer>
+
+</body>
+</html>
