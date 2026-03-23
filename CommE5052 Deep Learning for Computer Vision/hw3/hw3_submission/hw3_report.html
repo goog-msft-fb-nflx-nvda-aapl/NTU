@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>HW3 Report – Problem 2: PEFT on Vision-Language Model for Image Captioning</title>
+<style>
+  :root {
+    --primary: #1a1a2e;
+    --accent: #e94560;
+    --accent2: #0f3460;
+    --light: #f5f5f5;
+    --card: #ffffff;
+    --text: #333;
+    --muted: #666;
+    --border: #e0e0e0;
+    --green: #2ecc71;
+    --blue: #3498db;
+    --gold: #f39c12;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: var(--light); color: var(--text); line-height: 1.7; }
+
+  /* NAV */
+  nav { background: var(--primary); color: white; padding: 1rem 2rem; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+  nav .logo { font-size: 1.1rem; font-weight: 700; letter-spacing: 1px; }
+  nav .links a { color: #ccc; text-decoration: none; margin-left: 1.5rem; font-size: 0.9rem; transition: color 0.2s; }
+  nav .links a:hover { color: var(--accent); }
+
+  /* HERO */
+  .hero { background: linear-gradient(135deg, var(--primary) 0%, var(--accent2) 100%); color: white; padding: 4rem 2rem; text-align: center; }
+  .hero h1 { font-size: 2.2rem; margin-bottom: 0.5rem; }
+  .hero .subtitle { font-size: 1.1rem; color: #aad4f5; margin-bottom: 1.5rem; }
+  .hero .badges span { display: inline-block; background: rgba(255,255,255,0.15); border-radius: 20px; padding: 0.3rem 1rem; margin: 0.3rem; font-size: 0.85rem; }
+
+  /* SECTIONS */
+  .container { max-width: 1100px; margin: 0 auto; padding: 2rem; }
+  section { margin-bottom: 3rem; }
+  h2 { font-size: 1.6rem; color: var(--primary); border-left: 5px solid var(--accent); padding-left: 1rem; margin-bottom: 1.5rem; }
+  h3 { font-size: 1.15rem; color: var(--accent2); margin: 1.2rem 0 0.6rem; }
+  p { margin-bottom: 0.8rem; color: var(--text); }
+
+  /* CARDS */
+  .card { background: var(--card); border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 12px rgba(0,0,0,0.07); margin-bottom: 1.5rem; border: 1px solid var(--border); }
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.2rem; }
+
+  /* ARCH DIAGRAM */
+  .arch { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 0.5rem; padding: 1.5rem; background: #f8f9ff; border-radius: 12px; border: 1px solid var(--border); }
+  .arch-box { background: var(--card); border: 2px solid var(--accent2); border-radius: 10px; padding: 0.8rem 1.2rem; text-align: center; min-width: 130px; }
+  .arch-box .label { font-size: 0.75rem; color: var(--muted); }
+  .arch-box .name { font-weight: 700; font-size: 0.95rem; color: var(--primary); }
+  .arch-box .detail { font-size: 0.78rem; color: var(--accent); margin-top: 0.2rem; }
+  .arch-arrow { font-size: 1.5rem; color: var(--accent); font-weight: 700; }
+  .arch-box.highlight { border-color: var(--accent); background: #fff5f7; }
+
+  /* LORA DIAGRAM */
+  .lora-diagram { display: flex; gap: 2rem; align-items: flex-start; flex-wrap: wrap; }
+  .lora-box { border: 2px solid var(--border); border-radius: 10px; padding: 1rem; flex: 1; min-width: 200px; text-align: center; }
+  .lora-box.frozen { background: #f0f4ff; border-color: #aac; }
+  .lora-box.trainable { background: #fff5f0; border-color: var(--accent); }
+  .lora-box h4 { margin-bottom: 0.5rem; }
+  .lora-box .tag { display: inline-block; font-size: 0.75rem; padding: 0.2rem 0.6rem; border-radius: 10px; margin-top: 0.4rem; }
+  .tag-frozen { background: #dde; color: #446; }
+  .tag-train { background: #fde; color: var(--accent); }
+
+  /* RESULTS TABLE */
+  table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+  th { background: var(--primary); color: white; padding: 0.75rem 1rem; text-align: left; }
+  td { padding: 0.7rem 1rem; border-bottom: 1px solid var(--border); }
+  tr:nth-child(even) td { background: #f9f9f9; }
+  tr.best td { background: #fff8e1; font-weight: 600; }
+  .badge { display: inline-block; padding: 0.2rem 0.7rem; border-radius: 12px; font-size: 0.8rem; font-weight: 600; }
+  .badge-green { background: #d4f5e2; color: #1a7a40; }
+  .badge-blue { background: #d4eaf5; color: #1a5080; }
+  .badge-gold { background: #fef3cd; color: #856404; }
+
+  /* METRIC CARDS */
+  .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin: 1rem 0; }
+  .metric-card { background: var(--card); border-radius: 10px; padding: 1.2rem; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.07); border-top: 4px solid var(--accent); }
+  .metric-card .val { font-size: 2rem; font-weight: 800; color: var(--accent); }
+  .metric-card .name { font-size: 0.85rem; color: var(--muted); margin-top: 0.3rem; }
+
+  /* BASELINE TABLE */
+  .baseline-pass { color: var(--green); font-weight: 700; }
+
+  /* IMAGE GRID */
+  .img-wrap { text-align: center; }
+  .img-wrap img { max-width: 100%; border-radius: 10px; box-shadow: 0 2px 12px rgba(0,0,0,0.12); }
+  .img-caption { font-size: 0.85rem; color: var(--muted); margin-top: 0.5rem; }
+
+  /* CODE */
+  pre { background: #1e1e2e; color: #cdd6f4; padding: 1rem 1.2rem; border-radius: 8px; overflow-x: auto; font-size: 0.85rem; margin: 0.8rem 0; }
+  code { font-family: 'Courier New', monospace; }
+
+  /* PROGRESS BAR */
+  .progress-wrap { margin: 0.5rem 0; }
+  .progress-label { display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 0.2rem; }
+  .progress-bar { height: 10px; background: #e0e0e0; border-radius: 5px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 5px; transition: width 1s ease; }
+
+  /* FOOTER */
+  footer { background: var(--primary); color: #aaa; text-align: center; padding: 2rem; font-size: 0.9rem; margin-top: 3rem; }
+
+  @media (max-width: 600px) {
+    .hero h1 { font-size: 1.4rem; }
+    .arch { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">HW3 – Problem 2</div>
+  <div class="links">
+    <a href="#overview">Overview</a>
+    <a href="#architecture">Architecture</a>
+    <a href="#lora">LoRA</a>
+    <a href="#training">Training</a>
+    <a href="#results">Results</a>
+    <a href="#visualization">Visualization</a>
+    <a href="#observations">Observations</a>
+  </div>
+</nav>
+
+<div class="hero">
+  <h1>PEFT on Vision-Language Model for Image Captioning</h1>
+  <div class="subtitle">HW3 Problem 2 &nbsp;|&nbsp; Department of Computer Science, UT Austin</div>
+  <div class="badges">
+    <span>LLaVA-style Architecture</span>
+    <span>LoRA Fine-Tuning</span>
+    <span>CLIP ViT-Base Encoder</span>
+    <span>Qwen3 Decoder</span>
+    <span>8× NVIDIA H200</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- OVERVIEW -->
+  <section id="overview">
+    <h2>1. Task Overview</h2>
+    <div class="card">
+      <p>The goal of this task is to build an image captioning system using a Vision-Language Model (VLM). Given an RGB image as input, the model should output a natural language caption describing the image content.</p>
+      <p>We adopt a <strong>LLaVA-style architecture</strong> combining a pretrained Vision Transformer (ViT) encoder, an MLP projector, and a pretrained Qwen3-based causal language model decoder. To keep computational cost low, we apply <strong>Parameter-Efficient Fine-Tuning (PEFT)</strong> via <strong>LoRA (Low-Rank Adaptation)</strong>, limiting trainable parameters to under 10M.</p>
+    </div>
+
+    <h3>Dataset</h3>
+    <div class="card-grid">
+      <div class="card">
+        <h3>Training Set</h3>
+        <p><strong>10,000 images</strong> from MS-COCO with multiple captions per image. Images are stored as <code>000000000000.jpg</code> format. Captions are provided in <code>train.json</code> with <code>image_id</code> and <code>caption</code> fields.</p>
+      </div>
+      <div class="card">
+        <h3>Validation Set</h3>
+        <p><strong>2,000 images</strong> with ground-truth captions in <code>val.json</code>. Used to evaluate CIDEr and CLIPScore. Each image has multiple reference captions for evaluation.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ARCHITECTURE -->
+  <section id="architecture">
+    <h2>2. Model Architecture</h2>
+
+    <div class="arch">
+      <div class="arch-box">
+        <div class="label">Input</div>
+        <div class="name">RGB Image</div>
+        <div class="detail">224 × 224</div>
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-box">
+        <div class="label">Vision Encoder</div>
+        <div class="name">CLIP ViT-B/16</div>
+        <div class="detail">196 patch tokens × 768</div>
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-box highlight">
+        <div class="label">Projector</div>
+        <div class="name">MLP (2-layer)</div>
+        <div class="detail">768 → 1024</div>
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-box highlight">
+        <div class="label">Language Model</div>
+        <div class="name">Qwen3 Decoder</div>
+        <div class="detail">28 layers, hidden=1024</div>
+      </div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-box">
+        <div class="label">Output</div>
+        <div class="name">Caption Text</div>
+        <div class="detail">vocab size 151936</div>
+      </div>
+    </div>
+
+    <div class="card-grid" style="margin-top:1.5rem;">
+      <div class="card">
+        <h3>Vision Encoder</h3>
+        <p>We use <strong>CLIP ViT-Base/16</strong> loaded via <code>timm</code> (<code>vit_base_patch16_clip_224.openai</code>). The image is divided into 16×16 patches, yielding <strong>196 patch tokens</strong> of dimension 768. The CLS token is discarded; only patch tokens are passed to the projector. The vision encoder is <strong>fully frozen</strong> during training.</p>
+      </div>
+      <div class="card">
+        <h3>MLP Projector</h3>
+        <p>A 2-layer MLP maps visual tokens from dimension 768 to the language model's hidden dimension 1024:
+        <pre><code>Linear(768 → 1024)
+GELU activation
+Linear(1024 → 1024)</code></pre>
+        The projector is <strong>fully trainable</strong> and bridges the visual and language modalities.</p>
+      </div>
+      <div class="card">
+        <h3>Language Decoder</h3>
+        <p>The provided <strong>Qwen3-based decoder</strong> has 28 transformer layers with hidden size 1024, 16 attention heads (8 KV heads, GQA), head dim 128, and RoPE positional encoding. Visual tokens are prepended to text token embeddings before being fed into the decoder. Only LoRA parameters are trained in this module.</p>
+      </div>
+      <div class="card">
+        <h3>Input Construction</h3>
+        <p>During training, the input sequence is constructed as:</p>
+        <pre><code>[visual tokens (196)] + [&lt;im_start&gt;] + [caption tokens] + [&lt;im_end&gt;]</code></pre>
+        <p>Loss is computed only on text tokens using cross-entropy, ignoring padding token id <code>151643</code>.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- LORA -->
+  <section id="lora">
+    <h2>3. LoRA Implementation</h2>
+    <div class="card">
+      <p>LoRA (Low-Rank Adaptation) avoids full fine-tuning by injecting trainable low-rank matrices into frozen weight matrices. For a pretrained weight <strong>W ∈ ℝ<sup>d×k</sup></strong>, LoRA adds:</p>
+      <pre><code>W' = W + ΔW = W + B·A
+where A ∈ ℝ^(r×k), B ∈ ℝ^(d×r), r &lt;&lt; min(d, k)</code></pre>
+      <p>The output is scaled by <strong>α/r</strong>, where α is the LoRA alpha hyperparameter. Only A and B are trained; W remains frozen.</p>
+    </div>
+
+    <div class="lora-diagram">
+      <div class="lora-box frozen">
+        <h4>🔒 Frozen Components</h4>
+        <p>Vision Encoder (CLIP ViT-B/16)</p>
+        <p>Decoder W<sub>q</sub>, W<sub>k</sub>, W<sub>v</sub>, W<sub>o</sub> weights</p>
+        <p>MLP weights in decoder</p>
+        <p>Embeddings &amp; LM head</p>
+        <span class="tag tag-frozen">requires_grad = False</span>
+      </div>
+      <div class="lora-box trainable">
+        <h4>🔥 Trainable Components</h4>
+        <p>LoRA A, B matrices in q_proj (all 28 layers)</p>
+        <p>LoRA A, B matrices in v_proj (all 28 layers)</p>
+        <p>MLP Projector (768→1024→1024)</p>
+        <span class="tag tag-train">requires_grad = True</span>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:1.5rem;">
+      <h3>Implementation Details</h3>
+      <p>LoRA is applied to <strong>q_proj</strong> and <strong>v_proj</strong> in all 28 attention layers of the decoder using <code>loralib</code>. The pretrained weights are copied into the LoRA linear layers, and <code>lora.mark_only_lora_as_trainable()</code> freezes all non-LoRA decoder parameters.</p>
+      <pre><code># Replace q_proj with LoRA version
+new_q = lora.Linear(in_dim, q_out, r=r, lora_alpha=alpha, bias=False)
+new_q.weight = attn.q_proj.weight  # copy pretrained weights
+attn.q_proj = new_q
+
+lora.mark_only_lora_as_trainable(self.decoder)</code></pre>
+    </div>
+  </section>
+
+  <!-- TRAINING -->
+  <section id="training">
+    <h2>4. Training Setup</h2>
+    <div class="card-grid">
+      <div class="card">
+        <h3>Hardware</h3>
+        <p>8× NVIDIA H200 (143 GB each) using PyTorch <strong>DistributedDataParallel (DDP)</strong> with NCCL backend. Launched via <code>torchrun --nproc_per_node=8</code>.</p>
+      </div>
+      <div class="card">
+        <h3>Optimizer</h3>
+        <p><strong>AdamW</strong> with lr=2e-4, weight_decay=0.01. Learning rate schedule: <strong>CosineAnnealingLR</strong> over 10 epochs. Gradient clipping at norm 1.0.</p>
+      </div>
+      <div class="card">
+        <h3>Data</h3>
+        <p>Batch size <strong>32 per GPU</strong> (256 effective). Image augmentation: random horizontal flip, color jitter. Resize to 224×224. Normalized with CLIP mean/std. Max caption length: 64 tokens.</p>
+      </div>
+      <div class="card">
+        <h3>Tokenizer</h3>
+        <p>Custom <strong>Qwen3Tokenizer</strong> (BPE). Special tokens: <code>&lt;|im_start|&gt;</code> (start), <code>&lt;|im_end|&gt;</code> (end), <code>&lt;|endoftext|&gt;</code> (pad, id=151643). Padding tokens excluded from loss via <code>ignore_index=151643</code>.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- RESULTS -->
+  <section id="results">
+    <h2>5. Evaluation Results</h2>
+
+    <h3>Best Setting</h3>
+    <div class="metric-grid">
+      <div class="metric-card">
+        <div class="val">0.9836</div>
+        <div class="name">CIDEr Score</div>
+      </div>
+      <div class="metric-card">
+        <div class="val">0.7410</div>
+        <div class="name">CLIPScore</div>
+      </div>
+      <div class="metric-card">
+        <div class="val">~2.98M</div>
+        <div class="name">Trainable Params</div>
+      </div>
+      <div class="metric-card">
+        <div class="val">r=4, α=32</div>
+        <div class="name">Best LoRA Config</div>
+      </div>
+    </div>
+
+    <h3>LoRA Experiment Comparison</h3>
+    <table>
+      <thead>
+        <tr><th>Experiment</th><th>LoRA Rank (r)</th><th>LoRA Alpha (α)</th><th>Scale (α/r)</th><th>CIDEr</th><th>CLIPScore</th><th>Note</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Exp 1</td><td>8</td><td>16</td><td>2.0</td><td>0.9684</td><td>0.7389</td>
+          <td><span class="badge badge-blue">Baseline</span></td>
+        </tr>
+        <tr class="best">
+          <td>Exp 2 ⭐</td><td>4</td><td>32</td><td>8.0</td><td><strong>0.9836</strong></td><td><strong>0.7410</strong></td>
+          <td><span class="badge badge-gold">Best</span></td>
+        </tr>
+        <tr>
+          <td>Exp 3</td><td>16</td><td>16</td><td>1.0</td><td>0.9832</td><td>0.7380</td>
+          <td><span class="badge badge-blue">Higher rank</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Baseline Comparison</h3>
+    <table>
+      <thead>
+        <tr><th>Baseline</th><th>Required CIDEr</th><th>Required CLIPScore</th><th>Our CIDEr</th><th>Our CLIPScore</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Simple (11%)</td><td>0.76</td><td>0.67</td><td>0.9836</td><td>0.7410</td><td><span class="baseline-pass">✔ PASS</span></td></tr>
+        <tr><td>Medium (9%)</td><td>0.85</td><td>0.69</td><td>0.9836</td><td>0.7410</td><td><span class="baseline-pass">✔ PASS</span></td></tr>
+        <tr><td>Strong (8%)</td><td>0.90</td><td>0.71</td><td>0.9836</td><td>0.7410</td><td><span class="baseline-pass">✔ PASS</span></td></tr>
+      </tbody>
+    </table>
+
+    <div class="card" style="margin-top:1.5rem;">
+      <h3>Performance vs. Baselines</h3>
+      <div class="progress-wrap">
+        <div class="progress-label"><span>CIDEr – Simple Baseline (0.76)</span><span>Our: 0.9836</span></div>
+        <div class="progress-bar"><div class="progress-fill" style="width:98%;background:#2ecc71;"></div></div>
+      </div>
+      <div class="progress-wrap">
+        <div class="progress-label"><span>CIDEr – Medium Baseline (0.85)</span><span>Our: 0.9836</span></div>
+        <div class="progress-bar"><div class="progress-fill" style="width:98%;background:#3498db;"></div></div>
+      </div>
+      <div class="progress-wrap">
+        <div class="progress-label"><span>CIDEr – Strong Baseline (0.90)</span><span>Our: 0.9836</span></div>
+        <div class="progress-bar"><div class="progress-fill" style="width:98%;background:#e67e22;"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- VISUALIZATION -->
+  <section id="visualization">
+    <h2>6. Qualitative Results</h2>
+    <div class="card">
+      <div class="img-wrap">
+        <img src="p2/report_assets/sample_captions.png" alt="Sample image captions from validation set"/>
+        <div class="img-caption">Figure 1: Sample predictions (top) vs. ground truth captions (bottom) on 10 validation images. Best setting: LoRA r=4, α=32.</div>
+      </div>
+    </div>
+
+    <h3>Sample Captions (Best Model)</h3>
+    <table>
+      <thead><tr><th>Image ID</th><th>Predicted Caption</th></tr></thead>
+      <tbody>
+        <tr><td>000000000000</td><td>A bedroom with a mirror and a chair.</td></tr>
+        <tr><td>000000000001</td><td>A motorcycle with a police officer riding on it.</td></tr>
+        <tr><td>000000000002</td><td>A group of motorcycles parked on a street.</td></tr>
+        <tr><td>000000000003</td><td>A woman in a kitchen holding a waffle in her hand.</td></tr>
+        <tr><td>000000000004</td><td>A table with a projector and a laptop on it.</td></tr>
+        <tr><td>000000000005</td><td>A plate of food with broccoli and rice.</td></tr>
+        <tr><td>000000000006</td><td>A group of people standing on top of a snow covered slope.</td></tr>
+        <tr><td>000000000007</td><td>A man is sitting at a desk with a laptop computer.</td></tr>
+        <tr><td>000000000008</td><td>A group of people standing on a railroad track.</td></tr>
+        <tr><td>000000000009</td><td>A tray of food with a knife and fork on it.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- OBSERVATIONS -->
+  <section id="observations">
+    <h2>7. Observations & Analysis</h2>
+
+    <div class="card-grid">
+      <div class="card">
+        <h3>Effect of LoRA Rank</h3>
+        <p>Comparing Exp 1 (r=8) and Exp 2 (r=4), a <strong>lower rank with higher alpha</strong> yielded better performance. This suggests that for this task, a higher effective scaling factor (α/r=8 vs 2) is more important than the rank dimension. Exp 3 (r=16, α=16) performed similarly to Exp 2 in CIDEr but slightly lower in CLIPScore, indicating diminishing returns from increasing rank alone.</p>
+      </div>
+      <div class="card">
+        <h3>Effect of LoRA Alpha</h3>
+        <p>Alpha controls the magnitude of the LoRA update via the scale factor α/r. Exp 2 with α=32, r=4 gives a scale of 8.0, the highest among our experiments, and achieved the best results. This indicates that <strong>larger update magnitude</strong> helps the decoder adapt more effectively to the captioning task without overfitting.</p>
+      </div>
+      <div class="card">
+        <h3>Parameter Efficiency</h3>
+        <p>With only <strong>~2.98M trainable parameters</strong> (LoRA matrices in q_proj and v_proj across 28 layers + MLP projector), our model significantly outperforms all baselines. The full decoder has ~1B parameters, meaning we train less than 0.3% of the total model while achieving strong performance.</p>
+      </div>
+      <div class="card">
+        <h3>Architecture Design</h3>
+        <p>Prepending visual tokens before text tokens allows the decoder to attend to image features at every layer via self-attention. The 2-layer GELU MLP projector effectively bridges the 768-dim visual space and 1024-dim language space. Freezing the vision encoder preserves pretrained CLIP visual representations.</p>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  HW3 Problem 2 – PEFT on Vision-Language Model for Image Captioning &nbsp;|&nbsp; UT Austin CS &nbsp;|&nbsp; 2025
+</footer>
+
+</body>
+</html>
