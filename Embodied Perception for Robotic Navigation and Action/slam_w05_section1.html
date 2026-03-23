@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>W05 · Section 1 — ORB-SLAM | CSIE5452</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/reveal.min.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/theme/black.min.css"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet"/>
+
+<style>
+  :root {
+    --bg:      #0a0f1a;
+    --surface: #111827;
+    --border:  #1e2d45;
+    --accent:  #00d4ff;
+    --accent2: #ff6b35;
+    --accent3: #7fff6b;
+    --accent4: #c084fc;
+    --text:    #e8edf5;
+    --muted:   #6b7fa3;
+    --mono:    'Space Mono', monospace;
+    --sans:    'DM Sans', sans-serif;
+  }
+
+  .reveal { font-family: var(--sans); background: var(--bg); }
+  .reveal .slides { color: var(--text); }
+  .reveal .slide-number {
+    font-family: var(--mono); font-size: 0.75rem;
+    background: transparent; color: var(--muted);
+    bottom: 18px; right: 22px;
+  }
+
+  .two-col {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 2rem; align-items: start; margin-top: 1.1rem;
+  }
+  .two-col-6040 { display: grid; grid-template-columns: 3fr 2fr; gap: 2rem; align-items: start; margin-top: 1.1rem; }
+  .two-col-4060 { display: grid; grid-template-columns: 2fr 3fr; gap: 2rem; align-items: start; margin-top: 1.1rem; }
+
+  .reveal h1,.reveal h2,.reveal h3 {
+    font-family: var(--mono); text-transform: none;
+    letter-spacing: -0.02em; color: var(--text); text-align: left;
+  }
+  .reveal h1 { font-size: 2.1rem; line-height: 1.2; }
+  .reveal h2 { font-size: 1.45rem; border-bottom: 1px solid var(--border); padding-bottom: 0.4rem; margin-bottom: 0.7rem; }
+  .reveal h3 { font-size: 1.0rem; color: var(--accent); margin-bottom: 0.35rem; }
+
+  .label {
+    font-family: var(--mono); font-size: 0.63rem; letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: 0.4rem; display: block;
+  }
+
+  .reveal ul { list-style: none; padding: 0; margin: 0; }
+  .reveal ul li {
+    font-size: 0.92rem; line-height: 1.55;
+    padding: 0.26rem 0 0.26rem 1.4rem; position: relative;
+    color: var(--text); font-weight: 300;
+  }
+  .reveal ul li::before { content:'▸'; position:absolute; left:0; color:var(--accent); font-size:0.78rem; }
+  .reveal ul li strong { color: var(--accent2); font-weight: 700; }
+  .reveal ul li em { color: var(--accent3); font-style: normal; font-weight: 500; }
+  .reveal ul li.purple em, .reveal ul li .pu { color: var(--accent4); }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 0.9rem 1.1rem; }
+  .card.hi  { border-color: var(--accent); }
+  .card.hi2 { border-color: var(--accent2); }
+  .card.hi3 { border-color: var(--accent3); }
+
+  .callout {
+    border-left: 3px solid var(--accent2); background: #1a1208;
+    padding: 0.65rem 1rem; border-radius: 0 6px 6px 0;
+    font-size: 0.88rem; margin-top: 0.8rem;
+  }
+  .callout.blue { border-color: var(--accent); background: #06131e; }
+  .callout.green { border-color: var(--accent3); background: #0a1a0a; }
+
+  .accent-line { width:60px; height:3px; background:linear-gradient(90deg,var(--accent),var(--accent2)); margin:0.5rem 0 1.4rem; border-radius:2px; }
+
+  /* thread boxes */
+  .thread-box {
+    border-radius: 7px; padding: 0.7rem 0.9rem; margin-bottom: 0.5rem;
+  }
+  .thread-box h3 { margin-bottom: 0.3rem; font-size: 0.92rem; }
+  .thread-box ul li { font-size: 0.82rem; padding: 0.15rem 0 0.15rem 1.2rem; }
+
+  /* title slide */
+  .title-slide .course-tag {
+    font-family: var(--mono); font-size: 0.68rem; letter-spacing: 0.14em;
+    color: var(--muted); margin-bottom: 1.8rem;
+  }
+  .title-slide h1 { font-size: 2.5rem; margin-bottom: 0.3rem; }
+  .title-slide .subtitle { font-size: 1.05rem; color: var(--muted); font-weight: 300; margin-bottom: 2.2rem; }
+  .title-slide .meta { font-size: 0.75rem; color: var(--muted); font-family: var(--mono); line-height: 2; }
+
+  /* pipeline strip */
+  .pipeline { display:flex; align-items:center; gap:0; margin-top:1rem; flex-wrap:nowrap; }
+  .pstep {
+    background: var(--surface); border: 1px solid var(--border); border-radius:6px;
+    padding:0.45rem 0.55rem; font-size:0.68rem; font-family:var(--mono);
+    text-align:center; flex:1; line-height:1.3;
+  }
+  .pstep.c { border-color:var(--accent); color:var(--accent); }
+  .pstep.m { border-color:var(--accent2); color:var(--accent2); }
+  .pstep.l { border-color:var(--accent3); color:var(--accent3); }
+  .parrow { color:var(--muted); font-size:0.95rem; padding:0 0.15rem; flex-shrink:0; }
+
+  /* stat table */
+  table.stat { width:100%; border-collapse:collapse; font-size:0.78rem; }
+  table.stat th { font-family:var(--mono); font-size:0.68rem; color:var(--muted); padding:0.3rem 0.5rem; border-bottom:1px solid var(--border); text-align:left; }
+  table.stat td { padding:0.28rem 0.5rem; color:var(--text); font-weight:300; }
+  table.stat tr:hover td { background: var(--surface); }
+  table.stat td.best { color:var(--accent3); font-weight:700; }
+  table.stat td.fail { color:var(--accent2); }
+</style>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+<!-- ══════════════════════════════════════════
+     SLIDE 1 — Title
+══════════════════════════════════════════ -->
+<section data-background-color="#0a0f1a">
+  <div class="title-slide">
+    <div class="course-tag">CSIE5452 · Embodied Perception and Action · Week 05 · Section 1 of 4</div>
+    <h1>Classical Mastery:</h1>
+    <h1 style="color:var(--accent)">ORB-SLAM</h1>
+    <div class="accent-line"></div>
+    <div class="subtitle">Mur-Artal, Montiel, Tardós — IEEE Trans. Robotics, 2015 &nbsp;·&nbsp; ~25 min</div>
+    <div class="meta">
+      The canonical realization of the classical pipeline &nbsp;·&nbsp; monocular, real-time, lifelong
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 2 — One Feature to Rule Them All
+══════════════════════════════════════════ -->
+<section>
+  <h2>The Central Design Choice</h2>
+  <div class="two-col-6040">
+    <div>
+      <ul>
+        <li><strong>One feature type</strong> for all tasks: tracking, mapping, relocalization, loop closing</li>
+        <li>Prior systems used <em>different</em> features per task — expensive, inconsistent</li>
+        <li>Choice: <strong>ORB</strong> — Oriented FAST + Rotated BRIEF</li>
+        <li>256-bit binary descriptor, invariant to <em>rotation &amp; scale</em></li>
+        <li>Extraction: <strong>~11 ms/frame</strong> — no GPU needed</li>
+        <li>SIFT ~300 ms, SURF ~300 ms, A-KAZE ~100 ms — all too slow</li>
+      </ul>
+      <div class="callout blue" style="margin-top:0.9rem">
+        Unified features → efficient, simple, reliable. Everything else follows from this.
+      </div>
+    </div>
+    <div>
+      <!-- ORB feature illustration -->
+      <svg viewBox="0 0 240 260" xmlns="http://www.w3.org/2000/svg" style="width:100%">
+        <defs>
+          <marker id="a1" markerWidth="6" markerHeight="5" refX="6" refY="2.5" orient="auto">
+            <polygon points="0 0,6 2.5,0 5" fill="#00d4ff"/>
+          </marker>
+        </defs>
+        <!-- Image patch -->
+        <rect x="20" y="10" width="200" height="130" rx="4" fill="#111827" stroke="#1e2d45"/>
+        <!-- Simulated corner responses at various scales -->
+        <circle cx="70"  cy="55"  r="18" fill="none" stroke="#ff6b35" stroke-width="1.5" stroke-dasharray="3,2"/>
+        <circle cx="70"  cy="55"  r="4"  fill="#ff6b35"/>
+        <line x1="70" y1="55" x2="97" y2="38" stroke="#ff6b35" stroke-width="1.5" marker-end="url(#a1)" style="stroke:#ff6b35"/>
+
+        <circle cx="160" cy="80"  r="12" fill="none" stroke="#ff6b35" stroke-width="1.5" stroke-dasharray="3,2"/>
+        <circle cx="160" cy="80"  r="3"  fill="#ff6b35"/>
+        <line x1="160" y1="80" x2="172" y2="68" stroke="#ff6b35" stroke-width="1.5"/>
+
+        <circle cx="110" cy="100" r="22" fill="none" stroke="#7fff6b" stroke-width="1.5" stroke-dasharray="3,2"/>
+        <circle cx="110" cy="100" r="4"  fill="#7fff6b"/>
+        <line x1="110" y1="100" x2="110" y2="78" stroke="#7fff6b" stroke-width="1.5"/>
+
+        <text x="20" y="158" fill="#6b7fa3" font-size="9" font-family="'DM Sans',sans-serif">FAST corners at 8 scale levels</text>
+        <text x="20" y="170" fill="#ff6b35" font-size="9" font-family="'DM Sans',sans-serif">● Keypoint + orientation (arrow)</text>
+        <text x="20" y="182" fill="#7fff6b" font-size="9" font-family="'DM Sans',sans-serif">● Larger scale keypoint</text>
+
+        <!-- Descriptor bits visual -->
+        <text x="20" y="205" fill="#6b7fa3" font-size="9" font-family="'Space Mono',monospace">256-bit descriptor:</text>
+        <!-- bit strip -->
+        <g transform="translate(20,212)">
+          <!-- 32 blocks × 6px = 192px -->
+          <rect x="0"   y="0" width="5" height="10" rx="1" fill="#00d4ff"/>
+          <rect x="7"   y="0" width="5" height="10" rx="1" fill="#1e2d45"/>
+          <rect x="14"  y="0" width="5" height="10" rx="1" fill="#00d4ff"/>
+          <rect x="21"  y="0" width="5" height="10" rx="1" fill="#00d4ff"/>
+          <rect x="28"  y="0" width="5" height="10" rx="1" fill="#1e2d45"/>
+          <rect x="35"  y="0" width="5" height="10" rx="1" fill="#1e2d45"/>
+          <rect x="42"  y="0" width="5" height="10" rx="1" fill="#00d4ff"/>
+          <rect x="49"  y="0" width="5" height="10" rx="1" fill="#1e2d45"/>
+          <rect x="56"  y="0" width="5" height="10" rx="1" fill="#00d4ff"/>
+          <rect x="63"  y="0" width="5" height="10" rx="1" fill="#00d4ff"/>
+          <rect x="70"  y="0" width="5" height="10" rx="1" fill="#1e2d45"/>
+          <rect x="77"  y="0" width="5" height="10" rx="1" fill="#ff6b35"/>
+          <rect x="84"  y="0" width="5" height="10" rx="1" fill="#00d4ff"/>
+          <rect x="91"  y="0" width="5" height="10" rx="1" fill="#1e2d45"/>
+          <rect x="98"  y="0" width="5" height="10" rx="1" fill="#00d4ff"/>
+          <rect x="105" y="0" width="5" height="10" rx="1" fill="#1e2d45"/>
+          <text x="115" y="9" fill="#6b7fa3" font-size="9" font-family="'Space Mono',monospace">... ×256</text>
+        </g>
+        <text x="20" y="240" fill="#6b7fa3" font-size="8" font-family="'DM Sans',sans-serif">Hamming distance matching → very fast</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 3 — System Overview (Fig 1)
+══════════════════════════════════════════ -->
+<section>
+  <h2>Three Parallel Threads</h2>
+  <div class="two-col-4060">
+    <div>
+      <div class="thread-box" style="background:#0d1a2e; border:1px solid var(--accent)">
+        <h3 style="color:var(--accent)">① Tracking</h3>
+        <ul>
+          <li>Every frame — estimates camera pose</li>
+          <li>Motion-only BA</li>
+          <li>Decides keyframe insertion</li>
+        </ul>
+      </div>
+      <div class="thread-box" style="background:#1a1208; border:1px solid var(--accent2)">
+        <h3 style="color:var(--accent2)">② Local Mapping</h3>
+        <ul>
+          <li>Processes new keyframes</li>
+          <li>Triangulates new map points</li>
+          <li>Local bundle adjustment</li>
+          <li>Culls redundant keyframes</li>
+        </ul>
+      </div>
+      <div class="thread-box" style="background:#0a1a0a; border:1px solid var(--accent3)">
+        <h3 style="color:var(--accent3)">③ Loop Closing</h3>
+        <ul>
+          <li>DBoW2 place recognition</li>
+          <li>Similarity transform (7-DoF)</li>
+          <li>Essential Graph optimization</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <!-- Fig 1 re-drawn: system architecture SVG -->
+      <svg viewBox="0 0 310 340" xmlns="http://www.w3.org/2000/svg" style="width:100%">
+        <defs>
+          <marker id="b1" markerWidth="6" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,6 2.5,0 5" fill="#6b7fa3"/></marker>
+          <marker id="b2" markerWidth="6" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,6 2.5,0 5" fill="#00d4ff"/></marker>
+          <marker id="b3" markerWidth="6" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,6 2.5,0 5" fill="#ff6b35"/></marker>
+          <marker id="b4" markerWidth="6" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,6 2.5,0 5" fill="#7fff6b"/></marker>
+        </defs>
+
+        <!-- TRACKING band -->
+        <rect x="0" y="0" width="310" height="14" rx="3" fill="#0d1a2e"/>
+        <text x="8" y="10" fill="#00d4ff" font-size="8" font-family="'Space Mono',monospace">TRACKING</text>
+
+        <!-- Frame -->
+        <rect x="5" y="20" width="44" height="28" rx="4" fill="#111827" stroke="#00d4ff" stroke-width="1.5"/>
+        <text x="27" y="38" text-anchor="middle" fill="#00d4ff" font-size="8" font-family="'Space Mono',monospace">Frame</text>
+
+        <!-- Extract ORB -->
+        <rect x="60" y="20" width="52" height="28" rx="4" fill="#111827" stroke="#1e2d45"/>
+        <text x="86" y="31" text-anchor="middle" fill="#e8edf5" font-size="7" font-family="'Space Mono',monospace">Extract</text>
+        <text x="86" y="42" text-anchor="middle" fill="#00d4ff" font-size="7" font-family="'Space Mono',monospace">ORB</text>
+
+        <!-- Init Pose Est -->
+        <rect x="123" y="20" width="62" height="28" rx="4" fill="#111827" stroke="#1e2d45"/>
+        <text x="154" y="31" text-anchor="middle" fill="#e8edf5" font-size="7" font-family="'Space Mono',monospace">Init Pose</text>
+        <text x="154" y="42" text-anchor="middle" fill="#6b7fa3" font-size="7" font-family="'Space Mono',monospace">Est / Reloc</text>
+
+        <!-- Track Local Map -->
+        <rect x="196" y="20" width="58" height="28" rx="4" fill="#111827" stroke="#1e2d45"/>
+        <text x="225" y="31" text-anchor="middle" fill="#e8edf5" font-size="7" font-family="'Space Mono',monospace">Track</text>
+        <text x="225" y="42" text-anchor="middle" fill="#6b7fa3" font-size="7" font-family="'Space Mono',monospace">Local Map</text>
+
+        <!-- New KF Decision -->
+        <rect x="264" y="20" width="42" height="28" rx="4" fill="#111827" stroke="#00d4ff" stroke-width="1.2"/>
+        <text x="285" y="31" text-anchor="middle" fill="#00d4ff" font-size="7" font-family="'Space Mono',monospace">New KF</text>
+        <text x="285" y="42" text-anchor="middle" fill="#6b7fa3" font-size="7" font-family="'Space Mono',monospace">Decision</text>
+
+        <!-- Arrows: tracking thread horizontal -->
+        <line x1="49" y1="34" x2="59" y2="34" stroke="#6b7fa3" stroke-width="1" marker-end="url(#b1)"/>
+        <line x1="112" y1="34" x2="122" y2="34" stroke="#6b7fa3" stroke-width="1" marker-end="url(#b1)"/>
+        <line x1="185" y1="34" x2="195" y2="34" stroke="#6b7fa3" stroke-width="1" marker-end="url(#b1)"/>
+        <line x1="254" y1="34" x2="263" y2="34" stroke="#6b7fa3" stroke-width="1" marker-end="url(#b1)"/>
+
+        <!-- MAP band -->
+        <rect x="60" y="62" width="180" height="80" rx="5" fill="#0d1a2e" stroke="#1e2d45"/>
+        <text x="70" y="75" fill="#6b7fa3" font-size="8" font-family="'Space Mono',monospace">MAP</text>
+
+        <!-- MapPoints -->
+        <rect x="72" y="80" width="66" height="22" rx="3" fill="#111827" stroke="#ff6b35" stroke-width="1"/>
+        <text x="105" y="95" text-anchor="middle" fill="#ff6b35" font-size="8" font-family="'Space Mono',monospace">MapPoints</text>
+
+        <!-- KeyFrames -->
+        <rect x="72" y="110" width="66" height="22" rx="3" fill="#111827" stroke="#00d4ff" stroke-width="1"/>
+        <text x="105" y="125" text-anchor="middle" fill="#00d4ff" font-size="8" font-family="'Space Mono',monospace">KeyFrames</text>
+
+        <!-- CovisGraph -->
+        <rect x="150" y="80" width="82" height="22" rx="3" fill="#111827" stroke="#7fff6b" stroke-width="1"/>
+        <text x="191" y="88" text-anchor="middle" fill="#7fff6b" font-size="7" font-family="'Space Mono',monospace">Covisibility</text>
+        <text x="191" y="99" text-anchor="middle" fill="#7fff6b" font-size="7" font-family="'Space Mono',monospace">Graph</text>
+
+        <!-- Spanning tree -->
+        <rect x="150" y="110" width="82" height="22" rx="3" fill="#111827" stroke="#6b7fa3" stroke-width="1"/>
+        <text x="191" y="118" text-anchor="middle" fill="#6b7fa3" font-size="7" font-family="'Space Mono',monospace">Spanning</text>
+        <text x="191" y="129" text-anchor="middle" fill="#6b7fa3" font-size="7" font-family="'Space Mono',monospace">Tree</text>
+
+        <!-- Map init arrow (from tracking down) -->
+        <line x1="86" y1="48" x2="86" y2="62" stroke="#00d4ff" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#b2)"/>
+        <text x="88" y="58" fill="#00d4ff" font-size="7" font-family="'DM Sans',sans-serif">Map Init</text>
+
+        <!-- New KF → local mapping -->
+        <line x1="285" y1="48" x2="285" y2="162" stroke="#ff6b35" stroke-width="1.2" marker-end="url(#b3)"/>
+
+        <!-- PLACE RECOGNITION band -->
+        <rect x="0" y="155" width="52" height="88" rx="5" fill="#100d1e" stroke="#1e2d45"/>
+        <text x="5" y="168" fill="#6b7fa3" font-size="7" font-family="'Space Mono',monospace">PLACE</text>
+        <text x="5" y="178" fill="#6b7fa3" font-size="7" font-family="'Space Mono',monospace">RECOG</text>
+        <rect x="5" y="183" width="42" height="18" rx="3" fill="#111827" stroke="#c084fc" stroke-width="1"/>
+        <text x="26" y="192" text-anchor="middle" fill="#c084fc" font-size="7" font-family="'Space Mono',monospace">Visual</text>
+        <text x="26" y="201" text-anchor="middle" fill="#c084fc" font-size="7" font-family="'Space Mono',monospace">Vocab</text>
+        <rect x="5" y="208" width="42" height="28" rx="3" fill="#111827" stroke="#c084fc" stroke-width="1"/>
+        <text x="26" y="219" text-anchor="middle" fill="#c084fc" font-size="7" font-family="'Space Mono',monospace">Recog</text>
+        <text x="26" y="230" text-anchor="middle" fill="#c084fc" font-size="7" font-family="'Space Mono',monospace">DB</text>
+
+        <!-- LOCAL MAPPING band -->
+        <rect x="260" y="155" width="50" height="130" rx="5" fill="#1a1208" stroke="#1e2d45"/>
+        <text x="265" y="168" fill="#ff6b35" font-size="7" font-family="'Space Mono',monospace">LOCAL</text>
+        <text x="265" y="178" fill="#ff6b35" font-size="7" font-family="'Space Mono',monospace">MAPPING</text>
+        <rect x="264" y="182" width="42" height="18" rx="3" fill="#111827" stroke="#ff6b35" stroke-width="1"/>
+        <text x="285" y="195" text-anchor="middle" fill="#ff6b35" font-size="7" font-family="'Space Mono',monospace">KF Insert</text>
+        <rect x="264" y="205" width="42" height="18" rx="3" fill="#111827" stroke="#1e2d45"/>
+        <text x="285" y="218" text-anchor="middle" fill="#e8edf5" font-size="7" font-family="'Space Mono',monospace">Pt Culling</text>
+        <rect x="264" y="228" width="42" height="18" rx="3" fill="#111827" stroke="#1e2d45"/>
+        <text x="285" y="241" text-anchor="middle" fill="#e8edf5" font-size="7" font-family="'Space Mono',monospace">Pt Create</text>
+        <rect x="264" y="251" width="42" height="18" rx="3" fill="#111827" stroke="#ff6b35" stroke-width="1"/>
+        <text x="285" y="264" text-anchor="middle" fill="#ff6b35" font-size="7" font-family="'Space Mono',monospace">Local BA</text>
+        <rect x="264" y="274" width="42" height="18" rx="3" fill="#111827" stroke="#1e2d45"/>
+        <text x="285" y="287" text-anchor="middle" fill="#e8edf5" font-size="7" font-family="'Space Mono',monospace">KF Cull</text>
+
+        <!-- LOOP CLOSING band -->
+        <rect x="0" y="253" width="255" height="28" rx="4" fill="#0a1a0a" stroke="#7fff6b" stroke-width="1"/>
+        <text x="8" y="264" fill="#7fff6b" font-size="7" font-family="'Space Mono',monospace">LOOP CLOSING</text>
+        <rect x="8" y="268" width="52" height="8" rx="2" fill="#111827" stroke="#7fff6b" stroke-width="0.8"/>
+        <text x="34" y="275" text-anchor="middle" fill="#7fff6b" font-size="6" font-family="'Space Mono',monospace">Candidates</text>
+        <rect x="68" y="268" width="52" height="8" rx="2" fill="#111827" stroke="#6b7fa3" stroke-width="0.8"/>
+        <text x="94" y="275" text-anchor="middle" fill="#6b7fa3" font-size="6" font-family="'Space Mono',monospace">Sim3 Compute</text>
+        <rect x="128" y="268" width="42" height="8" rx="2" fill="#111827" stroke="#6b7fa3" stroke-width="0.8"/>
+        <text x="149" y="275" text-anchor="middle" fill="#6b7fa3" font-size="6" font-family="'Space Mono',monospace">Fusion</text>
+        <rect x="178" y="268" width="68" height="8" rx="2" fill="#111827" stroke="#7fff6b" stroke-width="0.8"/>
+        <text x="212" y="275" text-anchor="middle" fill="#7fff6b" font-size="6" font-family="'Space Mono',monospace">Ess. Graph Opt.</text>
+
+        <!-- local mapping → map -->
+        <line x1="264" y1="200" x2="240" y2="105" stroke="#ff6b35" stroke-width="0.8" stroke-dasharray="3,2" marker-end="url(#b3)"/>
+
+        <!-- reloc arrow: place rec → tracking -->
+        <line x1="52" y1="193" x2="123" y2="42" stroke="#c084fc" stroke-width="0.8" stroke-dasharray="3,2" marker-end="url(#b1)"/>
+
+        <!-- source label -->
+        <text x="4" y="335" fill="#6b7fa3" font-size="7" font-family="'DM Sans',sans-serif">Redrawn from Fig. 1, Mur-Artal et al. 2015</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 4 — What is "the Map"?
+══════════════════════════════════════════ -->
+<section>
+  <h2>What Does "Map" Mean in ORB-SLAM?</h2>
+  <div class="two-col">
+    <div>
+      <span class="label">Map Points</span>
+      <div class="card hi2" style="margin-bottom:0.9rem">
+        <ul>
+          <li>3D position <em>X<sub>w</sub></em> in world coordinates</li>
+          <li>Viewing direction <strong>n</strong> — mean of all observing rays</li>
+          <li>Best ORB descriptor <strong>D</strong> — min Hamming distance</li>
+          <li>Scale bounds <em>d<sub>min</sub></em>, <em>d<sub>max</sub></em> — ORB scale invariance range</li>
+        </ul>
+      </div>
+      <span class="label">Keyframes</span>
+      <div class="card hi">
+        <ul>
+          <li>Camera pose <strong>T<sub>iw</sub></strong> ∈ SE(3)</li>
+          <li>All extracted ORB features (matched or not)</li>
+          <li>Camera intrinsics — focal length, principal point</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="callout blue" style="margin-bottom:0.9rem">
+        Map = <em>sparse 3D point cloud</em> + a graph of keyframes. No dense geometry. No color.
+      </div>
+      <!-- Fig 2a: keyframes + map points schematic -->
+      <svg viewBox="0 0 260 220" xmlns="http://www.w3.org/2000/svg" style="width:100%">
+        <!-- Map points (black/red dots) -->
+        <circle cx="60"  cy="40"  r="3" fill="#ff6b35"/>
+        <circle cx="100" cy="30"  r="3" fill="#6b7fa3"/>
+        <circle cx="140" cy="50"  r="3" fill="#6b7fa3"/>
+        <circle cx="80"  cy="70"  r="3" fill="#ff6b35"/>
+        <circle cx="170" cy="35"  r="3" fill="#6b7fa3"/>
+        <circle cx="200" cy="60"  r="3" fill="#ff6b35"/>
+        <circle cx="120" cy="80"  r="3" fill="#6b7fa3"/>
+        <circle cx="50"  cy="90"  r="3" fill="#6b7fa3"/>
+        <circle cx="220" cy="40"  r="3" fill="#6b7fa3"/>
+        <circle cx="155" cy="90"  r="3" fill="#ff6b35"/>
+        <circle cx="90"  cy="100" r="3" fill="#6b7fa3"/>
+        <circle cx="185" cy="80"  r="3" fill="#6b7fa3"/>
+        <circle cx="240" cy="75"  r="3" fill="#ff6b35"/>
+        <circle cx="30"  cy="60"  r="3" fill="#6b7fa3"/>
+
+        <!-- Keyframes (blue rectangles = camera frusta) -->
+        <!-- KF 1 -->
+        <polygon points="35,140 15,165 55,165" fill="none" stroke="#00d4ff" stroke-width="1.5"/>
+        <rect x="22" y="145" width="26" height="18" rx="1" fill="none" stroke="#00d4ff" stroke-width="1"/>
+        <!-- KF 2 -->
+        <polygon points="100,135 80,160 120,160" fill="none" stroke="#00d4ff" stroke-width="1.5"/>
+        <rect x="87" y="140" width="26" height="18" rx="1" fill="none" stroke="#00d4ff" stroke-width="1"/>
+        <!-- KF 3 (current) -->
+        <polygon points="170,130 150,155 190,155" fill="none" stroke="#7fff6b" stroke-width="2"/>
+        <rect x="157" y="135" width="26" height="18" rx="1" fill="none" stroke="#7fff6b" stroke-width="1.5"/>
+        <!-- KF 4 -->
+        <polygon points="235,140 215,165 255,165" fill="none" stroke="#00d4ff" stroke-width="1.5"/>
+        <rect x="222" y="145" width="26" height="18" rx="1" fill="none" stroke="#00d4ff" stroke-width="1"/>
+
+        <!-- Observation lines: keyframe → map point (dashed) -->
+        <line x1="35" y1="140" x2="60"  y2="40"  stroke="#6b7fa3" stroke-width="0.7" stroke-dasharray="2,2"/>
+        <line x1="35" y1="140" x2="80"  y2="70"  stroke="#6b7fa3" stroke-width="0.7" stroke-dasharray="2,2"/>
+        <line x1="100" y1="135" x2="100" y2="30" stroke="#6b7fa3" stroke-width="0.7" stroke-dasharray="2,2"/>
+        <line x1="100" y1="135" x2="80"  y2="70" stroke="#6b7fa3" stroke-width="0.7" stroke-dasharray="2,2"/>
+        <line x1="100" y1="135" x2="120" y2="80" stroke="#6b7fa3" stroke-width="0.7" stroke-dasharray="2,2"/>
+        <line x1="170" y1="130" x2="140" y2="50" stroke="#7fff6b" stroke-width="0.8" stroke-dasharray="2,2"/>
+        <line x1="170" y1="130" x2="155" y2="90" stroke="#7fff6b" stroke-width="0.8" stroke-dasharray="2,2"/>
+        <line x1="170" y1="130" x2="200" y2="60" stroke="#7fff6b" stroke-width="0.8" stroke-dasharray="2,2"/>
+        <line x1="235" y1="140" x2="200" y2="60" stroke="#6b7fa3" stroke-width="0.7" stroke-dasharray="2,2"/>
+        <line x1="235" y1="140" x2="240" y2="75" stroke="#6b7fa3" stroke-width="0.7" stroke-dasharray="2,2"/>
+
+        <!-- Legend -->
+        <circle cx="15" cy="200" r="4" fill="#ff6b35"/>
+        <text x="23" y="204" fill="#ff6b35" font-size="9" font-family="'DM Sans',sans-serif">local map points (red)</text>
+        <circle cx="15" cy="215" r="4" fill="#6b7fa3"/>
+        <text x="23" y="219" fill="#6b7fa3" font-size="9" font-family="'DM Sans',sans-serif">global map points</text>
+        <polygon points="145,196 138,210 152,210" fill="none" stroke="#7fff6b" stroke-width="1.5"/>
+        <text x="157" y="207" fill="#7fff6b" font-size="9" font-family="'DM Sans',sans-serif">current camera</text>
+        <polygon points="145,215 138,229 152,229" fill="none" stroke="#00d4ff" stroke-width="1.5"/>
+        <text x="157" y="226" fill="#00d4ff" font-size="9" font-family="'DM Sans',sans-serif">keyframes</text>
+      </svg>
+      <div style="font-size:0.7rem; color:var(--muted); margin-top:0.3rem">Schematic of Fig. 2(a) — fr3_long_office_household</div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 5 — Covisibility & Essential Graph
+══════════════════════════════════════════ -->
+<section>
+  <h2>Covisibility Graph &amp; Essential Graph</h2>
+  <div class="two-col">
+    <div>
+      <span class="label">Covisibility Graph</span>
+      <ul>
+        <li>Undirected weighted graph over <em>keyframes</em></li>
+        <li>Edge exists if two KFs share <strong>≥15 map points</strong></li>
+        <li>Edge weight = number of <em>common observations</em></li>
+        <li>Enables <strong>local-map retrieval</strong> — focus tracking without scanning full map</li>
+      </ul>
+      <span class="label" style="margin-top:0.8rem">Essential Graph</span>
+      <ul>
+        <li>Sparser subgraph — retains <em>all nodes</em>, fewer edges</li>
+        <li>Includes: spanning tree + edges with <strong>θ ≥ 100</strong> + loop closure edges</li>
+        <li>Used for <em>pose graph optimization</em> after loop closure</li>
+        <li>~5× keyframe count edges — tight, fast to optimize</li>
+      </ul>
+    </div>
+    <div>
+      <!-- Covisibility + essential graph SVG (inspired by Fig 2b/2d) -->
+      <svg viewBox="0 0 260 290" xmlns="http://www.w3.org/2000/svg" style="width:100%">
+        <text x="5" y="14" fill="#7fff6b" font-size="9" font-family="'DM Sans',sans-serif">Covisibility Graph</text>
+        <!-- KF nodes -->
+        <circle cx="50"  cy="60"  r="7" fill="#111827" stroke="#00d4ff" stroke-width="1.5"/>
+        <circle cx="100" cy="40"  r="7" fill="#111827" stroke="#00d4ff" stroke-width="1.5"/>
+        <circle cx="150" cy="50"  r="7" fill="#111827" stroke="#00d4ff" stroke-width="1.5"/>
+        <circle cx="200" cy="35"  r="7" fill="#111827" stroke="#00d4ff" stroke-width="1.5"/>
+        <circle cx="210" cy="80"  r="7" fill="#111827" stroke="#00d4ff" stroke-width="1.5"/>
+        <circle cx="160" cy="100" r="7" fill="#111827" stroke="#00d4ff" stroke-width="1.5"/>
+        <circle cx="100" cy="100" r="7" fill="#111827" stroke="#00d4ff" stroke-width="1.5"/>
+        <circle cx="55"  cy="105" r="7" fill="#111827" stroke="#00d4ff" stroke-width="1.5"/>
+        <!-- Dense covis edges -->
+        <line x1="50" y1="60" x2="100" y2="40" stroke="#7fff6b" stroke-width="2.5" opacity="0.6"/>
+        <line x1="100" y1="40" x2="150" y2="50" stroke="#7fff6b" stroke-width="2" opacity="0.6"/>
+        <line x1="150" y1="50" x2="200" y2="35" stroke="#7fff6b" stroke-width="1.5" opacity="0.5"/>
+        <line x1="200" y1="35" x2="210" y2="80" stroke="#7fff6b" stroke-width="2" opacity="0.6"/>
+        <line x1="210" y1="80" x2="160" y2="100" stroke="#7fff6b" stroke-width="2.5" opacity="0.6"/>
+        <line x1="160" y1="100" x2="100" y2="100" stroke="#7fff6b" stroke-width="2" opacity="0.6"/>
+        <line x1="100" y1="100" x2="55"  y2="105" stroke="#7fff6b" stroke-width="1.5" opacity="0.5"/>
+        <line x1="55"  y1="105" x2="50"  y2="60"  stroke="#7fff6b" stroke-width="2" opacity="0.6"/>
+        <!-- Cross edges (high covis) -->
+        <line x1="50"  y1="60"  x2="100" y2="100" stroke="#7fff6b" stroke-width="1" opacity="0.3"/>
+        <line x1="100" y1="40"  x2="160" y2="100" stroke="#7fff6b" stroke-width="1" opacity="0.3"/>
+        <line x1="150" y1="50"  x2="210" y2="80"  stroke="#7fff6b" stroke-width="1" opacity="0.3"/>
+        <line x1="150" y1="50"  x2="100" y2="100" stroke="#7fff6b" stroke-width="1" opacity="0.3"/>
+
+        <!-- Loop closure edge -->
+        <path d="M50,60 Q130,20 210,80" fill="none" stroke="#ff6b35" stroke-width="2" stroke-dasharray="5,3"/>
+        <text x="95" y="22" fill="#ff6b35" font-size="8" font-family="'DM Sans',sans-serif">loop closure edge</text>
+
+        <!-- Essential graph below -->
+        <text x="5" y="155" fill="#00d4ff" font-size="9" font-family="'DM Sans',sans-serif">Essential Graph (sparser)</text>
+        <circle cx="50"  cy="200" r="7" fill="#111827" stroke="#00d4ff" stroke-width="1.5"/>
+        <circle cx="100" cy="180" r="7" fill="#111827" stroke="#00d4ff" stroke-width="1.5"/>
+        <circle cx="150" cy="190" r="7" fill="#111827" stroke="#00d4ff" stroke-width="1.5"/>
+        <circle cx="200" cy="175" r="7" fill="#111827" stroke="#00d4ff" stroke-width="1.5"/>
+        <circle cx="210" cy="220" r="7" fill="#111827" stroke="#00d4ff" stroke-width="1.5"/>
+        <circle cx="160" cy="240" r="7" fill="#111827" stroke="#00d4ff" stroke-width="1.5"/>
+        <circle cx="100" cy="240" r="7" fill="#111827" stroke="#00d4ff" stroke-width="1.5"/>
+        <circle cx="55"  cy="245" r="7" fill="#111827" stroke="#00d4ff" stroke-width="1.5"/>
+        <!-- Spanning tree (green) -->
+        <line x1="50" y1="200" x2="100" y2="180" stroke="#7fff6b" stroke-width="1.8"/>
+        <line x1="100" y1="180" x2="150" y2="190" stroke="#7fff6b" stroke-width="1.8"/>
+        <line x1="150" y1="190" x2="200" y2="175" stroke="#7fff6b" stroke-width="1.8"/>
+        <line x1="200" y1="175" x2="210" y2="220" stroke="#7fff6b" stroke-width="1.8"/>
+        <line x1="210" y1="220" x2="160" y2="240" stroke="#7fff6b" stroke-width="1.8"/>
+        <line x1="160" y1="240" x2="100" y2="240" stroke="#7fff6b" stroke-width="1.8"/>
+        <line x1="100" y1="240" x2="55"  y2="245" stroke="#7fff6b" stroke-width="1.8"/>
+        <!-- High covis edges only (θ≥100) -->
+        <line x1="50"  y1="200" x2="100" y2="240" stroke="#6b7fa3" stroke-width="1" opacity="0.6"/>
+        <line x1="150" y1="190" x2="210" y2="220" stroke="#6b7fa3" stroke-width="1" opacity="0.6"/>
+        <!-- Loop closure -->
+        <path d="M50,200 Q130,162 210,220" fill="none" stroke="#ff6b35" stroke-width="1.8" stroke-dasharray="5,3"/>
+
+        <!-- Legend -->
+        <line x1="5" y1="278" x2="25" y2="278" stroke="#7fff6b" stroke-width="1.8"/>
+        <text x="28" y="282" fill="#7fff6b" font-size="8" font-family="'DM Sans',sans-serif">spanning tree</text>
+        <line x1="100" y1="278" x2="120" y2="278" stroke="#6b7fa3" stroke-width="1"/>
+        <text x="123" y="282" fill="#6b7fa3" font-size="8" font-family="'DM Sans',sans-serif">high covis</text>
+        <line x1="178" y1="278" x2="198" y2="278" stroke="#ff6b35" stroke-width="1.5" stroke-dasharray="4,2"/>
+        <text x="201" y="282" fill="#ff6b35" font-size="8" font-family="'DM Sans',sans-serif">loop</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 6 — Tracking Thread
+══════════════════════════════════════════ -->
+<section>
+  <h2>Thread ①: Tracking</h2>
+  <div class="two-col-6040">
+    <div>
+      <div class="pipeline" style="margin-bottom:1rem">
+        <div class="pstep c">Extract<br/>ORB</div><div class="parrow">→</div>
+        <div class="pstep">Init Pose<br/>Estimate</div><div class="parrow">→</div>
+        <div class="pstep">Track<br/>Local Map</div><div class="parrow">→</div>
+        <div class="pstep m">New KF?</div>
+      </div>
+      <ul>
+        <li><strong>ORB extraction:</strong> 8 scale levels, scale factor 1.2 — homogeneous grid distribution</li>
+        <li><em>Initial pose:</em> constant velocity model → guided search in previous frame</li>
+        <li><strong>Relocalization:</strong> if tracking lost → DBoW2 query → RANSAC PnP</li>
+        <li><em>Track local map:</em> project map points from covisibility neighbors → refine pose</li>
+        <li><strong>New keyframe condition:</strong> visual change &gt;10%, ≥50 tracked points, &gt;20 frames since reloc</li>
+      </ul>
+      <div class="callout">
+        Tracking runs at <em>25–30 Hz</em>. Most demanding step: tracking the local map (~15 ms median)
+      </div>
+    </div>
+    <div>
+      <!-- motion-only BA illustration -->
+      <svg viewBox="0 0 220 240" xmlns="http://www.w3.org/2000/svg" style="width:100%">
+        <defs>
+          <marker id="c1" markerWidth="6" markerHeight="5" refX="6" refY="2.5" orient="auto">
+            <polygon points="0 0,6 2.5,0 5" fill="#ff6b35"/>
+          </marker>
+        </defs>
+        <text x="5" y="14" fill="#6b7fa3" font-size="9" font-family="'DM Sans',sans-serif">Motion-only BA</text>
+        <!-- Fixed map points -->
+        <circle cx="60"  cy="50"  r="5" fill="#6b7fa3"/>
+        <circle cx="120" cy="40"  r="5" fill="#6b7fa3"/>
+        <circle cx="170" cy="65"  r="5" fill="#6b7fa3"/>
+        <circle cx="90"  cy="80"  r="5" fill="#6b7fa3"/>
+        <circle cx="150" cy="95"  r="5" fill="#6b7fa3"/>
+        <text x="5" y="115" fill="#6b7fa3" font-size="8" font-family="'DM Sans',sans-serif">Fixed 3D map points</text>
+
+        <!-- Camera pose: initial estimate -->
+        <polygon points="110,145 90,175 130,175" fill="none" stroke="#ff6b35" stroke-width="1.5" stroke-dasharray="3,2"/>
+        <text x="60" y="170" fill="#ff6b35" font-size="8" font-family="'DM Sans',sans-serif">init estimate</text>
+
+        <!-- Camera pose: optimized -->
+        <polygon points="115,150 95,180 135,180" fill="none" stroke="#00d4ff" stroke-width="2"/>
+        <text x="140" y="175" fill="#00d4ff" font-size="8" font-family="'DM Sans',sans-serif">optimized</text>
+
+        <!-- Reprojection error lines -->
+        <line x1="110" y1="145" x2="60"  y2="50"  stroke="#ff6b35" stroke-width="0.8" stroke-dasharray="2,2"/>
+        <line x1="110" y1="145" x2="120" y2="40"  stroke="#ff6b35" stroke-width="0.8" stroke-dasharray="2,2"/>
+        <line x1="110" y1="145" x2="170" y2="65"  stroke="#ff6b35" stroke-width="0.8" stroke-dasharray="2,2"/>
+        <line x1="115" y1="150" x2="60"  y2="50"  stroke="#00d4ff" stroke-width="1"/>
+        <line x1="115" y1="150" x2="120" y2="40"  stroke="#00d4ff" stroke-width="1"/>
+        <line x1="115" y1="150" x2="170" y2="65"  stroke="#00d4ff" stroke-width="1"/>
+
+        <!-- minimize arrow -->
+        <text x="30" y="205" fill="#e8edf5" font-size="8" font-family="'DM Sans',sans-serif">Minimize reprojection error:</text>
+        <text x="30" y="220" fill="#accent3" font-size="9" font-family="'Space Mono',monospace" style="fill:#7fff6b">Σ ‖xᵢⱼ − π(Tᵢw, Xwⱼ)‖²</text>
+        <text x="30" y="234" fill="#6b7fa3" font-size="8" font-family="'DM Sans',sans-serif">points fixed, only pose optimized</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 7 — Local Mapping Thread
+══════════════════════════════════════════ -->
+<section>
+  <h2>Thread ②: Local Mapping</h2>
+  <div class="two-col">
+    <div>
+      <ul>
+        <li><strong>Keyframe insertion:</strong> update covisibility graph, compute BoW representation</li>
+        <li><em>Map point culling:</em> must be visible in &gt;25% of predicted frames, seen in ≥3 KFs after first 3</li>
+        <li><strong>New point creation:</strong> triangulate unmatched ORBs in covisibility neighbors — check parallax, reprojection error, depth</li>
+        <li><em>Local bundle adjustment:</em> optimize current KF + covisible KFs + their map points jointly</li>
+        <li><strong>Keyframe culling:</strong> delete if 90% of its map points visible in ≥3 other KFs at same/finer scale</li>
+      </ul>
+      <div class="callout green">
+        "Generous in spawning, restrictive in culling" — map stays compact and accurate
+      </div>
+    </div>
+    <div>
+      <!-- Survival of fittest / culling diagram -->
+      <svg viewBox="0 0 240 270" xmlns="http://www.w3.org/2000/svg" style="width:100%">
+        <text x="5" y="14" fill="#6b7fa3" font-size="9" font-family="'DM Sans',sans-serif">Keyframe lifetime</text>
+
+        <!-- Timeline -->
+        <line x1="20" y1="30" x2="20" y2="240" stroke="#1e2d45" stroke-width="1"/>
+        <text x="5" y="28" fill="#6b7fa3" font-size="8" font-family="'Space Mono',monospace">t</text>
+
+        <!-- KF bars: created then some culled -->
+        <!-- KF1 - survives -->
+        <rect x="25" y="35"  width="180" height="10" rx="2" fill="#00d4ff" opacity="0.7"/>
+        <text x="210" y="44" fill="#7fff6b" font-size="7" font-family="'DM Sans',sans-serif">kept</text>
+
+        <!-- KF2 - culled early -->
+        <rect x="25" y="52"  width="40"  height="10" rx="2" fill="#ff6b35" opacity="0.7"/>
+        <line x1="65" y1="52" x2="65" y2="62" stroke="#ff6b35" stroke-width="1"/>
+        <text x="70" y="61" fill="#ff6b35" font-size="7" font-family="'DM Sans',sans-serif">culled (redundant)</text>
+
+        <!-- KF3 - survives -->
+        <rect x="25" y="69"  width="180" height="10" rx="2" fill="#00d4ff" opacity="0.7"/>
+        <text x="210" y="78" fill="#7fff6b" font-size="7" font-family="'DM Sans',sans-serif">kept</text>
+
+        <!-- KF4 - culled mid -->
+        <rect x="25" y="86"  width="80"  height="10" rx="2" fill="#ff6b35" opacity="0.6"/>
+        <text x="110" y="95" fill="#ff6b35" font-size="7" font-family="'DM Sans',sans-serif">culled</text>
+
+        <!-- KF5 - culled early -->
+        <rect x="25" y="103" width="25"  height="10" rx="2" fill="#ff6b35" opacity="0.5"/>
+        <text x="55"  y="112" fill="#ff6b35" font-size="7" font-family="'DM Sans',sans-serif">culled</text>
+
+        <!-- KF6 - survives -->
+        <rect x="25" y="120" width="180" height="10" rx="2" fill="#00d4ff" opacity="0.7"/>
+        <text x="210" y="129" fill="#7fff6b" font-size="7" font-family="'DM Sans',sans-serif">kept</text>
+
+        <!-- KF7 - culled early -->
+        <rect x="25" y="137" width="35"  height="10" rx="2" fill="#ff6b35" opacity="0.5"/>
+        <text x="65"  y="146" fill="#ff6b35" font-size="7" font-family="'DM Sans',sans-serif">culled</text>
+
+        <!-- KF8 - survives -->
+        <rect x="25" y="154" width="180" height="10" rx="2" fill="#00d4ff" opacity="0.7"/>
+
+        <!-- KF9 - culled -->
+        <rect x="25" y="171" width="60"  height="10" rx="2" fill="#ff6b35" opacity="0.6"/>
+
+        <!-- KF10 - kept -->
+        <rect x="25" y="188" width="180" height="10" rx="2" fill="#00d4ff" opacity="0.7"/>
+
+        <!-- Annotation -->
+        <text x="25" y="222" fill="#6b7fa3" font-size="8" font-family="'DM Sans',sans-serif">Most KFs culled quickly after creation</text>
+        <text x="25" y="235" fill="#6b7fa3" font-size="8" font-family="'DM Sans',sans-serif">Small representative subset survives</text>
+        <text x="25" y="248" fill="#7fff6b" font-size="8" font-family="'DM Sans',sans-serif">→ map size bounded, not time-growing</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 8 — Loop Closing Thread
+══════════════════════════════════════════ -->
+<section>
+  <h2>Thread ③: Loop Closing</h2>
+  <div class="two-col">
+    <div>
+      <ul>
+        <li><strong>Candidate detection:</strong> DBoW2 query against DB; require 3 consecutive consistent candidates</li>
+        <li><em>Similarity transformation:</em> find <strong>Sim(3)</strong> — 3 translation, 3 rotation, <em>1 scale</em> — corrects monocular scale drift</li>
+        <li><strong>RANSAC</strong> over 3D–3D ORB correspondences (Horn's method)</li>
+        <li><em>Loop fusion:</em> align both sides of loop, fuse duplicate map points</li>
+        <li><strong>Essential Graph optimization:</strong> distribute loop error along sparse subgraph</li>
+      </ul>
+      <div class="callout blue">
+        Why Sim(3) not SE(3)? Monocular SLAM has <em>scale ambiguity</em> — scale can drift over time. Sim(3) corrects it.
+      </div>
+    </div>
+    <div>
+      <!-- Before/after loop closure inspired by Fig 5 -->
+      <svg viewBox="0 0 240 270" xmlns="http://www.w3.org/2000/svg" style="width:100%">
+        <text x="5" y="13" fill="#ff6b35" font-size="9" font-family="'DM Sans',sans-serif">Before loop closure</text>
+        <!-- Drifted trajectory -->
+        <path d="M30,100 Q50,50 100,40 Q150,30 190,55 Q220,75 215,100 Q210,125 195,130" fill="none" stroke="#ff6b35" stroke-width="1.5" stroke-dasharray="4,3"/>
+        <circle cx="30"  cy="100" r="4" fill="#7fff6b"/>
+        <circle cx="195" cy="130" r="4" fill="#ff6b35"/>
+        <!-- Local map (red) at closure point -->
+        <ellipse cx="180" cy="100" rx="30" ry="18" fill="none" stroke="#ff6b35" stroke-width="1" stroke-dasharray="2,2" opacity="0.5"/>
+        <text x="5"  cy="145" y="148" fill="#ff6b35" font-size="8" font-family="'DM Sans',sans-serif">gap = accumulated drift</text>
+
+        <!-- Gap indicator -->
+        <line x1="30" y1="100" x2="195" y2="130" stroke="#6b7fa3" stroke-width="1" stroke-dasharray="2,2"/>
+        <text x="90" y="125" fill="#6b7fa3" font-size="8" font-family="'DM Sans',sans-serif">drift</text>
+
+        <text x="5" y="168" fill="#00d4ff" font-size="9" font-family="'DM Sans',sans-serif">After Essential Graph optimization</text>
+        <!-- Corrected trajectory -->
+        <path d="M30,230 Q75,205 120,200 Q165,196 195,210 Q215,223 205,237 Q165,252 100,255 Q55,258 30,230" fill="none" stroke="#00d4ff" stroke-width="1.8"/>
+        <!-- Loop closure constraint -->
+        <line x1="205" y1="237" x2="30" y2="230" stroke="#7fff6b" stroke-width="1.5" stroke-dasharray="5,3"/>
+        <circle cx="30"  cy="230" r="4" fill="#7fff6b"/>
+        <circle cx="205" cy="237" r="4" fill="#00d4ff"/>
+        <text x="80" y="262" fill="#7fff6b" font-size="8" font-family="'DM Sans',sans-serif">Sim(3) constraint closes loop</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 9 — Relocalization & Map Reuse
+══════════════════════════════════════════ -->
+<section>
+  <h2>Relocalization &amp; Lifelong Map Reuse</h2>
+  <div class="two-col">
+    <div>
+      <span class="label">Relocalization</span>
+      <ul>
+        <li>Triggered when tracking is <strong>lost</strong> (occlusion, fast motion)</li>
+        <li>Frame → BoW vector → query recognition DB → <em>top candidates</em></li>
+        <li>RANSAC PnP per candidate → accept if <strong>enough inliers</strong></li>
+        <li>High invariance to viewpoint — ORB is rotation &amp; scale invariant</li>
+      </ul>
+      <span class="label" style="margin-top:0.8rem">Map Reuse</span>
+      <ul>
+        <li>Map persists across sessions — load and localize in <em>existing map</em></li>
+        <li>Keyframe culling keeps map <strong>bounded</strong> even in repeated visits</li>
+        <li>Map grows only when <em>new visual content</em> appears</li>
+      </ul>
+      <div class="callout">
+        fr2_xyz: ORB-SLAM relocalizes <em>78%</em> of frames vs PTAM's 35%
+      </div>
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:0.8rem">
+        <h3>Lifelong Operation</h3>
+        <ul>
+          <li>PTAM: keyframes grow <strong>unboundedly</strong> over time</li>
+          <li>ORB-SLAM: map size <em>saturates</em> once scene is covered</li>
+          <li>Dynamic changes → new KFs for novel content only</li>
+        </ul>
+      </div>
+      <!-- Lifelong KF count inspired by Fig 9 -->
+      <svg viewBox="0 0 240 150" xmlns="http://www.w3.org/2000/svg" style="width:100%">
+        <text x="5" y="13" fill="#6b7fa3" font-size="9" font-family="'DM Sans',sans-serif">Keyframe count over time (static scene)</text>
+        <!-- Axes -->
+        <line x1="25" y1="120" x2="220" y2="120" stroke="#1e2d45" stroke-width="1"/>
+        <line x1="25" y1="20"  x2="25"  y2="120" stroke="#1e2d45" stroke-width="1"/>
+        <text x="215" y="128" fill="#6b7fa3" font-size="7" font-family="'Space Mono',monospace">t</text>
+        <text x="5"   y="23"  fill="#6b7fa3" font-size="7" font-family="'Space Mono',monospace">KF</text>
+        <!-- PTAM: always growing -->
+        <path d="M25,110 Q80,95 130,75 Q170,58 220,35" fill="none" stroke="#ff6b35" stroke-width="1.5"/>
+        <text x="190" y="32" fill="#ff6b35" font-size="8" font-family="'DM Sans',sans-serif">PTAM</text>
+        <!-- ORB-SLAM: saturates -->
+        <path d="M25,110 Q60,90 90,72 Q115,62 140,60 Q170,58 220,58" fill="none" stroke="#00d4ff" stroke-width="1.5"/>
+        <text x="185" y="55" fill="#00d4ff" font-size="8" font-family="'DM Sans',sans-serif">ORB-SLAM</text>
+        <!-- saturation annotation -->
+        <line x1="130" y1="60" x2="130" y2="120" stroke="#6b7fa3" stroke-width="0.8" stroke-dasharray="2,2"/>
+        <text x="105" y="136" fill="#6b7fa3" font-size="7" font-family="'DM Sans',sans-serif">scene covered</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 10 — Results
+══════════════════════════════════════════ -->
+<section>
+  <h2>Results: Accuracy &amp; Scale</h2>
+  <div class="two-col">
+    <div>
+      <span class="label">TUM RGB-D — Absolute Trajectory Error (cm)</span>
+      <table class="stat">
+        <tr><th>Sequence</th><th>ORB-SLAM</th><th>PTAM</th><th>LSD-SLAM</th></tr>
+        <tr><td>fr1_xyz</td>      <td class="best">0.90</td><td>1.15</td><td>9.00</td></tr>
+        <tr><td>fr2_xyz</td>      <td class="best">0.30</td><td>0.20</td><td>2.15</td></tr>
+        <tr><td>fr1_desk</td>     <td class="best">1.69</td><td class="fail">X</td><td>10.65</td></tr>
+        <tr><td>fr3_long_office</td><td class="best">3.45</td><td class="fail">X</td><td>38.53</td></tr>
+        <tr><td>fr3_walk_xyz</td> <td class="best">1.24</td><td class="fail">X</td><td>12.44</td></tr>
+      </table>
+      <div style="font-size:0.68rem; color:var(--muted); margin-top:0.4rem">X = tracking lost. Median over 5 runs, 7-DoF alignment.</div>
+
+      <span class="label" style="margin-top:0.9rem">KITTI Odometry — RMSE (m)</span>
+      <ul>
+        <li>Trajectory error typically <strong>&lt;1%</strong> of path length</li>
+        <li>KITTI 00 (564×496 m): <em>6.68 m</em> RMSE</li>
+        <li>Runs 10 of 11 sequences — fails on highway (no close features)</li>
+      </ul>
+    </div>
+    <div>
+      <div class="callout blue" style="margin-bottom:0.8rem">
+        Feature-based BA outperforms direct methods (LSD-SLAM) on localization accuracy — wide baseline matches reduce depth uncertainty
+      </div>
+      <div class="card hi3">
+        <h3 style="color:var(--accent3)">Key numbers</h3>
+        <ul>
+          <li>Tracking: <em>~30 ms/frame</em> total (25–30 Hz)</li>
+          <li>Local BA: <strong>~300 ms</strong> median (separate thread)</li>
+          <li>Loop detection: <em>sublinear</em> in map size — DBoW2 inverted index</li>
+          <li>Essential Graph opt: <strong>&lt;1 s</strong> vs 14+ s for full BA</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 11 — Limitations & Bridge
+══════════════════════════════════════════ -->
+<section>
+  <h2>Limitations &amp; What Comes Next</h2>
+  <div class="two-col">
+    <div>
+      <span class="label">ORB-SLAM limitations</span>
+      <ul>
+        <li><strong>Sparse map only</strong> — no dense geometry, limited for manipulation or navigation</li>
+        <li><em>Textureless scenes</em> — corners needed; fails on blank walls, asphalt</li>
+        <li><strong>Scale ambiguity</strong> — monocular; scale recovered up to a constant</li>
+        <li><em>No appearance</em> — cannot render the environment, no photo-realism</li>
+        <li><strong>Map representation</strong> is a hard-coded point cloud — not differentiable</li>
+      </ul>
+      <div class="callout" style="margin-top:0.9rem">
+        The pipeline is sound. What if we replaced the <em>map representation</em> with something richer?
+      </div>
+    </div>
+    <div>
+      <div class="card" style="border-color:var(--accent2); background:#1a1208; margin-bottom:0.8rem">
+        <h3 style="color:var(--accent2)">W04 → W05 Bridge</h3>
+        <ul>
+          <li>W04: NeRF &amp; 3DGS as <em>offline</em> reconstruction</li>
+          <li>What if the <strong>MLP or Gaussians</strong> were the map?</li>
+          <li>SLAM pipeline stays; map representation changes <em>everything</em></li>
+        </ul>
+      </div>
+      <div class="card hi" style="margin-bottom:0.5rem">
+        <h3>Section 2: iMAP</h3>
+        <ul><li>MLP as map — <em>first</em> attempt at neural SLAM</li></ul>
+      </div>
+      <div class="card hi">
+        <h3>Section 3: NICE-SLAM</h3>
+        <ul><li>Hierarchical feature grids — fix iMAP's scalability problem</li></ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 12 — Summary (stays up for Q&A)
+══════════════════════════════════════════ -->
+<section>
+  <h2>Section 1 — Key Takeaways</h2>
+  <div class="two-col">
+    <div>
+      <ul>
+        <li><strong>One feature</strong> (ORB) for all tasks — tracking, mapping, relocalization, loop closing — is the key architectural insight</li>
+        <li>Three <em>parallel threads</em>: Tracking (every frame), Local Mapping (per keyframe), Loop Closing (global)</li>
+        <li><strong>Covisibility graph</strong> localizes computation — large maps become tractable</li>
+        <li><em>Essential Graph</em> makes loop correction fast: &lt;1 s vs 72 s for full BA</li>
+        <li><strong>Survival of the fittest</strong>: generous spawn, restrictive cull → compact, bounded map</li>
+        <li>Accuracy: typically <em>&lt;1% of path length</em> on KITTI</li>
+      </ul>
+    </div>
+    <div>
+      <div class="card hi2" style="margin-bottom:0.8rem">
+        <h3 style="color:var(--accent2)">What "map" means here</h3>
+        <ul>
+          <li>Sparse 3D point cloud + keyframe graph</li>
+          <li>No density, no color, no differentiability</li>
+          <li>Fast, accurate — but limited expressiveness</li>
+        </ul>
+      </div>
+      <div class="callout blue">
+        ORB-SLAM is the <em>baseline</em> every neural SLAM paper compares against. Know it well.
+      </div>
+      <div style="margin-top:0.8rem; font-size:0.78rem; color:var(--muted); font-family:var(--mono)">
+        Mur-Artal, Montiel, Tardós · IEEE Trans. Robotics 2015<br/>
+        Code: github.com/raulmur/ORB_SLAM
+      </div>
+    </div>
+  </div>
+</section>
+
+</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/reveal.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/plugin/notes/notes.min.js"></script>
+<script>
+Reveal.initialize({
+  hash: true, slideNumber: true, transition: 'fade',
+  transitionSpeed: 'fast', controls: true, progress: true,
+  center: false, margin: 0.06, width: 1280, height: 720,
+  plugins: [RevealNotes]
+});
+</script>
+</body>
+</html>

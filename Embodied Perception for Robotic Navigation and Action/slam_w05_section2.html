@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>W05 · Section 2 — Neural SLAM | CSIE5452</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/reveal.min.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/theme/black.min.css"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet"/>
+
+<style>
+  :root {
+    --bg:      #0a0f1a;
+    --surface: #111827;
+    --border:  #1e2d45;
+    --accent:  #00d4ff;
+    --accent2: #ff6b35;
+    --accent3: #7fff6b;
+    --accent4: #c084fc;
+    --text:    #e8edf5;
+    --muted:   #6b7fa3;
+    --mono:    'Space Mono', monospace;
+    --sans:    'DM Sans', sans-serif;
+  }
+  .reveal { font-family: var(--sans); background: var(--bg); }
+  .reveal .slides { color: var(--text); }
+  .reveal .slide-number { font-family:var(--mono); font-size:0.75rem; background:transparent; color:var(--muted); bottom:18px; right:22px; }
+
+  .two-col   { display:grid; grid-template-columns:1fr 1fr;   gap:1.8rem; align-items:start; margin-top:1rem; }
+  .col-6040  { display:grid; grid-template-columns:3fr 2fr;   gap:1.8rem; align-items:start; margin-top:1rem; }
+  .col-4060  { display:grid; grid-template-columns:2fr 3fr;   gap:1.8rem; align-items:start; margin-top:1rem; }
+
+  .reveal h1,.reveal h2,.reveal h3 { font-family:var(--mono); text-transform:none; letter-spacing:-0.02em; color:var(--text); text-align:left; }
+  .reveal h1 { font-size:2.1rem; line-height:1.2; }
+  .reveal h2 { font-size:1.45rem; border-bottom:1px solid var(--border); padding-bottom:0.4rem; margin-bottom:0.7rem; }
+  .reveal h3 { font-size:1.0rem; color:var(--accent); margin-bottom:0.35rem; }
+
+  .label { font-family:var(--mono); font-size:0.62rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent); margin-bottom:0.4rem; display:block; }
+
+  .reveal ul { list-style:none; padding:0; margin:0; }
+  .reveal ul li { font-size:0.9rem; line-height:1.55; padding:0.25rem 0 0.25rem 1.35rem; position:relative; color:var(--text); font-weight:300; }
+  .reveal ul li::before { content:'▸'; position:absolute; left:0; color:var(--accent); font-size:0.75rem; }
+  .reveal ul li strong { color:var(--accent2); font-weight:700; }
+  .reveal ul li em { color:var(--accent3); font-style:normal; font-weight:500; }
+  .reveal ul li .pu { color:var(--accent4); }
+
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:0.85rem 1.05rem; }
+  .card.hi  { border-color:var(--accent); }
+  .card.hi2 { border-color:var(--accent2); }
+  .card.hi3 { border-color:var(--accent3); }
+  .card.hi4 { border-color:var(--accent4); }
+
+  .callout      { border-left:3px solid var(--accent2); background:#1a1208; padding:0.6rem 0.9rem; border-radius:0 6px 6px 0; font-size:0.86rem; margin-top:0.75rem; }
+  .callout.blue { border-color:var(--accent);  background:#06131e; }
+  .callout.green{ border-color:var(--accent3); background:#0a1a0a; }
+  .callout.pu   { border-color:var(--accent4); background:#0f0a1e; }
+
+  .accent-line { width:60px; height:3px; background:linear-gradient(90deg,var(--accent),var(--accent2)); margin:0.5rem 0 1.3rem; border-radius:2px; }
+
+  /* title */
+  .title-slide .course-tag { font-family:var(--mono); font-size:0.68rem; letter-spacing:0.14em; color:var(--muted); margin-bottom:1.6rem; }
+  .title-slide h1 { font-size:2.4rem; margin-bottom:0.3rem; }
+  .title-slide .subtitle { font-size:1.0rem; color:var(--muted); font-weight:300; margin-bottom:2rem; }
+  .title-slide .meta { font-size:0.74rem; color:var(--muted); font-family:var(--mono); line-height:2; }
+
+  /* demo pause slide */
+  .demo-slide { display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; height:580px; }
+  .demo-badge { font-family:var(--mono); font-size:0.7rem; letter-spacing:0.15em; background:var(--accent2); color:#0a0f1a; padding:0.3rem 0.9rem; border-radius:3px; margin-bottom:1.2rem; display:inline-block; }
+  .demo-url { font-family:var(--mono); font-size:0.9rem; color:var(--accent); margin-top:0.6rem; }
+  .demo-ts  { font-family:var(--mono); font-size:0.75rem; color:var(--accent3); margin-top:0.3rem; }
+
+  /* comparison table */
+  table.cmp { width:100%; border-collapse:collapse; font-size:0.76rem; }
+  table.cmp th { font-family:var(--mono); font-size:0.65rem; color:var(--muted); padding:0.28rem 0.5rem; border-bottom:1px solid var(--border); text-align:left; }
+  table.cmp td { padding:0.24rem 0.5rem; color:var(--text); font-weight:300; }
+  table.cmp tr.hi-row td { background:#0d1a2e; }
+  table.cmp td.best { color:var(--accent3); font-weight:700; }
+  table.cmp td.bad  { color:var(--accent2); }
+  table.cmp td.mid  { color:var(--accent); }
+</style>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+<!-- ══════════════════════════════════════════
+     SLIDE 1 — Title
+══════════════════════════════════════════ -->
+<section data-background-color="#0a0f1a">
+  <div class="title-slide">
+    <div class="course-tag">CSIE5452 · Embodied Perception and Action · Week 05 · Section 2 of 4</div>
+    <h1>Neural SLAM:</h1>
+    <h1 style="color:var(--accent)">From iMAP to NICE-SLAM</h1>
+    <div class="accent-line"></div>
+    <div class="subtitle">Sucar et al. ICCV 2021 &nbsp;·&nbsp; Zhu, Peng et al. CVPR 2022 &nbsp;·&nbsp; ~30 min</div>
+    <div class="meta">
+      What if the map is a neural network? &nbsp;·&nbsp; RGB-D · dense · differentiable
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 2 — The Shift: From Points to Networks
+══════════════════════════════════════════ -->
+<section>
+  <h2>The Shift: From Sparse Points to Neural Maps</h2>
+  <div class="two-col">
+    <div>
+      <div class="card hi2" style="margin-bottom:0.8rem">
+        <h3 style="color:var(--accent2)">ORB-SLAM map (classical)</h3>
+        <ul>
+          <li>Sparse 3D points + keyframe graph</li>
+          <li><strong>Not renderable</strong> — no novel view synthesis</li>
+          <li>No geometry between points</li>
+          <li>Not differentiable — cannot optimize via rendering loss</li>
+        </ul>
+      </div>
+      <div class="card hi">
+        <h3>Neural map (this section)</h3>
+        <ul>
+          <li>MLP maps <em>(x,y,z) → occupancy + colour</em></li>
+          <li><strong>Dense</strong> — full surface reconstruction</li>
+          <li>Differentiable — optimize both map <em>and</em> pose via backprop</li>
+          <li>Predictive — <strong>fills in unobserved regions</strong></li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="callout blue" style="margin-bottom:0.9rem">
+        Bridge from W04: NeRF showed MLPs can represent scenes offline. iMAP asks: <em>can it work online, in real time, as the camera moves?</em>
+      </div>
+      <!-- MLP map concept diagram -->
+      <svg viewBox="0 0 240 230" xmlns="http://www.w3.org/2000/svg" style="width:100%">
+        <defs>
+          <marker id="n1" markerWidth="6" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,6 2.5,0 5" fill="#6b7fa3"/></marker>
+          <marker id="n2" markerWidth="6" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,6 2.5,0 5" fill="#00d4ff"/></marker>
+        </defs>
+        <!-- input coord -->
+        <rect x="5" y="95" width="44" height="30" rx="4" fill="#111827" stroke="#6b7fa3" stroke-width="1"/>
+        <text x="27" y="108" text-anchor="middle" fill="#6b7fa3" font-size="9" font-family="'Space Mono',monospace">(x, y, z)</text>
+        <text x="27" y="119" text-anchor="middle" fill="#6b7fa3" font-size="7" font-family="'DM Sans',sans-serif">3D query</text>
+
+        <!-- MLP layers -->
+        <rect x="65" y="60" width="110" height="100" rx="6" fill="#0d1a2e" stroke="#00d4ff" stroke-width="1.5"/>
+        <text x="120" y="78" text-anchor="middle" fill="#00d4ff" font-size="9" font-family="'Space Mono',monospace">F_θ  (MLP)</text>
+        <!-- layer dots -->
+        <circle cx="90"  cy="110" r="5" fill="#00d4ff" opacity="0.7"/>
+        <circle cx="110" cy="100" r="5" fill="#00d4ff" opacity="0.7"/>
+        <circle cx="110" cy="120" r="5" fill="#00d4ff" opacity="0.7"/>
+        <circle cx="130" cy="95"  r="5" fill="#00d4ff" opacity="0.7"/>
+        <circle cx="130" cy="110" r="5" fill="#00d4ff" opacity="0.7"/>
+        <circle cx="130" cy="125" r="5" fill="#00d4ff" opacity="0.7"/>
+        <circle cx="150" cy="105" r="5" fill="#00d4ff" opacity="0.7"/>
+        <circle cx="150" cy="120" r="5" fill="#00d4ff" opacity="0.7"/>
+        <!-- connection lines -->
+        <line x1="95" y1="110" x2="105" y2="100" stroke="#00d4ff" stroke-width="0.5" opacity="0.4"/>
+        <line x1="95" y1="110" x2="105" y2="120" stroke="#00d4ff" stroke-width="0.5" opacity="0.4"/>
+        <line x1="115" y1="100" x2="125" y2="95"  stroke="#00d4ff" stroke-width="0.5" opacity="0.4"/>
+        <line x1="115" y1="100" x2="125" y2="110" stroke="#00d4ff" stroke-width="0.5" opacity="0.4"/>
+        <line x1="115" y1="120" x2="125" y2="110" stroke="#00d4ff" stroke-width="0.5" opacity="0.4"/>
+        <line x1="115" y1="120" x2="125" y2="125" stroke="#00d4ff" stroke-width="0.5" opacity="0.4"/>
+        <line x1="135" y1="95"  x2="145" y2="105" stroke="#00d4ff" stroke-width="0.5" opacity="0.4"/>
+        <line x1="135" y1="110" x2="145" y2="105" stroke="#00d4ff" stroke-width="0.5" opacity="0.4"/>
+        <line x1="135" y1="110" x2="145" y2="120" stroke="#00d4ff" stroke-width="0.5" opacity="0.4"/>
+        <line x1="135" y1="125" x2="145" y2="120" stroke="#00d4ff" stroke-width="0.5" opacity="0.4"/>
+        <text x="120" y="148" text-anchor="middle" fill="#6b7fa3" font-size="8" font-family="'DM Sans',sans-serif">4 hidden layers, width 256</text>
+        <text x="120" y="158" text-anchor="middle" fill="#6b7fa3" font-size="7" font-family="'DM Sans',sans-serif">~1 MB parameters</text>
+
+        <!-- outputs -->
+        <rect x="190" y="85" width="46" height="22" rx="3" fill="#111827" stroke="#ff6b35" stroke-width="1"/>
+        <text x="213" y="99" text-anchor="middle" fill="#ff6b35" font-size="8" font-family="'Space Mono',monospace">occ ρ</text>
+        <rect x="190" y="115" width="46" height="22" rx="3" fill="#111827" stroke="#7fff6b" stroke-width="1"/>
+        <text x="213" y="129" text-anchor="middle" fill="#7fff6b" font-size="8" font-family="'Space Mono',monospace">color c</text>
+
+        <!-- arrows -->
+        <line x1="49"  y1="110" x2="64"  y2="110" stroke="#6b7fa3" stroke-width="1" marker-end="url(#n1)"/>
+        <line x1="175" y1="100" x2="189" y2="96"  stroke="#ff6b35" stroke-width="1" marker-end="url(#n1)"/>
+        <line x1="175" y1="115" x2="189" y2="121" stroke="#7fff6b" stroke-width="1" marker-end="url(#n1)"/>
+
+        <!-- volume render arrow -->
+        <line x1="213" y1="137" x2="213" y2="170" stroke="#6b7fa3" stroke-width="1" marker-end="url(#n1)"/>
+        <rect x="180" y="172" width="66" height="22" rx="3" fill="#111827" stroke="#c084fc" stroke-width="1"/>
+        <text x="213" y="185" text-anchor="middle" fill="#c084fc" font-size="7" font-family="'Space Mono',monospace">Vol. Render</text>
+        <text x="120" y="205" text-anchor="middle" fill="#6b7fa3" font-size="8" font-family="'DM Sans',sans-serif">→ rendered D̂, Î → loss → backprop</text>
+        <text x="120" y="218" text-anchor="middle" fill="#6b7fa3" font-size="8" font-family="'DM Sans',sans-serif">updates θ and pose T jointly</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 3 — iMAP System
+══════════════════════════════════════════ -->
+<section>
+  <h2>iMAP: The MLP as Map</h2>
+  <div class="col-4060">
+    <div>
+      <ul>
+        <li><strong>Input:</strong> RGB-D stream (Azure Kinect)</li>
+        <li>Single MLP <em>F_θ</em>: (x,y,z) → (occupancy, colour)</li>
+        <li><strong>Two parallel processes</strong> — same as PTAM spirit</li>
+        <li><em>Process 1 — Tracking:</em> fix network, optimize pose T at ~10 Hz</li>
+        <li><em>Process 2 — Mapping:</em> joint optimization of θ + keyframe poses at ~2 Hz</li>
+        <li><strong>Loss:</strong> geometric L1 depth + photometric L1 colour</li>
+        <li>Optimizer: <em>ADAM</em> on both θ and {T<sub>i</sub>}</li>
+        <li><strong>No prior training</strong> — network initialized randomly</li>
+      </ul>
+      <div class="callout blue">
+        The entire scene = <em>1 MB</em> of network weights. No point cloud. No mesh. Just θ.
+      </div>
+    </div>
+    <div>
+      <!-- iMAP pipeline from uploaded Fig — redrawn faithfully -->
+      <svg viewBox="0 0 320 310" xmlns="http://www.w3.org/2000/svg" style="width:100%">
+        <defs>
+          <marker id="p1" markerWidth="6" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,6 2.5,0 5" fill="#6b7fa3"/></marker>
+          <marker id="p2" markerWidth="6" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,6 2.5,0 5" fill="#ff6b35"/></marker>
+          <marker id="p3" markerWidth="6" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,6 2.5,0 5" fill="#00d4ff"/></marker>
+        </defs>
+
+        <!-- Process 1 band -->
+        <rect x="0" y="0" width="320" height="12" rx="3" fill="#0d1a2e"/>
+        <text x="6" y="9" fill="#00d4ff" font-size="7" font-family="'Space Mono',monospace">PROCESS 1 — TRACKING</text>
+
+        <!-- RGB-D input -->
+        <rect x="5" y="18" width="52" height="32" rx="4" fill="#111827" stroke="#6b7fa3" stroke-width="1.2"/>
+        <text x="31" y="31" text-anchor="middle" fill="#e8edf5" font-size="8" font-family="'Space Mono',monospace">I, D</text>
+        <text x="31" y="42" text-anchor="middle" fill="#6b7fa3" font-size="7" font-family="'DM Sans',sans-serif">RGB-D</text>
+
+        <!-- Tracking box -->
+        <rect x="70" y="18" width="70" height="32" rx="4" fill="#ff6b35" opacity="0.85"/>
+        <text x="105" y="35" text-anchor="middle" fill="#0a0f1a" font-size="9" font-family="'Space Mono',monospace">Tracking</text>
+        <text x="105" y="45" text-anchor="middle" fill="#0a0f1a" font-size="7" font-family="'DM Sans',sans-serif">fix F_θ, opt. T</text>
+
+        <!-- T output -->
+        <rect x="155" y="18" width="38" height="32" rx="4" fill="#111827" stroke="#00d4ff" stroke-width="1.2"/>
+        <text x="174" y="31" text-anchor="middle" fill="#00d4ff" font-size="9" font-family="'Space Mono',monospace">T</text>
+        <text x="174" y="43" text-anchor="middle" fill="#6b7fa3" font-size="7" font-family="'DM Sans',sans-serif">pose</text>
+
+        <!-- arrows P1 -->
+        <line x1="57" y1="34" x2="69" y2="34" stroke="#6b7fa3" stroke-width="1" marker-end="url(#p1)"/>
+        <line x1="140" y1="34" x2="154" y2="34" stroke="#6b7fa3" stroke-width="1" marker-end="url(#p1)"/>
+
+        <!-- Feedback: network → tracking -->
+        <path d="M260,90 Q290,60 260,34 L210,34" fill="none" stroke="#00d4ff" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#p3)"/>
+        <text x="270" y="66" fill="#00d4ff" font-size="7" font-family="'DM Sans',sans-serif">F_θ</text>
+
+        <!-- Process 2 band -->
+        <rect x="0" y="62" width="320" height="12" rx="3" fill="#1a1208"/>
+        <text x="6" y="71" fill="#ff6b35" font-size="7" font-family="'Space Mono',monospace">PROCESS 2 — MAPPING</text>
+
+        <!-- Is Keyframe? -->
+        <rect x="5" y="80" width="70" height="32" rx="4" fill="#ff6b35" opacity="0.85"/>
+        <text x="40" y="92" text-anchor="middle" fill="#0a0f1a" font-size="8" font-family="'Space Mono',monospace">Keyframe?</text>
+        <text x="40" y="103" text-anchor="middle" fill="#0a0f1a" font-size="7" font-family="'DM Sans',sans-serif">— Yes</text>
+
+        <!-- Keyframe set -->
+        <rect x="90" y="80" width="70" height="32" rx="4" fill="#111827" stroke="#6b7fa3" stroke-width="1.2"/>
+        <text x="125" y="92" text-anchor="middle" fill="#e8edf5" font-size="8" font-family="'Space Mono',monospace">{I,D,T}ᵢ</text>
+        <text x="125" y="103" text-anchor="middle" fill="#6b7fa3" font-size="7" font-family="'DM Sans',sans-serif">KF set</text>
+
+        <!-- Joint Opt -->
+        <rect x="175" y="80" width="80" height="32" rx="4" fill="#ff6b35" opacity="0.85"/>
+        <text x="215" y="92" text-anchor="middle" fill="#0a0f1a" font-size="8" font-family="'Space Mono',monospace">Joint Opt.</text>
+        <text x="215" y="103" text-anchor="middle" fill="#0a0f1a" font-size="7" font-family="'DM Sans',sans-serif">opt. θ + {T}ᵢ</text>
+
+        <!-- F_θ output -->
+        <rect x="268" y="80" width="48" height="32" rx="4" fill="#111827" stroke="#00d4ff" stroke-width="1.5"/>
+        <text x="292" y="92" text-anchor="middle" fill="#00d4ff" font-size="9" font-family="'Space Mono',monospace">F_θ</text>
+        <text x="292" y="103" text-anchor="middle" fill="#6b7fa3" font-size="7" font-family="'DM Sans',sans-serif">implicit map</text>
+
+        <!-- arrows P2 -->
+        <line x1="75"  y1="96" x2="89"  y2="96" stroke="#6b7fa3" stroke-width="1" marker-end="url(#p1)"/>
+        <line x1="160" y1="96" x2="174" y2="96" stroke="#6b7fa3" stroke-width="1" marker-end="url(#p1)"/>
+        <line x1="255" y1="96" x2="267" y2="96" stroke="#6b7fa3" stroke-width="1" marker-end="url(#p1)"/>
+
+        <!-- I,D feeds into keyframe -->
+        <line x1="31" y1="50" x2="31" y2="74" stroke="#6b7fa3" stroke-width="0.8" stroke-dasharray="2,2" marker-end="url(#p1)"/>
+        <line x1="31" y1="74" x2="89" y2="90" stroke="#6b7fa3" stroke-width="0.8" stroke-dasharray="2,2"/>
+
+        <!-- T feeds into keyframe -->
+        <line x1="174" y1="50" x2="174" y2="74" stroke="#00d4ff" stroke-width="0.8" stroke-dasharray="2,2" marker-end="url(#p3)"/>
+        <line x1="174" y1="74" x2="145" y2="80" stroke="#00d4ff" stroke-width="0.8" stroke-dasharray="2,2"/>
+
+        <!-- Right side: renderer detail -->
+        <rect x="0" y="135" width="320" height="12" rx="3" fill="#0a1a0a"/>
+        <text x="6" y="144" fill="#7fff6b" font-size="7" font-family="'Space Mono',monospace">JOINT OPTIMISATION DETAIL</text>
+
+        <!-- Renderer -->
+        <polygon points="30,162 10,195 50,195" fill="#7fff6b" opacity="0.85"/>
+        <text x="30" y="182" text-anchor="middle" fill="#0a0f1a" font-size="8" font-family="'Space Mono',monospace">Renderer</text>
+
+        <!-- Rendered output -->
+        <rect x="58" y="162" width="60" height="32" rx="4" fill="#111827" stroke="#7fff6b" stroke-width="1"/>
+        <text x="88" y="175" text-anchor="middle" fill="#7fff6b" font-size="8" font-family="'Space Mono',monospace">{Î, D̂}ᵢ</text>
+        <text x="88" y="186" text-anchor="middle" fill="#6b7fa3" font-size="7" font-family="'DM Sans',sans-serif">rendered</text>
+
+        <!-- Loss -->
+        <polygon points="145,162 125,195 165,195" fill="#7fff6b" opacity="0.85"/>
+        <text x="145" y="182" text-anchor="middle" fill="#0a0f1a" font-size="8" font-family="'Space Mono',monospace">Loss</text>
+
+        <!-- Captured images -->
+        <rect x="58" y="205" width="60" height="28" rx="4" fill="#111827" stroke="#6b7fa3" stroke-width="1"/>
+        <text x="88" y="217" text-anchor="middle" fill="#e8edf5" font-size="8" font-family="'Space Mono',monospace">{I, D}ᵢ</text>
+        <text x="88" y="228" text-anchor="middle" fill="#6b7fa3" font-size="7" font-family="'DM Sans',sans-serif">captured</text>
+
+        <!-- Lg + Lp -->
+        <rect x="175" y="168" width="58" height="22" rx="3" fill="#111827" stroke="#ff6b35" stroke-width="1"/>
+        <text x="204" y="183" text-anchor="middle" fill="#ff6b35" font-size="8" font-family="'Space Mono',monospace">Lg + Lp</text>
+
+        <!-- ADAM -->
+        <polygon points="260,162 240,195 280,195" fill="#ff6b35" opacity="0.85"/>
+        <text x="260" y="182" text-anchor="middle" fill="#0a0f1a" font-size="8" font-family="'Space Mono',monospace">ADAM</text>
+
+        <!-- gradient labels -->
+        <text x="280" y="155" fill="#6b7fa3" font-size="7" font-family="'DM Sans',sans-serif">∇T poses</text>
+        <text x="250" y="210" fill="#6b7fa3" font-size="7" font-family="'DM Sans',sans-serif">∇θ network</text>
+
+        <!-- arrows detail -->
+        <line x1="50"  y1="179" x2="57"  y2="179" stroke="#6b7fa3" stroke-width="1" marker-end="url(#p1)"/>
+        <line x1="118" y1="179" x2="124" y2="179" stroke="#6b7fa3" stroke-width="1" marker-end="url(#p1)"/>
+        <line x1="88"  y1="195" x2="88"  y2="204" stroke="#6b7fa3" stroke-width="1" marker-end="url(#p1)"/>
+        <line x1="88"  y1="194" x2="124" y2="185" stroke="#6b7fa3" stroke-width="0.8"/>
+        <line x1="165" y1="179" x2="174" y2="179" stroke="#6b7fa3" stroke-width="1" marker-end="url(#p1)"/>
+        <line x1="233" y1="179" x2="239" y2="179" stroke="#6b7fa3" stroke-width="1" marker-end="url(#p1)"/>
+
+        <!-- F_θ feeds renderer -->
+        <line x1="292" y1="112" x2="292" y2="148" stroke="#00d4ff" stroke-width="0.8" stroke-dasharray="2,2"/>
+        <line x1="292" y1="148" x2="50"  y2="165" stroke="#00d4ff" stroke-width="0.8" stroke-dasharray="2,2" marker-end="url(#p3)"/>
+
+        <text x="4" y="300" fill="#6b7fa3" font-size="7" font-family="'DM Sans',sans-serif">Redrawn from Fig. 2, Sucar et al. iMAP 2021</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 4 — iMAP: Active Sampling & Keyframes
+══════════════════════════════════════════ -->
+<section>
+  <h2>iMAP: Active Sampling &amp; Forgetting</h2>
+  <div class="col-6040">
+    <div>
+      <span class="label">Active Pixel Sampling</span>
+      <ul>
+        <li>Only <strong>200 pixels/frame</strong> rendered per iteration — too expensive otherwise</li>
+        <li>Divide image into 8×8 grid → compute <em>per-cell loss</em></li>
+        <li>Resample proportional to loss — <strong>focus on high-error regions</strong></li>
+        <li>Active sampling beats random: faster convergence, <em>higher completion</em></li>
+      </ul>
+      <span class="label" style="margin-top:0.8rem">Keyframe Selection</span>
+      <ul>
+        <li>New KF if proportion of well-explained pixels <strong>P &lt; 0.65</strong></li>
+        <li>At each joint opt step: fixed window of <em>W = 5</em> KFs, sampled by loss</li>
+        <li>Serves as <strong>replay buffer</strong> — prevents catastrophic forgetting</li>
+      </ul>
+      <div class="callout">
+        Critical insight: without KF replay, the MLP <strong>forgets</strong> previously seen rooms — classic catastrophic forgetting in continual learning
+      </div>
+    </div>
+    <div>
+      <!-- Active sampling: the iMAP3.png figure content recreated -->
+      <div style="font-size:0.72rem; color:var(--muted); margin-bottom:0.4rem; font-family:var(--mono)">Keyframe active sampling (Fig. 4, iMAP)</div>
+      <svg viewBox="0 0 240 200" xmlns="http://www.w3.org/2000/svg" style="width:100%">
+        <!-- Keyframes strip with loss bars -->
+        <!-- KF1 -->
+        <rect x="10"  y="80" width="34" height="50" rx="3" fill="#111827" stroke="#6b7fa3" stroke-width="1"/>
+        <text x="27"  y="140" text-anchor="middle" fill="#6b7fa3" font-size="7" font-family="'DM Sans',sans-serif">KF1</text>
+        <!-- loss bar KF1 = 0.08 -->
+        <rect x="17" y="65" width="20" height="14" rx="2" fill="#7b1a1a"/>
+        <text x="27" y="75" text-anchor="middle" fill="#e8edf5" font-size="7" font-family="'Space Mono',monospace">0.08</text>
+
+        <!-- KF2 -->
+        <rect x="54"  y="80" width="34" height="50" rx="3" fill="#111827" stroke="#ff6b35" stroke-width="1.5"/>
+        <text x="71"  y="140" text-anchor="middle" fill="#ff6b35" font-size="7" font-family="'DM Sans',sans-serif">KF2✓</text>
+        <rect x="61" y="52" width="20" height="27" rx="2" fill="#cc2200"/>
+        <text x="71" y="65" text-anchor="middle" fill="#e8edf5" font-size="7" font-family="'Space Mono',monospace">0.14</text>
+
+        <!-- KF3 -->
+        <rect x="98"  y="80" width="34" height="50" rx="3" fill="#111827" stroke="#ff6b35" stroke-width="1.5"/>
+        <text x="115" y="140" text-anchor="middle" fill="#ff6b35" font-size="7" font-family="'DM Sans',sans-serif">KF3✓</text>
+        <rect x="105" y="40" width="20" height="39" rx="2" fill="#ff6b00"/>
+        <text x="115" y="53" text-anchor="middle" fill="#0a0f1a" font-size="7" font-family="'Space Mono',monospace">0.21</text>
+
+        <!-- KF4 -->
+        <rect x="142" y="80" width="34" height="50" rx="3" fill="#111827" stroke="#6b7fa3" stroke-width="1"/>
+        <text x="159" y="140" text-anchor="middle" fill="#6b7fa3" font-size="7" font-family="'DM Sans',sans-serif">KF4</text>
+        <rect x="149" y="57" width="20" height="22" rx="2" fill="#cc2200"/>
+        <text x="159" y="70" text-anchor="middle" fill="#e8edf5" font-size="7" font-family="'Space Mono',monospace">0.12</text>
+
+        <!-- current frame -->
+        <rect x="190" y="80" width="44" height="50" rx="3" fill="#111827" stroke="#ffcc00" stroke-width="1.5"/>
+        <text x="212" y="140" text-anchor="middle" fill="#ffcc00" font-size="7" font-family="'DM Sans',sans-serif">current✓</text>
+        <rect x="199" y="30" width="24" height="49" rx="2" fill="#ffcc00"/>
+        <text x="211" y="48" text-anchor="middle" fill="#0a0f1a" font-size="7" font-family="'Space Mono',monospace">0.27</text>
+
+        <text x="120" y="160" text-anchor="middle" fill="#6b7fa3" font-size="8" font-family="'DM Sans',sans-serif">all registered keyframes</text>
+        <text x="212" y="160" text-anchor="middle" fill="#ffcc00" font-size="7" font-family="'DM Sans',sans-serif">current</text>
+
+        <!-- Selection boxes (red dashes) around KF2, KF3, current -->
+        <rect x="52"  y="78" width="38" height="54" rx="3" fill="none" stroke="#ff6b35" stroke-width="1.5" stroke-dasharray="3,2"/>
+        <rect x="96"  y="78" width="38" height="54" rx="3" fill="none" stroke="#ff6b35" stroke-width="1.5" stroke-dasharray="3,2"/>
+        <rect x="188" y="78" width="48" height="54" rx="3" fill="none" stroke="#ffcc00" stroke-width="1.5" stroke-dasharray="3,2"/>
+
+        <text x="120" y="180" text-anchor="middle" fill="#ff6b35" font-size="8" font-family="'DM Sans',sans-serif">selected window W=5 (by loss)</text>
+        <text x="120" y="192" text-anchor="middle" fill="#6b7fa3" font-size="7" font-family="'DM Sans',sans-serif">loss bars = Fig. 4 values from paper</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 5 — iMAP Results & Limitations
+══════════════════════════════════════════ -->
+<section>
+  <h2>iMAP: Results &amp; Hard Limits</h2>
+  <div class="two-col">
+    <div>
+      <span class="label">What iMAP achieves</span>
+      <ul>
+        <li>Dense watertight reconstruction — <strong>fills holes</strong> TSDF fusion leaves</li>
+        <li>Whole room in <em>~1 MB</em> vs TSDF 67 MB at 256³</li>
+        <li>Tracking 10 Hz, mapping 2 Hz — <em>real-time</em></li>
+        <li>Completion ratio <strong>79%</strong> on Replica vs TSDF 75%</li>
+      </ul>
+      <span class="label" style="margin-top:0.8rem">Hard limitations</span>
+      <ul>
+        <li><strong>Single MLP bottleneck</strong> — fixed capacity regardless of scene size</li>
+        <li>Any new observation <em>requires global update</em> of all weights</li>
+        <li>Scales to one room — <strong>fails on multi-room apartments</strong></li>
+        <li>Oversmoothed geometry — MLP low-frequency bias</li>
+        <li>Tracking ATE <em>4.9–5.8 cm</em> on TUM — classical methods do 1–2 cm</li>
+      </ul>
+    </div>
+    <div>
+      <div class="callout" style="margin-bottom:0.8rem">
+        <strong>Root cause:</strong> a global MLP cannot do local updates. Touching one part of the scene potentially corrupts another.
+      </div>
+      <!-- comparison mini-table from papers -->
+      <table class="cmp">
+        <tr><th>Method</th><th>Mem (MB)</th><th>Acc (cm)</th><th>Comp%</th></tr>
+        <tr><td>TSDF-256</td><td>67.10</td><td class="mid">1.60</td><td>86.1</td></tr>
+        <tr class="hi-row"><td>iMAP</td><td class="best">1.04</td><td class="bad">6.95</td><td class="bad">66.6</td></tr>
+        <tr><td>NICE-SLAM</td><td>12.02</td><td class="best">2.85</td><td class="best">89.3</td></tr>
+      </table>
+      <div style="font-size:0.65rem; color:var(--muted); margin-top:0.3rem">Replica dataset avg. 8 scenes. Table 1, NICE-SLAM paper.</div>
+      <div class="callout blue" style="margin-top:0.8rem">
+        NICE-SLAM's question: <em>how do we get local updates while keeping the neural representation?</em>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 6 — NICE-SLAM: The Key Idea
+══════════════════════════════════════════ -->
+<section>
+  <h2>NICE-SLAM: Replace MLP with Feature Grids</h2>
+  <div class="two-col">
+    <div>
+      <div class="card hi2" style="margin-bottom:0.8rem">
+        <h3 style="color:var(--accent2)">iMAP: global MLP</h3>
+        <ul>
+          <li>One network encodes everything</li>
+          <li>Update at position X → affects all positions</li>
+          <li>Scale: one room maximum</li>
+        </ul>
+      </div>
+      <div class="card hi">
+        <h3>NICE-SLAM: feature grid + tiny MLP</h3>
+        <ul>
+          <li><em>Voxel grid</em> stores learnable feature vectors</li>
+          <li>Tiny <strong>pre-trained MLP decoder</strong> converts features → occupancy</li>
+          <li>Update at X → only affects <em>nearby voxels</em></li>
+          <li>Scale: <strong>multi-room apartment</strong>, works</li>
+        </ul>
+      </div>
+      <div class="callout green" style="margin-top:0.8rem">
+        Key insight: separate <em>what to store</em> (grid features, optimized online) from <em>how to decode</em> (MLP, pre-trained offline, fixed)
+      </div>
+    </div>
+    <div>
+      <!-- iMAP vs NICE-SLAM representation comparison SVG -->
+      <svg viewBox="0 0 240 300" xmlns="http://www.w3.org/2000/svg" style="width:100%">
+        <text x="5" y="14" fill="#ff6b35" font-size="9" font-family="'DM Sans',sans-serif">iMAP — global MLP</text>
+        <!-- Scene box -->
+        <rect x="5" y="20" width="110" height="70" rx="4" fill="#111827" stroke="#ff6b35" stroke-width="1"/>
+        <!-- Network in center -->
+        <ellipse cx="60" cy="55" rx="35" ry="22" fill="#1a0d08" stroke="#ff6b35" stroke-width="1.5"/>
+        <text x="60" y="52" text-anchor="middle" fill="#ff6b35" font-size="8" font-family="'Space Mono',monospace">F_θ</text>
+        <text x="60" y="62" text-anchor="middle" fill="#ff6b35" font-size="7" font-family="'DM Sans',sans-serif">1 big MLP</text>
+        <!-- Update arrows from all over -->
+        <line x1="10" y1="25" x2="30" y2="42" stroke="#ff6b35" stroke-width="0.8" stroke-dasharray="2,2" opacity="0.6"/>
+        <line x1="110" y1="25" x2="85" y2="42" stroke="#ff6b35" stroke-width="0.8" stroke-dasharray="2,2" opacity="0.6"/>
+        <line x1="10" y1="85" x2="30" y2="68" stroke="#ff6b35" stroke-width="0.8" stroke-dasharray="2,2" opacity="0.6"/>
+        <line x1="110" y1="85" x2="85" y2="68" stroke="#ff6b35" stroke-width="0.8" stroke-dasharray="2,2" opacity="0.6"/>
+        <text x="60" y="102" text-anchor="middle" fill="#ff6b35" font-size="8" font-family="'DM Sans',sans-serif">update here → affects everywhere</text>
+
+        <text x="5" y="122" fill="#00d4ff" font-size="9" font-family="'DM Sans',sans-serif">NICE-SLAM — feature grid</text>
+        <!-- Grid -->
+        <rect x="5" y="128" width="110" height="80" rx="4" fill="#0d1a2e" stroke="#00d4ff" stroke-width="1"/>
+        <!-- Voxels -->
+        <g stroke="#1e2d45" stroke-width="0.5">
+          <line x1="5"  y1="155" x2="115" y2="155"/>
+          <line x1="5"  y1="182" x2="115" y2="182"/>
+          <line x1="38" y1="128" x2="38"  y2="208"/>
+          <line x1="71" y1="128" x2="71"  y2="208"/>
+          <line x1="82" y1="128" x2="82"  y2="208"/>
+        </g>
+        <!-- Feature vectors in some cells -->
+        <rect x="7"  y="130" width="29" height="24" rx="2" fill="#111827"/>
+        <text x="21" y="145" text-anchor="middle" fill="#6b7fa3" font-size="6" font-family="'Space Mono',monospace">ω</text>
+        <rect x="40" y="130" width="29" height="24" rx="2" fill="#111827"/>
+        <text x="54" y="145" text-anchor="middle" fill="#6b7fa3" font-size="6" font-family="'Space Mono',monospace">ω</text>
+        <rect x="7"  y="157" width="29" height="24" rx="2" fill="#0a1e0a"/>
+        <text x="21" y="172" text-anchor="middle" fill="#7fff6b" font-size="6" font-family="'Space Mono',monospace">ω✓</text>
+        <rect x="40" y="157" width="29" height="24" rx="2" fill="#0a1e0a"/>
+        <text x="54" y="172" text-anchor="middle" fill="#7fff6b" font-size="6" font-family="'Space Mono',monospace">ω✓</text>
+        <!-- other cells static -->
+        <rect x="73" y="130" width="38" height="24" rx="2" fill="#111827"/>
+        <text x="92" y="145" text-anchor="middle" fill="#6b7fa3" font-size="6" font-family="'Space Mono',monospace">ω (fixed)</text>
+        <rect x="73" y="157" width="38" height="24" rx="2" fill="#111827"/>
+        <text x="92" y="172" text-anchor="middle" fill="#6b7fa3" font-size="6" font-family="'Space Mono',monospace">ω (fixed)</text>
+        <!-- Frustum -->
+        <polygon points="21,207 5,240 37,240" fill="none" stroke="#7fff6b" stroke-width="1.5"/>
+        <text x="21" y="252" text-anchor="middle" fill="#7fff6b" font-size="8" font-family="'DM Sans',sans-serif">camera frustum</text>
+        <text x="60" y="265" text-anchor="middle" fill="#00d4ff" font-size="8" font-family="'DM Sans',sans-serif">update only frustum voxels</text>
+        <text x="60" y="276" text-anchor="middle" fill="#7fff6b" font-size="8" font-family="'DM Sans',sans-serif">rest stays fixed → local update!</text>
+
+        <!-- tiny MLP decoder -->
+        <rect x="128" y="145" width="105" height="45" rx="5" fill="#0f0a1e" stroke="#c084fc" stroke-width="1.2"/>
+        <text x="180" y="160" text-anchor="middle" fill="#c084fc" font-size="8" font-family="'Space Mono',monospace">tiny MLP decoder</text>
+        <text x="180" y="172" text-anchor="middle" fill="#6b7fa3" font-size="7" font-family="'DM Sans',sans-serif">pre-trained, fixed</text>
+        <text x="180" y="183" text-anchor="middle" fill="#6b7fa3" font-size="7" font-family="'DM Sans',sans-serif">encodes shape priors</text>
+        <line x1="115" y1="165" x2="127" y2="165" stroke="#c084fc" stroke-width="1" marker-end="url(#p1)" style="--marker:none"/>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 7 — Hierarchical Feature Grid (Fig 2)
+══════════════════════════════════════════ -->
+<section>
+  <h2>NICE-SLAM: Hierarchical Feature Grid</h2>
+  <div class="col-4060">
+    <div>
+      <ul>
+        <li><strong>4 grids total</strong> — 3 geometry + 1 colour</li>
+        <li><em>Coarse (2 m voxels):</em> large structure — walls, floor — enables <strong>geometry forecast</strong> into unseen areas</li>
+        <li><em>Mid (32 cm voxels):</em> room-level geometry, main reconstruction grid</li>
+        <li><em>Fine (16 cm voxels):</em> residual offset on mid-level — <strong>high-frequency details</strong></li>
+        <li><em>Colour grid:</em> jointly optimized with decoder for photometric loss</li>
+        <li>Decoders <strong>pre-trained on ConvONet</strong> — bring shape priors at each resolution</li>
+        <li>Only feature grids optimized online, <em>decoders fixed</em></li>
+      </ul>
+      <div class="callout pu">
+        Fine occupancy: <strong>o<sub>p</sub> = o¹<sub>p</sub> + Δo¹<sub>p</sub></strong> — mid prediction + fine residual
+      </div>
+    </div>
+    <div>
+      <!-- Hierarchical grid SVG — faithful to Fig 2 of NICE-SLAM paper -->
+      <svg viewBox="0 0 270 340" xmlns="http://www.w3.org/2000/svg" style="width:100%">
+        <defs>
+          <marker id="h1" markerWidth="6" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,6 2.5,0 5" fill="#6b7fa3"/></marker>
+        </defs>
+
+        <text x="130" y="14" text-anchor="middle" fill="#6b7fa3" font-size="9" font-family="'DM Sans',sans-serif">Hierarchical Feature Grid</text>
+
+        <!-- COARSE grid (2m voxels — few cells) -->
+        <text x="5" y="32" fill="#c084fc" font-size="8" font-family="'Space Mono',monospace">Coarse (2m)</text>
+        <g stroke="#c084fc" stroke-width="1" fill="none" opacity="0.8">
+          <rect x="5" y="36" width="90" height="28" rx="2"/>
+          <line x1="35" y1="36" x2="35" y2="64"/>
+          <line x1="65" y1="36" x2="65" y2="64"/>
+        </g>
+        <!-- feature vectors in coarse cells -->
+        <text x="20" y="53" text-anchor="middle" fill="#c084fc" font-size="6" font-family="'Space Mono',monospace">ω⁰</text>
+        <text x="50" y="53" text-anchor="middle" fill="#c084fc" font-size="6" font-family="'Space Mono',monospace">ω⁰</text>
+        <text x="78" y="53" text-anchor="middle" fill="#c084fc" font-size="6" font-family="'Space Mono',monospace">ω⁰</text>
+        <!-- decoder f0 -->
+        <rect x="108" y="40" width="50" height="20" rx="3" fill="#0f0a1e" stroke="#c084fc" stroke-width="1"/>
+        <text x="133" y="53" text-anchor="middle" fill="#c084fc" font-size="7" font-family="'Space Mono',monospace">f⁰ (fixed)</text>
+        <line x1="95"  y1="50" x2="107" y2="50" stroke="#c084fc" stroke-width="0.8" marker-end="url(#h1)"/>
+        <!-- output -->
+        <rect x="170" y="40" width="52" height="20" rx="3" fill="#111827" stroke="#c084fc" stroke-width="0.8"/>
+        <text x="196" y="53" text-anchor="middle" fill="#c084fc" font-size="7" font-family="'Space Mono',monospace">o⁰ₚ (coarse)</text>
+        <line x1="158" y1="50" x2="169" y2="50" stroke="#6b7fa3" stroke-width="0.8" marker-end="url(#h1)"/>
+
+        <!-- MID grid (32cm voxels) -->
+        <text x="5" y="90" fill="#00d4ff" font-size="8" font-family="'Space Mono',monospace">Mid (32cm)</text>
+        <g stroke="#00d4ff" stroke-width="1" fill="none">
+          <rect x="5" y="94" width="90" height="42" rx="2"/>
+          <line x1="20" y1="94" x2="20" y2="136"/>
+          <line x1="35" y1="94" x2="35" y2="136"/>
+          <line x1="50" y1="94" x2="50" y2="136"/>
+          <line x1="65" y1="94" x2="65" y2="136"/>
+          <line x1="80" y1="94" x2="80" y2="136"/>
+          <line x1="5"  y1="115" x2="95" y2="115"/>
+        </g>
+        <!-- trilinear interp dots -->
+        <circle cx="13" cy="104" r="2" fill="#00d4ff" opacity="0.7"/>
+        <circle cx="28" cy="104" r="2" fill="#00d4ff" opacity="0.7"/>
+        <circle cx="13" cy="125" r="2" fill="#00d4ff" opacity="0.7"/>
+        <circle cx="28" cy="125" r="2" fill="#00d4ff" opacity="0.7"/>
+        <text x="60" y="118" text-anchor="middle" fill="#00d4ff" font-size="5.5" font-family="'Space Mono',monospace">tri-linear interp.</text>
+        <!-- decoder f1 -->
+        <rect x="108" y="100" width="50" height="20" rx="3" fill="#06131e" stroke="#00d4ff" stroke-width="1"/>
+        <text x="133" y="113" text-anchor="middle" fill="#00d4ff" font-size="7" font-family="'Space Mono',monospace">f¹ (fixed)</text>
+        <line x1="95"  y1="115" x2="107" y2="112" stroke="#00d4ff" stroke-width="0.8" marker-end="url(#h1)"/>
+        <rect x="170" y="100" width="52" height="20" rx="3" fill="#111827" stroke="#00d4ff" stroke-width="0.8"/>
+        <text x="196" y="113" text-anchor="middle" fill="#00d4ff" font-size="7" font-family="'Space Mono',monospace">o¹ₚ (mid)</text>
+        <line x1="158" y1="110" x2="169" y2="110" stroke="#6b7fa3" stroke-width="0.8" marker-end="url(#h1)"/>
+
+        <!-- FINE grid (16cm voxels) -->
+        <text x="5" y="158" fill="#7fff6b" font-size="8" font-family="'Space Mono',monospace">Fine (16cm)</text>
+        <g stroke="#7fff6b" stroke-width="1" fill="none">
+          <rect x="5" y="162" width="90" height="50" rx="2"/>
+          <line x1="16" y1="162" x2="16" y2="212"/>
+          <line x1="27" y1="162" x2="27" y2="212"/>
+          <line x1="38" y1="162" x2="38" y2="212"/>
+          <line x1="49" y1="162" x2="49" y2="212"/>
+          <line x1="60" y1="162" x2="60" y2="212"/>
+          <line x1="71" y1="162" x2="71" y2="212"/>
+          <line x1="82" y1="162" x2="82" y2="212"/>
+          <line x1="5"  y1="179" x2="95" y2="179"/>
+          <line x1="5"  y1="196" x2="95" y2="196"/>
+        </g>
+        <!-- decoder f2 -->
+        <rect x="108" y="172" width="50" height="20" rx="3" fill="#0a1a0a" stroke="#7fff6b" stroke-width="1"/>
+        <text x="133" y="185" text-anchor="middle" fill="#7fff6b" font-size="7" font-family="'Space Mono',monospace">f² (fixed)</text>
+        <line x1="95"  y1="187" x2="107" y2="183" stroke="#7fff6b" stroke-width="0.8" marker-end="url(#h1)"/>
+        <rect x="170" y="172" width="70" height="20" rx="3" fill="#111827" stroke="#7fff6b" stroke-width="0.8"/>
+        <text x="205" y="185" text-anchor="middle" fill="#7fff6b" font-size="7" font-family="'Space Mono',monospace">Δo¹ₚ (residual)</text>
+        <line x1="158" y1="182" x2="169" y2="182" stroke="#6b7fa3" stroke-width="0.8" marker-end="url(#h1)"/>
+
+        <!-- Addition: mid + fine -->
+        <text x="196" y="212" text-anchor="middle" fill="#e8edf5" font-size="9" font-family="'Space Mono',monospace">+</text>
+        <line x1="196" y1="120" x2="220" y2="150" stroke="#6b7fa3" stroke-width="0.5" stroke-dasharray="2,2"/>
+        <line x1="196" y1="192" x2="220" y2="215" stroke="#6b7fa3" stroke-width="0.5" stroke-dasharray="2,2"/>
+        <rect x="170" y="218" width="70" height="20" rx="3" fill="#111827" stroke="#e8edf5" stroke-width="1"/>
+        <text x="205" y="231" text-anchor="middle" fill="#e8edf5" font-size="7" font-family="'Space Mono',monospace">oₚ = o¹ₚ + Δo¹ₚ</text>
+
+        <!-- COLOUR grid -->
+        <text x="5" y="240" fill="#ff6b35" font-size="8" font-family="'Space Mono',monospace">Colour</text>
+        <g stroke="#ff6b35" stroke-width="1" fill="none" opacity="0.8">
+          <rect x="5" y="244" width="90" height="30" rx="2"/>
+          <line x1="16" y1="244" x2="16" y2="274"/>
+          <line x1="27" y1="244" x2="27" y2="274"/>
+          <line x1="38" y1="244" x2="38" y2="274"/>
+          <line x1="49" y1="244" x2="49" y2="274"/>
+          <line x1="60" y1="244" x2="60" y2="274"/>
+          <line x1="71" y1="244" x2="71" y2="274"/>
+          <line x1="82" y1="244" x2="82" y2="274"/>
+        </g>
+        <!-- colour decoder gε -->
+        <rect x="108" y="250" width="50" height="20" rx="3" fill="#1a1208" stroke="#ff6b35" stroke-width="1"/>
+        <text x="133" y="263" text-anchor="middle" fill="#ff6b35" font-size="7" font-family="'Space Mono',monospace">gε (opt.)</text>
+        <line x1="95"  y1="259" x2="107" y2="261" stroke="#ff6b35" stroke-width="0.8" marker-end="url(#h1)"/>
+        <rect x="170" y="250" width="52" height="20" rx="3" fill="#111827" stroke="#ff6b35" stroke-width="0.8"/>
+        <text x="196" y="263" text-anchor="middle" fill="#ff6b35" font-size="7" font-family="'Space Mono',monospace">cₚ (colour)</text>
+        <line x1="158" y1="260" x2="169" y2="260" stroke="#6b7fa3" stroke-width="0.8" marker-end="url(#h1)"/>
+
+        <text x="130" y="305" text-anchor="middle" fill="#6b7fa3" font-size="7" font-family="'DM Sans',sans-serif">Redrawn from Fig. 2, Zhu, Peng et al. NICE-SLAM 2022</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 8 — NICE-SLAM: Tracking & Mapping
+══════════════════════════════════════════ -->
+<section>
+  <h2>NICE-SLAM: Alternating Optimization</h2>
+  <div class="two-col">
+    <div>
+      <span class="label">Mapping (per keyframe)</span>
+      <ul>
+        <li>Sample M pixels from current frame + selected KFs</li>
+        <li><strong>Stage 1:</strong> optimize mid-level grid ω¹ only (geometric loss)</li>
+        <li><strong>Stage 2:</strong> jointly optimize mid + fine ω¹, ω²</li>
+        <li><strong>Stage 3:</strong> local BA — optimize all grids + colour decoder + K keyframe poses</li>
+        <li>Only update <em>features inside viewing frustum</em> — rest stays fixed</li>
+      </ul>
+      <span class="label" style="margin-top:0.75rem">Tracking (per frame)</span>
+      <ul>
+        <li>Fix all feature grids, optimize <strong>only camera pose</strong> {R, t}</li>
+        <li>Variance-weighted depth loss — <em>down-weights uncertain edges</em></li>
+        <li>Coarse grid provides <strong>geometry forecast</strong> for unseen areas — enables tracking into new regions</li>
+      </ul>
+    </div>
+    <div>
+      <!-- Alternating optimization flow -->
+      <svg viewBox="0 0 240 270" xmlns="http://www.w3.org/2000/svg" style="width:100%">
+        <defs>
+          <marker id="a2" markerWidth="6" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,6 2.5,0 5" fill="#7fff6b"/></marker>
+          <marker id="a3" markerWidth="6" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,6 2.5,0 5" fill="#00d4ff"/></marker>
+        </defs>
+
+        <!-- Input -->
+        <rect x="80" y="5" width="80" height="26" rx="4" fill="#111827" stroke="#6b7fa3" stroke-width="1"/>
+        <text x="120" y="21" text-anchor="middle" fill="#e8edf5" font-size="8" font-family="'Space Mono',monospace">RGB-D frame</text>
+
+        <!-- Keyframe? -->
+        <rect x="70" y="46" width="100" height="26" rx="4" fill="#1a1208" stroke="#ff6b35" stroke-width="1.2"/>
+        <text x="120" y="62" text-anchor="middle" fill="#ff6b35" font-size="8" font-family="'Space Mono',monospace">Keyframe?</text>
+        <line x1="120" y1="31" x2="120" y2="45" stroke="#6b7fa3" stroke-width="1" marker-end="url(#h1)"/>
+
+        <!-- MAPPING branch (yes) -->
+        <line x1="70" y1="59" x2="40" y2="59" stroke="#7fff6b" stroke-width="1"/>
+        <line x1="40" y1="59" x2="40" y2="100" stroke="#7fff6b" stroke-width="1" marker-end="url(#a2)"/>
+        <text x="25" y="82" fill="#7fff6b" font-size="7" font-family="'DM Sans',sans-serif" transform="rotate(-90,25,82)">yes</text>
+
+        <rect x="5" y="100" width="72" height="26" rx="4" fill="#0a1a0a" stroke="#7fff6b" stroke-width="1.2"/>
+        <text x="41" y="112" text-anchor="middle" fill="#7fff6b" font-size="7" font-family="'Space Mono',monospace">Mapping</text>
+        <text x="41" y="122" text-anchor="middle" fill="#6b7fa3" font-size="6" font-family="'DM Sans',sans-serif">update ω + poses</text>
+
+        <!-- Mapping stages -->
+        <rect x="5" y="140" width="72" height="18" rx="3" fill="#111827" stroke="#00d4ff" stroke-width="0.8"/>
+        <text x="41" y="152" text-anchor="middle" fill="#00d4ff" font-size="6.5" font-family="'Space Mono',monospace">① mid-level ω¹</text>
+        <rect x="5" y="162" width="72" height="18" rx="3" fill="#111827" stroke="#7fff6b" stroke-width="0.8"/>
+        <text x="41" y="174" text-anchor="middle" fill="#7fff6b" font-size="6.5" font-family="'Space Mono',monospace">② mid + fine ω¹ω²</text>
+        <rect x="5" y="184" width="72" height="18" rx="3" fill="#111827" stroke="#ff6b35" stroke-width="0.8"/>
+        <text x="41" y="196" text-anchor="middle" fill="#ff6b35" font-size="6.5" font-family="'Space Mono',monospace">③ all + colour + poses</text>
+        <line x1="41" y1="126" x2="41" y2="139" stroke="#7fff6b" stroke-width="0.8" marker-end="url(#a2)"/>
+        <line x1="41" y1="158" x2="41" y2="161" stroke="#6b7fa3" stroke-width="0.8"/>
+        <line x1="41" y1="180" x2="41" y2="183" stroke="#6b7fa3" stroke-width="0.8"/>
+
+        <!-- TRACKING branch (always) -->
+        <line x1="170" y1="59" x2="200" y2="59" stroke="#00d4ff" stroke-width="1"/>
+        <line x1="200" y1="59" x2="200" y2="100" stroke="#00d4ff" stroke-width="1" marker-end="url(#a3)"/>
+        <text x="218" y="82" fill="#00d4ff" font-size="7" font-family="'DM Sans',sans-serif" transform="rotate(90,218,82)">always</text>
+
+        <rect x="163" y="100" width="72" height="26" rx="4" fill="#06131e" stroke="#00d4ff" stroke-width="1.2"/>
+        <text x="199" y="112" text-anchor="middle" fill="#00d4ff" font-size="7" font-family="'Space Mono',monospace">Tracking</text>
+        <text x="199" y="122" text-anchor="middle" fill="#6b7fa3" font-size="6" font-family="'DM Sans',sans-serif">optimize {R, t} only</text>
+
+        <!-- Tracking detail -->
+        <rect x="163" y="140" width="72" height="18" rx="3" fill="#111827" stroke="#c084fc" stroke-width="0.8"/>
+        <text x="199" y="152" text-anchor="middle" fill="#c084fc" font-size="6.5" font-family="'Space Mono',monospace">coarse prediction</text>
+        <rect x="163" y="162" width="72" height="18" rx="3" fill="#111827" stroke="#00d4ff" stroke-width="0.8"/>
+        <text x="199" y="174" text-anchor="middle" fill="#00d4ff" font-size="6.5" font-family="'Space Mono',monospace">variance-weighted Lg</text>
+        <rect x="163" y="184" width="72" height="18" rx="3" fill="#111827" stroke="#ff6b35" stroke-width="0.8"/>
+        <text x="199" y="196" text-anchor="middle" fill="#ff6b35" font-size="6.5" font-family="'Space Mono',monospace">photometric Lp</text>
+        <line x1="199" y1="126" x2="199" y2="139" stroke="#00d4ff" stroke-width="0.8" marker-end="url(#a3)"/>
+        <line x1="199" y1="158" x2="199" y2="161" stroke="#6b7fa3" stroke-width="0.8"/>
+        <line x1="199" y1="180" x2="199" y2="183" stroke="#6b7fa3" stroke-width="0.8"/>
+
+        <!-- Updated grid / pose output -->
+        <rect x="60" y="225" width="120" height="26" rx="4" fill="#111827" stroke="#e8edf5" stroke-width="1"/>
+        <text x="120" y="237" text-anchor="middle" fill="#e8edf5" font-size="7" font-family="'Space Mono',monospace">updated map ω</text>
+        <text x="120" y="247" text-anchor="middle" fill="#6b7fa3" font-size="7" font-family="'DM Sans',sans-serif">+ refined pose {R, t}</text>
+        <line x1="41"  y1="202" x2="90"  y2="224" stroke="#7fff6b" stroke-width="0.8" marker-end="url(#a2)"/>
+        <line x1="199" y1="202" x2="150" y2="224" stroke="#00d4ff" stroke-width="0.8" marker-end="url(#a3)"/>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 9 — Demo Pause
+══════════════════════════════════════════ -->
+<section data-background-color="#0a0e0a">
+  <div class="demo-slide">
+    <div class="demo-badge">▶ DEMO PAUSE</div>
+    <h2 style="text-align:center; border:none; font-size:1.6rem">NICE-SLAM Pipeline Demo</h2>
+    <p style="color:var(--muted); font-size:0.9rem; margin-top:0.5rem">Switch to browser — cue video to 2:30</p>
+    <div class="demo-url">https://www.youtube.com/watch?v=V5hYTz5os0M</div>
+    <div class="demo-ts">⏱ 2:30 → 3:50 — pipeline walkthrough &amp; multi-room reconstruction</div>
+    <p style="color:var(--muted); font-size:0.78rem; margin-top:1.5rem">
+      Watch for: hierarchical grid building in real time · coarse geometry forecasting ahead of camera · local update — unvisited rooms stay unchanged
+    </p>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 10 — NICE-SLAM Results
+══════════════════════════════════════════ -->
+<section>
+  <h2>NICE-SLAM: Results</h2>
+  <div class="two-col">
+    <div>
+      <span class="label">Tracking — TUM RGB-D ATE RMSE (cm)</span>
+      <table class="cmp" style="margin-bottom:0.8rem">
+        <tr><th>Method</th><th>fr1/desk</th><th>fr2/xyz</th><th>fr3/off</th></tr>
+        <tr><td>iMAP</td><td class="bad">4.9</td><td>2.0</td><td class="bad">5.8</td></tr>
+        <tr class="hi-row"><td>NICE-SLAM</td><td class="best">2.7</td><td class="best">1.8</td><td class="best">3.0</td></tr>
+        <tr><td>ORB-SLAM2</td><td>1.6</td><td class="best">0.4</td><td>1.0</td></tr>
+      </table>
+
+      <span class="label">Tracking — ScanNet ATE RMSE avg. (cm)</span>
+      <table class="cmp">
+        <tr><th>Method</th><th>Avg. 6 scenes</th></tr>
+        <tr><td>iMAP*</td><td class="bad">36.67</td></tr>
+        <tr><td>DI-Fusion</td><td class="bad">78.89</td></tr>
+        <tr class="hi-row"><td>NICE-SLAM</td><td class="best">9.63</td></tr>
+      </table>
+      <div style="font-size:0.65rem; color:var(--muted); margin-top:0.3rem">Tables 2–3, Zhu, Peng et al. 2022</div>
+    </div>
+    <div>
+      <div class="callout blue" style="margin-bottom:0.8rem">
+        NICE-SLAM reduces tracking error <em>4× over iMAP</em> on ScanNet. iMAP* fails (spaghetti trajectory); NICE-SLAM completes full sequence.
+      </div>
+      <div class="card hi3">
+        <h3 style="color:var(--accent3)">Runtime vs iMAP</h3>
+        <table class="cmp">
+          <tr><th></th><th>FLOPs (×10³)</th><th>Track (ms)</th><th>Map (ms)</th></tr>
+          <tr><td>iMAP</td><td class="bad">443.9</td><td class="bad">101</td><td class="bad">448</td></tr>
+          <tr class="hi-row"><td>NICE-SLAM</td><td class="best">104.2</td><td class="best">47</td><td class="best">130</td></tr>
+        </table>
+        <div style="font-size:0.65rem; color:var(--muted); margin-top:0.3rem">Table 4. NICE-SLAM is 2–3× faster than iMAP.</div>
+      </div>
+      <div class="callout green" style="margin-top:0.7rem">
+        Tiny MLPs + local feature grids → <em>¼ the FLOPs</em> of a single large MLP
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 11 — Comparison & Bridge to Gaussian
+══════════════════════════════════════════ -->
+<section>
+  <h2>Where Neural SLAM Stands</h2>
+  <div class="two-col">
+    <div>
+      <span class="label">What neural SLAM gains over classical</span>
+      <ul>
+        <li><strong>Dense</strong> geometry — full surfaces, not point clouds</li>
+        <li><em>Hole filling</em> — predicts unobserved regions via learned priors</li>
+        <li><strong>Differentiable</strong> — map optimized via rendering loss, enables joint optimization</li>
+        <li>Richer representation for <em>downstream tasks</em></li>
+      </ul>
+      <span class="label" style="margin-top:0.8rem">What neural SLAM still lacks</span>
+      <ul>
+        <li>Tracking accuracy: <strong>ORB-SLAM2 still wins</strong> on TUM (1.0 vs 3.0 cm)</li>
+        <li><em>No loop closure</em> in NICE-SLAM — acknowledged limitation</li>
+        <li>Needs <strong>RGB-D</strong> — monocular case much harder</li>
+        <li>Rendering speed: feature grid queries slower than rasterization</li>
+      </ul>
+    </div>
+    <div>
+      <div class="card" style="border-color:var(--accent4); background:#0f0a1e; margin-bottom:0.8rem">
+        <h3 style="color:var(--accent4)">The arc so far</h3>
+        <ul>
+          <li>Classical (ORB-SLAM): sparse, fast, accurate — <em>no density</em></li>
+          <li>iMAP: dense, differentiable — <em>does not scale</em></li>
+          <li>NICE-SLAM: dense + scalable — <em>slower rendering</em></li>
+        </ul>
+      </div>
+      <div class="callout pu">
+        Next: Gaussian SLAM — replaces feature grids with <strong>3D Gaussians</strong>. Real-time rendering via rasterization. Closes the W04→W05 arc.
+      </div>
+      <div class="callout blue" style="margin-top:0.7rem">
+        All three neural variants lack what ORB-SLAM has: a mature <em>loop closure</em> system. Open problem as of 2022.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════════════════
+     SLIDE 12 — Summary
+══════════════════════════════════════════ -->
+<section>
+  <h2>Section 2 — Key Takeaways</h2>
+  <div class="two-col">
+    <div>
+      <ul>
+        <li><strong>iMAP:</strong> first real-time SLAM with MLP as map — joint optimization of θ and poses via differentiable volume rendering</li>
+        <li>Active sampling + keyframe replay solve <em>real-time</em> and <em>forgetting</em> — but single MLP bottleneck limits scale</li>
+        <li><strong>NICE-SLAM:</strong> replaces global MLP with <em>hierarchical feature grids</em> + pre-trained fixed decoders — enables local updates</li>
+        <li>Three geometry levels (coarse 2 m / mid 32 cm / fine 16 cm) + colour grid — each captures different spatial frequency</li>
+        <li>Coarse level enables <em>geometry forecast</em> into unseen areas → more robust tracking</li>
+        <li>NICE-SLAM: <strong>4× faster</strong>, 4× fewer FLOPs, far better tracking than iMAP on large scenes</li>
+      </ul>
+    </div>
+    <div>
+      <div class="card hi2" style="margin-bottom:0.8rem">
+        <h3 style="color:var(--accent2)">The key question answered</h3>
+        <ul>
+          <li>iMAP: can NeRF-style MLP do SLAM? <em>Yes, but one room only</em></li>
+          <li>NICE-SLAM: how to scale? <em>Local feature grids + pretrained decoders</em></li>
+        </ul>
+      </div>
+      <div class="callout blue">
+        Map representation progression:<br/>
+        sparse points → <em>global MLP</em> → <em>hierarchical grids</em> → <strong>3D Gaussians</strong> (next)
+      </div>
+      <div style="margin-top:0.7rem; font-size:0.72rem; color:var(--muted); font-family:var(--mono)">
+        iMAP: Sucar et al., ICCV 2021<br/>
+        NICE-SLAM: Zhu, Peng et al., CVPR 2022
+      </div>
+    </div>
+  </div>
+</section>
+
+</div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/reveal.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/plugin/notes/notes.min.js"></script>
+<script>
+Reveal.initialize({
+  hash:true, slideNumber:true, transition:'fade',
+  transitionSpeed:'fast', controls:true, progress:true,
+  center:false, margin:0.06, width:1280, height:720,
+  plugins:[RevealNotes]
+});
+</script>
+</body>
+</html>

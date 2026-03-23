@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>W05 · Section 3 — Gaussian SLAM | CSIE5452</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/reveal.min.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/theme/black.min.css"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet"/>
+<style>
+  :root{--bg:#0a0f1a;--surface:#111827;--border:#1e2d45;--accent:#00d4ff;--accent2:#ff6b35;--accent3:#7fff6b;--accent4:#c084fc;--accent5:#fbbf24;--text:#e8edf5;--muted:#6b7fa3;--mono:'Space Mono',monospace;--sans:'DM Sans',sans-serif;}
+  .reveal{font-family:var(--sans);background:var(--bg);}
+  .reveal .slides{color:var(--text);}
+  .reveal .slide-number{font-family:var(--mono);font-size:.75rem;background:transparent;color:var(--muted);bottom:18px;right:22px;}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:1.8rem;align-items:start;margin-top:1rem;}
+  .col-6040{display:grid;grid-template-columns:3fr 2fr;gap:1.8rem;align-items:start;margin-top:1rem;}
+  .col-4060{display:grid;grid-template-columns:2fr 3fr;gap:1.8rem;align-items:start;margin-top:1rem;}
+  .reveal h1,.reveal h2,.reveal h3{font-family:var(--mono);text-transform:none;letter-spacing:-.02em;color:var(--text);text-align:left;}
+  .reveal h1{font-size:2.1rem;line-height:1.2;}
+  .reveal h2{font-size:1.45rem;border-bottom:1px solid var(--border);padding-bottom:.4rem;margin-bottom:.7rem;}
+  .reveal h3{font-size:1rem;color:var(--accent);margin-bottom:.35rem;}
+  .label{font-family:var(--mono);font-size:.62rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:.4rem;display:block;}
+  .reveal ul{list-style:none;padding:0;margin:0;}
+  .reveal ul li{font-size:.9rem;line-height:1.55;padding:.25rem 0 .25rem 1.35rem;position:relative;color:var(--text);font-weight:300;}
+  .reveal ul li::before{content:'▸';position:absolute;left:0;color:var(--accent);font-size:.75rem;}
+  .reveal ul li strong{color:var(--accent2);font-weight:700;}
+  .reveal ul li em{color:var(--accent3);font-style:normal;font-weight:500;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.85rem 1.05rem;}
+  .card.hi{border-color:var(--accent);}.card.hi2{border-color:var(--accent2);}.card.hi3{border-color:var(--accent3);}.card.hi4{border-color:var(--accent4);}.card.hi5{border-color:var(--accent5);}
+  .callout{border-left:3px solid var(--accent2);background:#1a1208;padding:.6rem .9rem;border-radius:0 6px 6px 0;font-size:.86rem;margin-top:.75rem;}
+  .callout.blue{border-color:var(--accent);background:#06131e;}.callout.green{border-color:var(--accent3);background:#0a1a0a;}.callout.pu{border-color:var(--accent4);background:#0f0a1e;}.callout.gold{border-color:var(--accent5);background:#1a1500;}
+  .accent-line{width:60px;height:3px;background:linear-gradient(90deg,var(--accent),var(--accent4));margin:.5rem 0 1.3rem;border-radius:2px;}
+  .title-slide .course-tag{font-family:var(--mono);font-size:.68rem;letter-spacing:.14em;color:var(--muted);margin-bottom:1.6rem;}
+  .title-slide h1{font-size:2.4rem;margin-bottom:.3rem;}
+  .title-slide .subtitle{font-size:1rem;color:var(--muted);font-weight:300;margin-bottom:2rem;}
+  .title-slide .meta{font-size:.74rem;color:var(--muted);font-family:var(--mono);line-height:2;}
+  table.cmp{width:100%;border-collapse:collapse;font-size:.75rem;}
+  table.cmp th{font-family:var(--mono);font-size:.64rem;color:var(--muted);padding:.26rem .45rem;border-bottom:1px solid var(--border);text-align:left;}
+  table.cmp td{padding:.22rem .45rem;color:var(--text);font-weight:300;}
+  table.cmp tr.hi-row td{background:#0d1a2e;}
+  table.cmp td.best{color:var(--accent3);font-weight:700;}
+  table.cmp td.bad{color:var(--accent2);}
+  table.cmp td.mid{color:var(--accent);}
+  table.cmp td.gold{color:var(--accent5);font-weight:600;}
+  .arc-row{display:flex;gap:.6rem;margin-top:.5rem;}
+  .arc-cell{flex:1;border-radius:6px;padding:.6rem .7rem;font-size:.78rem;}
+</style>
+</head>
+<body>
+<div class="reveal"><div class="slides">
+
+<!-- SLIDE 1 -->
+<section data-background-color="#0a0f1a">
+  <div class="title-slide">
+    <div class="course-tag">CSIE5452 · Embodied Perception and Action · Week 05 · Section 3 of 4</div>
+    <h1>Gaussian SLAM</h1>
+    <h1 style="color:var(--accent4)">3DGS Meets Live Reconstruction</h1>
+    <div class="accent-line"></div>
+    <div class="subtitle">Matsuki, Murai, Kelly, Davison — CVPR 2024 &nbsp;·&nbsp; ~15 min</div>
+    <div class="meta">First monocular SLAM using 3DGS as the only representation &nbsp;·&nbsp; 3 fps live</div>
+  </div>
+</section>
+
+<!-- SLIDE 2 — Why 3DGS -->
+<section>
+  <h2>Why Replace Feature Grids with Gaussians?</h2>
+  <div class="two-col">
+    <div>
+      <div class="card hi2" style="margin-bottom:.8rem">
+        <h3 style="color:var(--accent2)">Neural SLAM bottleneck</h3>
+        <ul>
+          <li>Volume rendering = <strong>ray marching</strong> — N samples × M pixels</li>
+          <li>NICE-SLAM: <em>0.54 fps</em> · Point-SLAM: <em>1.33 fps</em></li>
+          <li>Too slow for real-time tracking feedback loop</li>
+        </ul>
+      </div>
+      <div class="card hi4">
+        <h3 style="color:var(--accent4)">3DGS: rasterisation</h3>
+        <ul>
+          <li>Iterate over <strong>Gaussians</strong>, not along rays</li>
+          <li>CUDA-native, exploits scene sparsity</li>
+          <li>Rendering: <em style="color:var(--accent5)">769 fps</em> on Replica</li>
+          <li>Fully differentiable — <strong>gradient flows</strong> to Gaussian params and pose T</li>
+          <li>Explicit geometry — easy to insert, prune, warp</li>
+        </ul>
+      </div>
+      <div class="callout pu" style="margin-top:.8rem">
+        3DGS: most like a <em>surfel cloud</em> in structure, but renders with <strong>photorealistic quality</strong>. Inherits efficiency and locality; gains differentiability.
+      </div>
+    </div>
+    <div>
+      <svg viewBox="0 0 240 290" xmlns="http://www.w3.org/2000/svg" style="width:100%">
+        <defs>
+          <marker id="g1" markerWidth="5" markerHeight="4" refX="5" refY="2" orient="auto"><polygon points="0 0,5 2,0 4" fill="#6b7fa3"/></marker>
+        </defs>
+        <text x="5" y="14" fill="#ff6b35" font-size="9" font-family="'DM Sans',sans-serif">Ray marching — per-ray sampling</text>
+        <polygon points="15,50 5,75 25,75" fill="none" stroke="#ff6b35" stroke-width="1.5"/>
+        <line x1="15" y1="50" x2="210" y2="42" stroke="#ff6b35" stroke-width=".8"/>
+        <line x1="15" y1="50" x2="210" y2="55" stroke="#ff6b35" stroke-width=".8"/>
+        <line x1="15" y1="50" x2="210" y2="68" stroke="#ff6b35" stroke-width=".8"/>
+        <circle cx="55" cy="44" r="2.5" fill="#6b7fa3"/><circle cx="90" cy="46" r="2.5" fill="#6b7fa3"/>
+        <circle cx="125" cy="47" r="2.5" fill="#6b7fa3"/><circle cx="160" cy="49" r="2.5" fill="#6b7fa3"/>
+        <circle cx="55" cy="54" r="2.5" fill="#6b7fa3"/><circle cx="90" cy="55" r="2.5" fill="#6b7fa3"/>
+        <circle cx="125" cy="56" r="2.5" fill="#6b7fa3"/><circle cx="160" cy="58" r="2.5" fill="#6b7fa3"/>
+        <circle cx="55" cy="66" r="2.5" fill="#6b7fa3"/><circle cx="90" cy="66" r="2.5" fill="#6b7fa3"/>
+        <text x="110" y="92" text-anchor="middle" fill="#ff6b35" font-size="8" font-family="'DM Sans',sans-serif">N samples × M pixels — slow</text>
+
+        <text x="5" y="115" fill="#c084fc" font-size="9" font-family="'DM Sans',sans-serif">Rasterisation — iterate over Gaussians</text>
+        <ellipse cx="75"  cy="155" rx="24" ry="15" fill="#c084fc" opacity=".3" stroke="#c084fc" stroke-width="1"/>
+        <ellipse cx="125" cy="148" rx="16" ry="22" fill="#fbbf24" opacity=".25" stroke="#fbbf24" stroke-width="1"/>
+        <ellipse cx="165" cy="162" rx="18" ry="10" fill="#7fff6b" opacity=".25" stroke="#7fff6b" stroke-width="1"/>
+        <ellipse cx="55"  cy="170" rx="10" ry="16" fill="#c084fc" opacity=".2" stroke="#c084fc" stroke-width=".8"/>
+        <rect x="200" y="125" width="14" height="65" rx="2" fill="#0d1a2e" stroke="#c084fc" stroke-width="1"/>
+        <line x1="75"  y1="155" x2="200" y2="140" stroke="#c084fc" stroke-width=".7" stroke-dasharray="2,2"/>
+        <line x1="125" y1="148" x2="200" y2="152" stroke="#fbbf24" stroke-width=".7" stroke-dasharray="2,2"/>
+        <line x1="165" y1="162" x2="200" y2="162" stroke="#7fff6b" stroke-width=".7" stroke-dasharray="2,2"/>
+        <line x1="55"  y1="170" x2="200" y2="172" stroke="#c084fc" stroke-width=".7" stroke-dasharray="2,2"/>
+        <line x1="40" y1="192" x2="195" y2="192" stroke="#6b7fa3" stroke-width=".8" marker-end="url(#g1)"/>
+        <text x="110" y="205" text-anchor="middle" fill="#6b7fa3" font-size="7" font-family="'DM Sans',sans-serif">sort front-to-back → alpha-blend</text>
+        <text x="110" y="220" text-anchor="middle" fill="#7fff6b" font-size="9" font-family="'DM Sans',sans-serif">769 fps vs 0.54 fps (×1400)</text>
+
+        <rect x="5"   y="240" width="75" height="12" rx="2" fill="#ff6b35" opacity=".5"/>
+        <text x="83"  y="251" fill="#ff6b35" font-size="7.5" font-family="'DM Sans',sans-serif">NICE-SLAM 0.54 fps</text>
+        <rect x="5"   y="258" width="220" height="12" rx="2" fill="#c084fc" opacity=".6"/>
+        <text x="5"   y="283" fill="#c084fc" font-size="7.5" font-family="'DM Sans',sans-serif">3DGS SLAM 769 fps</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 3 — Gaussian Representation -->
+<section>
+  <h2>3D Gaussians as SLAM Primitives</h2>
+  <div class="col-6040">
+    <div>
+      <span class="label">Each Gaussian G<sup>i</sup> stores</span>
+      <ul>
+        <li><strong>μ<sub>W</sub></strong> — 3D mean position in world coordinates</li>
+        <li><strong>Σ<sub>W</sub></strong> — covariance matrix (size, orientation, elongation)</li>
+        <li><em>c<sup>i</sup></em> — colour (RGB)</li>
+        <li><em>α<sup>i</sup></em> — opacity</li>
+      </ul>
+      <span class="label" style="margin-top:.8rem">Alpha-blending (splatting)</span>
+      <ul>
+        <li>Project 3D Gaussians to 2D via <strong>EWA splatting</strong></li>
+        <li>C<sub>p</sub> = Σ c<sup>i</sup>α<sup>i</sup> Π(1−α<sup>j</sup>) — front-to-back blend</li>
+        <li>All parameters differentiable → <strong>gradient to μ, Σ, c, α and pose T</strong></li>
+      </ul>
+      <span class="label" style="margin-top:.8rem">Adaptive geometry</span>
+      <ul>
+        <li>Flat ellipsoids for walls/floors · round for objects · <em>thin elongated for wires</em></li>
+        <li>Rim-placed Gaussians naturally represent <strong>transparent objects</strong></li>
+        <li>No fixed resolution, no mesh topology</li>
+      </ul>
+    </div>
+    <div>
+      <svg viewBox="0 0 210 270" xmlns="http://www.w3.org/2000/svg" style="width:100%">
+        <text x="5" y="14" fill="#6b7fa3" font-size="9" font-family="'DM Sans',sans-serif">Gaussian shapes in scene</text>
+        <ellipse cx="105" cy="215" rx="78" ry="11" fill="#c084fc" opacity=".2" stroke="#c084fc" stroke-width="1"/>
+        <text x="105" y="235" text-anchor="middle" fill="#c084fc" font-size="7" font-family="'DM Sans',sans-serif">flat (floor/wall)</text>
+        <ellipse cx="65"  cy="155" rx="22" ry="18" fill="#fbbf24" opacity=".3" stroke="#fbbf24" stroke-width="1"/>
+        <text x="65" y="180" text-anchor="middle" fill="#fbbf24" font-size="7" font-family="'DM Sans',sans-serif">round (object)</text>
+        <ellipse cx="148" cy="140" rx="5"  ry="30" fill="#7fff6b" opacity=".35" stroke="#7fff6b" stroke-width="1"/>
+        <text x="148" y="178" text-anchor="middle" fill="#7fff6b" font-size="7" font-family="'DM Sans',sans-serif">wire/edge</text>
+        <ellipse cx="100" cy="100" rx="7"  ry="7"  fill="#00d4ff" opacity=".5" stroke="#00d4ff" stroke-width="1"/>
+        <text x="100" y="115" text-anchor="middle" fill="#00d4ff" font-size="7" font-family="'DM Sans',sans-serif">fine detail</text>
+        <ellipse cx="50"  cy="80"  rx="17" ry="11" fill="none" stroke="#ff6b35" stroke-width="1.5" stroke-dasharray="3,2"/>
+        <ellipse cx="50"  cy="80"  rx="9"  ry="5"  fill="#ff6b35" opacity=".1"/>
+        <text x="50" y="98" text-anchor="middle" fill="#ff6b35" font-size="7" font-family="'DM Sans',sans-serif">transparent (rim)</text>
+        <circle cx="65" cy="155" r="2.5" fill="#e8edf5"/>
+        <text x="73" y="150" fill="#e8edf5" font-size="8" font-family="'Space Mono',monospace">μ</text>
+        <text x="5" y="255" fill="#6b7fa3" font-size="7.5" font-family="'DM Sans',sans-serif">Shape adapts — no fixed resolution</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 4 — System Overview -->
+<section>
+  <h2>System: Tracking · Keyframing · Mapping</h2>
+  <div class="col-4060">
+    <div>
+      <div class="card hi" style="margin-bottom:.6rem">
+        <h3>Tracking</h3>
+        <ul>
+          <li>Fix map G, optimize <strong>pose T only</strong></li>
+          <li>Photometric loss E<sub>pho</sub> + geometric E<sub>geo</sub> (if depth)</li>
+          <li><em>≥50 CUDA gradient steps</em> per frame</li>
+          <li>Affine brightness correction for exposure change</li>
+        </ul>
+      </div>
+      <div class="card hi5" style="margin-bottom:.6rem">
+        <h3 style="color:var(--accent5)">Keyframing</h3>
+        <ul>
+          <li>New KF if Gaussian <strong>IOU drops below threshold</strong> or large translation</li>
+          <li>Insert Gaussians: back-project depth (RGBD) or <em>rendered depth</em> (mono)</li>
+          <li><strong>Prune</strong>: unseen by ≥3 frames in last 3 KFs → remove</li>
+        </ul>
+      </div>
+      <div class="card hi3">
+        <h3 style="color:var(--accent3)">Mapping</h3>
+        <ul>
+          <li>Window W<sub>k</sub> + <em>2 random past KFs</em> (anti-forgetting)</li>
+          <li>Joint: optimize Gaussian params + KF poses</li>
+          <li><strong>Isotropic regularization</strong> E<sub>iso</sub></li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <!-- System overview: faithful to uploaded overview.pdf Fig 2 -->
+      <svg viewBox="0 0 310 340" xmlns="http://www.w3.org/2000/svg" style="width:100%">
+        <defs>
+          <marker id="s1" markerWidth="5" markerHeight="4" refX="5" refY="2" orient="auto"><polygon points="0 0,5 2,0 4" fill="#6b7fa3"/></marker>
+          <marker id="s2" markerWidth="5" markerHeight="4" refX="5" refY="2" orient="auto"><polygon points="0 0,5 2,0 4" fill="#00d4ff"/></marker>
+          <marker id="s3" markerWidth="5" markerHeight="4" refX="5" refY="2" orient="auto"><polygon points="0 0,5 2,0 4" fill="#fbbf24"/></marker>
+          <marker id="s4" markerWidth="5" markerHeight="4" refX="5" refY="2" orient="auto"><polygon points="0 0,5 2,0 4" fill="#7fff6b"/></marker>
+        </defs>
+        <!-- TRACKING -->
+        <rect x="0" y="0" width="88" height="152" rx="5" fill="#06131e" stroke="#00d4ff" stroke-width="1.5" stroke-dasharray="5,3"/>
+        <text x="44" y="13" text-anchor="middle" fill="#00d4ff" font-size="8.5" font-family="'Space Mono',monospace">Tracking</text>
+        <rect x="6" y="18" width="76" height="36" rx="3" fill="#111827" stroke="#6b7fa3" stroke-width="1"/>
+        <text x="44" y="31" text-anchor="middle" fill="#e8edf5" font-size="7" font-family="'DM Sans',sans-serif">Input video</text>
+        <text x="44" y="41" text-anchor="middle" fill="#6b7fa3" font-size="6.5" font-family="'DM Sans',sans-serif">(RGB or RGB-D)</text>
+        <rect x="12" y="46" width="18" height="5" rx="1" fill="#ff6b35" opacity=".6"/><rect x="33" y="46" width="18" height="5" rx="1" fill="#7fff6b" opacity=".4"/>
+        <line x1="44" y1="54" x2="44" y2="93" stroke="#6b7fa3" stroke-width="1" marker-end="url(#s1)"/>
+        <rect x="6" y="94" width="76" height="28" rx="3" fill="#111827" stroke="#00d4ff" stroke-width="1"/>
+        <text x="44" y="106" text-anchor="middle" fill="#00d4ff" font-size="7" font-family="'Space Mono',monospace">Camera Pose</text>
+        <text x="44" y="117" text-anchor="middle" fill="#00d4ff" font-size="7" font-family="'Space Mono',monospace">Estimation</text>
+
+        <!-- KEYFRAMING -->
+        <rect x="100" y="0" width="108" height="152" rx="5" fill="#1a1500" stroke="#fbbf24" stroke-width="1.5" stroke-dasharray="5,3"/>
+        <text x="154" y="13" text-anchor="middle" fill="#fbbf24" font-size="8.5" font-family="'Space Mono',monospace">Keyframing</text>
+        <rect x="108" y="18" width="92" height="22" rx="3" fill="#111827" stroke="#6b7fa3" stroke-width="1"/>
+        <text x="154" y="32" text-anchor="middle" fill="#e8edf5" font-size="7" font-family="'DM Sans',sans-serif">Co-visibility Check</text>
+        <line x1="154" y1="40" x2="154" y2="54" stroke="#6b7fa3" stroke-width="1" marker-end="url(#s1)"/>
+        <polygon points="154,55 140,68 154,81 168,68" fill="#111827" stroke="#fbbf24" stroke-width="1.2"/>
+        <text x="154" y="71" text-anchor="middle" fill="#fbbf24" font-size="7" font-family="'DM Sans',sans-serif">Is KF?</text>
+        <text x="172" y="68" fill="#fbbf24" font-size="6.5" font-family="'DM Sans',sans-serif">yes</text>
+        <line x1="154" y1="81" x2="154" y2="92" stroke="#fbbf24" stroke-width="1" marker-end="url(#s3)"/>
+        <rect x="108" y="93" width="92" height="28" rx="3" fill="#111827" stroke="#fbbf24" stroke-width="1"/>
+        <text x="154" y="106" text-anchor="middle" fill="#fbbf24" font-size="7" font-family="'DM Sans',sans-serif">Gaussian</text>
+        <text x="154" y="116" text-anchor="middle" fill="#fbbf24" font-size="7" font-family="'DM Sans',sans-serif">Insertion &amp; Prune</text>
+
+        <!-- MAPPING -->
+        <rect x="220" y="0" width="90" height="152" rx="5" fill="#0a1a0a" stroke="#7fff6b" stroke-width="1.5" stroke-dasharray="5,3"/>
+        <text x="265" y="13" text-anchor="middle" fill="#7fff6b" font-size="8.5" font-family="'Space Mono',monospace">Mapping</text>
+        <rect x="228" y="18" width="74" height="22" rx="3" fill="#111827" stroke="#7fff6b" stroke-width="1"/>
+        <text x="265" y="32" text-anchor="middle" fill="#7fff6b" font-size="7" font-family="'DM Sans',sans-serif">Window Optimisation</text>
+        <line x1="265" y1="40" x2="265" y2="54" stroke="#7fff6b" stroke-width="1" marker-end="url(#s4)"/>
+        <rect x="228" y="55" width="74" height="36" rx="3" fill="#111827" stroke="#6b7fa3" stroke-width=".8"/>
+        <text x="265" y="66" text-anchor="middle" fill="#6b7fa3" font-size="6.5" font-family="'Space Mono',monospace">min T,G,∀k∈W</text>
+        <text x="265" y="76" text-anchor="middle" fill="#6b7fa3" font-size="6.5" font-family="'Space Mono',monospace">Σ E_pho</text>
+        <text x="265" y="86" text-anchor="middle" fill="#6b7fa3" font-size="6.5" font-family="'Space Mono',monospace">+ λ_iso E_iso</text>
+        <line x1="265" y1="91" x2="265" y2="102" stroke="#6b7fa3" stroke-width="1" marker-end="url(#s1)"/>
+        <rect x="228" y="103" width="74" height="22" rx="3" fill="#111827" stroke="#6b7fa3" stroke-width=".8"/>
+        <text x="265" y="117" text-anchor="middle" fill="#6b7fa3" font-size="7" font-family="'DM Sans',sans-serif">Keyframe Mgmt</text>
+
+        <!-- 3D Gaussian Map -->
+        <rect x="80" y="170" width="148" height="68" rx="5" fill="#0f0a1e" stroke="#c084fc" stroke-width="1.5"/>
+        <text x="154" y="186" text-anchor="middle" fill="#c084fc" font-size="9" font-family="'Space Mono',monospace">3D Gaussian Map</text>
+        <ellipse cx="105" cy="220" rx="17" ry="11" fill="#c084fc" opacity=".25" stroke="#c084fc" stroke-width=".8"/>
+        <ellipse cx="135" cy="213" rx="11" ry="17" fill="#fbbf24" opacity=".2" stroke="#fbbf24" stroke-width=".8"/>
+        <ellipse cx="162" cy="222" rx="15" ry="9" fill="#7fff6b" opacity=".2" stroke="#7fff6b" stroke-width=".8"/>
+        <ellipse cx="190" cy="210" rx="8" ry="13" fill="#00d4ff" opacity=".2" stroke="#00d4ff" stroke-width=".8"/>
+        <ellipse cx="210" cy="222" rx="10" ry="6" fill="#ff6b35" opacity=".2" stroke="#ff6b35" stroke-width=".8"/>
+
+        <!-- Cross arrows -->
+        <line x1="88" y1="75" x2="99" y2="68" stroke="#00d4ff" stroke-width="1" marker-end="url(#s2)"/>
+        <line x1="154" y1="152" x2="154" y2="169" stroke="#fbbf24" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#s3)"/>
+        <line x1="265" y1="152" x2="235" y2="169" stroke="#7fff6b" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#s4)"/>
+        <line x1="114" y1="170" x2="65" y2="153" stroke="#c084fc" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#s1)"/>
+        <line x1="195" y1="170" x2="243" y2="153" stroke="#c084fc" stroke-width="1" stroke-dasharray="3,2" marker-end="url(#s1)"/>
+
+        <text x="5" y="335" fill="#6b7fa3" font-size="7" font-family="'DM Sans',sans-serif">Redrawn from Fig. 2, Matsuki et al. CVPR 2024</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 5 — Two Innovations -->
+<section>
+  <h2>Two Key Technical Innovations</h2>
+  <div class="two-col">
+    <div>
+      <span class="label">① Analytic SE(3) Pose Jacobian</span>
+      <ul>
+        <li>Original 3DGS requires <strong>known poses from SfM</strong> — offline only</li>
+        <li>Online SLAM needs gradient of rendering loss <em>w.r.t. camera pose T</em></li>
+        <li>First <strong>analytic Jacobian on SE(3) Lie group</strong> for EWA splatting</li>
+        <li>Minimal 6-DoF parametrization — no redundant computation</li>
+        <li>Integrated into <em>CUDA rasterizer</em> — no autograd overhead</li>
+        <li><strong>≥50 gradient steps/frame</strong> feasible at interactive speed</li>
+      </ul>
+      <div class="callout blue" style="margin-top:.8rem">
+        This was unexplored before this paper — opening 3DGS to all online pose-optimization applications beyond SLAM
+      </div>
+    </div>
+    <div>
+      <span class="label">② Isotropic Regularization E<sub>iso</sub></span>
+      <div class="card hi2" style="margin-bottom:.8rem">
+        <ul>
+          <li>Without depth, Gaussians <strong>elongate along viewing ray</strong> — photometric loss cannot observe this</li>
+          <li>Elongation causes <em>artifacts in novel views</em> + corrupts tracking</li>
+          <li>E<sub>iso</sub> = ‖s<sup>i</sup> − s̃<sup>i</sup>·1‖₁ penalizes deviation from <strong>spherical shape</strong></li>
+        </ul>
+      </div>
+      <svg viewBox="0 0 240 120" xmlns="http://www.w3.org/2000/svg" style="width:100%">
+        <text x="60"  y="12" text-anchor="middle" fill="#ff6b35" font-size="8" font-family="'DM Sans',sans-serif">w/o E_iso — elongated</text>
+        <text x="180" y="12" text-anchor="middle" fill="#7fff6b" font-size="8" font-family="'DM Sans',sans-serif">w/ E_iso — compact</text>
+        <ellipse cx="30"  cy="52" rx="34" ry="5"  fill="#ff6b35" opacity=".4" stroke="#ff6b35" stroke-width="1"/>
+        <ellipse cx="55"  cy="70" rx="27" ry="4"  fill="#ff6b35" opacity=".35" stroke="#ff6b35" stroke-width="1"/>
+        <ellipse cx="80"  cy="42" rx="29" ry="3"  fill="#ff6b35" opacity=".35" stroke="#ff6b35" stroke-width="1"/>
+        <text x="58" y="92" text-anchor="middle" fill="#ff6b35" font-size="7" font-family="'DM Sans',sans-serif">artifacts in novel views</text>
+        <ellipse cx="152" cy="52" rx="12" ry="10" fill="#7fff6b" opacity=".4" stroke="#7fff6b" stroke-width="1"/>
+        <ellipse cx="177" cy="68" rx="9"  ry="8"  fill="#7fff6b" opacity=".35" stroke="#7fff6b" stroke-width="1"/>
+        <ellipse cx="202" cy="46" rx="10" ry="9"  fill="#7fff6b" opacity=".35" stroke="#7fff6b" stroke-width="1"/>
+        <text x="178" y="92" text-anchor="middle" fill="#7fff6b" font-size="7" font-family="'DM Sans',sans-serif">consistent across views</text>
+        <line x1="120" y1="15" x2="120" y2="108" stroke="#1e2d45" stroke-width="1"/>
+        <text x="58" y="108" text-anchor="middle" fill="#6b7fa3" font-size="6.5" font-family="'DM Sans',sans-serif">Ref: Fig. 3, Matsuki et al.</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 6 — Convergence Basin -->
+<section>
+  <h2>Surprise Result: Wide Convergence Basin</h2>
+  <div class="col-6040">
+    <div>
+      <ul>
+        <li>3DGS maps empirically show a <strong>notably larger convergence basin</strong> for pose optimization</li>
+        <li>Test: train map from 9 views; localize from <em>0.2–1.2 m away</em> (wider than training baseline)</li>
+        <li><strong>3DGS w/ depth: 82%</strong> success · Hash Grid SDF: 14% · MLP SDF: 33%</li>
+        <li>Even <em>monocular 3DGS (no depth): 79%</em></li>
+      </ul>
+      <div class="callout gold" style="margin-top:.8rem">
+        Why? Anisotropic Gaussians form a <em>smooth gradient field</em> — no hash collisions, no positional-encoding aliasing. Gradient persists over larger displacements.
+      </div>
+      <ul style="margin-top:.8rem">
+        <li><strong>Practical</strong>: robust tracking after fast motion or frame drops</li>
+        <li>Useful for <em>map-based relocalization</em> from wider viewpoints</li>
+      </ul>
+    </div>
+    <div>
+      <div style="font-size:.7rem;color:var(--muted);margin-bottom:.4rem;font-family:var(--mono)">Convergence basin (Fig. 5, Table 6)</div>
+      <svg viewBox="0 0 220 230" xmlns="http://www.w3.org/2000/svg" style="width:100%">
+        <!-- 3DGS success grid -->
+        <text x="55" y="13" text-anchor="middle" fill="#7fff6b" font-size="8" font-family="'DM Sans',sans-serif">3DGS w/ depth — 82%</text>
+        <g transform="translate(8,17)">
+          <circle cx="10" cy="8"  r="4" fill="#7fff6b"/><circle cx="24" cy="8"  r="4" fill="#7fff6b"/>
+          <circle cx="38" cy="8"  r="4" fill="#7fff6b"/><circle cx="52" cy="8"  r="4" fill="#7fff6b"/>
+          <circle cx="10" cy="22" r="4" fill="#7fff6b"/><circle cx="24" cy="22" r="4" fill="#7fff6b"/>
+          <circle cx="38" cy="22" r="4" fill="#7fff6b"/><circle cx="52" cy="22" r="4" fill="#7fff6b"/>
+          <circle cx="10" cy="36" r="4" fill="#7fff6b"/><circle cx="24" cy="36" r="4" fill="#7fff6b"/>
+          <circle cx="38" cy="36" r="4" fill="#7fff6b"/><circle cx="52" cy="36" r="4" fill="#ff6b35"/>
+          <circle cx="10" cy="50" r="4" fill="#7fff6b"/><circle cx="24" cy="50" r="4" fill="#7fff6b"/>
+          <circle cx="38" cy="50" r="4" fill="#ff6b35"/><circle cx="52" cy="50" r="4" fill="#ff6b35"/>
+          <circle cx="31" cy="29" r="5" fill="#fbbf24" stroke="#0a0f1a" stroke-width="1"/>
+        </g>
+        <!-- Hash Grid failure grid -->
+        <text x="165" y="13" text-anchor="middle" fill="#ff6b35" font-size="8" font-family="'DM Sans',sans-serif">Hash Grid SDF — 14%</text>
+        <g transform="translate(118,17)" font-size="10" font-family="'Space Mono',monospace">
+          <text x="6"  y="13" fill="#ff6b35">×</text><text x="20" y="13" fill="#ff6b35">×</text><text x="34" y="13" fill="#ff6b35">×</text><text x="48" y="13" fill="#ff6b35">×</text>
+          <text x="6"  y="27" fill="#ff6b35">×</text><text x="20" y="27" fill="#ff6b35">×</text><circle cx="38" cy="22" r="4" fill="#7fff6b"/><text x="48" y="27" fill="#ff6b35">×</text>
+          <text x="6"  y="41" fill="#ff6b35">×</text><circle cx="24" cy="36" r="4" fill="#7fff6b"/><circle cx="38" cy="36" r="4" fill="#7fff6b"/><text x="48" y="41" fill="#ff6b35">×</text>
+          <text x="6"  y="55" fill="#ff6b35">×</text><text x="20" y="55" fill="#ff6b35">×</text><text x="34" y="55" fill="#ff6b35">×</text><text x="48" y="55" fill="#ff6b35">×</text>
+          <circle cx="31" cy="29" r="5" fill="#fbbf24" stroke="#0a0f1a" stroke-width="1"/>
+        </g>
+        <!-- Legend -->
+        <circle cx="14" cy="100" r="4" fill="#7fff6b"/>
+        <text x="22" y="104" fill="#7fff6b" font-size="7.5" font-family="'DM Sans',sans-serif">converged</text>
+        <text x="98" y="104" fill="#ff6b35" font-size="10" font-family="'Space Mono',monospace">×</text>
+        <text x="112" y="104" fill="#ff6b35" font-size="7.5" font-family="'DM Sans',sans-serif">failed</text>
+        <circle cx="172" cy="100" r="4" fill="#fbbf24"/>
+        <text x="180" y="104" fill="#fbbf24" font-size="7.5" font-family="'DM Sans',sans-serif">target</text>
+        <!-- bar chart -->
+        <text x="5" y="122" fill="#6b7fa3" font-size="7.5" font-family="'DM Sans',sans-serif">Success rate (avg 3 seqs):</text>
+        <rect x="5" y="128" width="180" height="11" rx="2" fill="#7fff6b" opacity=".8"/>
+        <text x="188" y="138" fill="#7fff6b" font-size="7" font-family="'DM Sans',sans-serif">82% ours w/depth</text>
+        <rect x="5" y="144" width="173" height="11" rx="2" fill="#7fff6b" opacity=".65"/>
+        <text x="188" y="154" fill="#7fff6b" font-size="7" font-family="'DM Sans',sans-serif">79% ours mono</text>
+        <rect x="5" y="160" width="66"  height="11" rx="2" fill="#6b7fa3" opacity=".6"/>
+        <text x="74"  y="170" fill="#6b7fa3" font-size="7" font-family="'DM Sans',sans-serif">33% MLP SDF</text>
+        <rect x="5" y="176" width="28"  height="11" rx="2" fill="#ff6b35" opacity=".7"/>
+        <text x="36"  y="186" fill="#ff6b35" font-size="7" font-family="'DM Sans',sans-serif">14% Hash Grid SDF</text>
+        <text x="5"   y="210" fill="#6b7fa3" font-size="6.5" font-family="'DM Sans',sans-serif">Ref: Table 6 + Fig. 5</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 7 — Results -->
+<section>
+  <h2>Results: Tracking &amp; Rendering</h2>
+  <div class="two-col">
+    <div>
+      <span class="label">TUM RGB-D — ATE RMSE (cm)</span>
+      <table class="cmp" style="margin-bottom:.8rem">
+        <tr><th>Method</th><th>Input</th><th>fr1/desk</th><th>fr2/xyz</th><th>fr3/off</th><th>Avg</th></tr>
+        <tr><td>iMAP</td>      <td>RGBD</td><td class="bad">4.90</td><td>2.00</td><td class="bad">5.80</td><td class="bad">4.23</td></tr>
+        <tr><td>NICE-SLAM</td> <td>RGBD</td><td class="bad">4.26</td><td class="bad">6.19</td><td>3.87</td><td class="bad">4.77</td></tr>
+        <tr><td>ORB-SLAM2</td> <td>RGBD</td><td>1.60</td><td class="best">0.40</td><td class="best">1.00</td><td class="best">1.00</td></tr>
+        <tr class="hi-row"><td><strong>Ours</strong></td><td>Mono</td><td class="mid">3.78</td><td class="mid">4.60</td><td class="mid">3.50</td><td class="mid">3.96</td></tr>
+        <tr class="hi-row"><td><strong>Ours</strong></td><td>RGBD</td><td class="best">1.50</td><td class="gold">1.44</td><td class="gold">1.49</td><td class="gold">1.47</td></tr>
+      </table>
+      <span class="label">Novel View Rendering — Replica (RGB-D)</span>
+      <table class="cmp">
+        <tr><th>Method</th><th>PSNR↑</th><th>SSIM↑</th><th>Render FPS↑</th></tr>
+        <tr><td>NICE-SLAM</td>  <td>24.42</td><td>0.809</td><td class="bad">0.54</td></tr>
+        <tr><td>Point-SLAM</td> <td>35.17</td><td>0.975</td><td class="bad">1.33</td></tr>
+        <tr class="hi-row"><td><strong>Ours</strong></td><td class="best">38.94</td><td class="mid">0.968</td><td class="best">769</td></tr>
+      </table>
+      <div style="font-size:.63rem;color:var(--muted);margin-top:.3rem">Tables 1, 5. Matsuki et al. CVPR 2024</div>
+    </div>
+    <div>
+      <div class="callout gold" style="margin-bottom:.8rem">
+        Rendering: <strong>769 vs 1.33 fps</strong> (Point-SLAM) — <em>×580 faster</em> — at higher PSNR
+      </div>
+      <div class="card hi4" style="margin-bottom:.7rem">
+        <h3 style="color:var(--accent4)">Monocular highlights</h3>
+        <ul>
+          <li>RGB-only tracking <em>3.96 cm avg</em> — beats DROID-VO, DSO without deep priors</li>
+          <li>Comparable to many <strong>RGB-D methods</strong></li>
+          <li>Handles <em>transparent objects, wires</em> naturally</li>
+        </ul>
+      </div>
+      <div class="card hi3">
+        <h3 style="color:var(--accent3)">Memory</h3>
+        <ul>
+          <li>Mono: <em>2.6 MB</em> · RGB-D: <em>3.97 MB</em></li>
+          <li>NICE-SLAM: 40 MB · Point-SLAM: 38 MB</li>
+          <li>System FPS: <em>3.2 fps</em> monocular (tracking fast; mapping is bottleneck)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 8 — Limitations + Full Arc -->
+<section>
+  <h2>Limitations &amp; Closing the W04→W05 Arc</h2>
+  <div class="two-col">
+    <div>
+      <span class="label">Current limitations</span>
+      <ul>
+        <li><strong>No loop closure</strong> — drift inevitable over long trajectories</li>
+        <li><em>Small-scale only</em> — single rooms; large scenes degrade</li>
+        <li><strong>3 fps end-to-end</strong> — not hard real-time</li>
+        <li>Monocular <em>scale ambiguity</em> remains</li>
+      </ul>
+      <div class="callout" style="margin-top:.8rem">
+        Authors note: loop closure should be <em>easier</em> for Gaussians than voxel grids — Gaussians can be warped like surfel clouds (cf. ElasticFusion). Key open direction.
+      </div>
+      <div class="callout pu" style="margin-top:.7rem">
+        The frontier: unify Gaussian SLAM's <em>rendering quality</em> with ORB-SLAM's <em>pose accuracy</em> and loop closure. No system achieves both today.
+      </div>
+    </div>
+    <div>
+      <div class="card hi5">
+        <h3 style="color:var(--accent5)">The W04→W05 arc complete</h3>
+        <ul>
+          <li>W04: Occ / NeRF / 3DGS as <em>offline reconstruction</em></li>
+          <li>W05: same representations, now <em>online SLAM</em></li>
+        </ul>
+        <div style="margin-top:.7rem">
+          <div style="color:var(--muted);font-size:.8rem;margin-bottom:.35rem">Every W04 representation now has a SLAM variant:</div>
+          <div style="color:var(--accent2);font-size:.8rem;margin-bottom:.25rem">Occ/TSDF grid → KinectFusion, Vox-Fusion</div>
+          <div style="color:var(--accent);font-size:.8rem;margin-bottom:.25rem">NeRF / feature grid → iMAP, NICE-SLAM</div>
+          <div style="color:var(--accent4);font-size:.8rem;font-weight:600">3DGS → <strong>Gaussian SLAM</strong></div>
+        </div>
+      </div>
+      <div class="callout blue" style="margin-top:.7rem">
+        Same pipeline pattern across all: <em>tracking alternates with mapping</em>. The map representation is the design variable — it determines what the system can perceive, render, and correct.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 9 — Summary -->
+<section>
+  <h2>Section 3 — Key Takeaways</h2>
+  <div class="two-col">
+    <div>
+      <ul>
+        <li><strong>Gaussian SLAM</strong>: first SLAM using 3DGS as the only representation — unified tracking, mapping, rendering</li>
+        <li>Rasterisation replaces ray marching → <em>769 fps</em> rendering, orders of magnitude faster than neural methods</li>
+        <li><strong>Analytic SE(3) Jacobian</strong> enables gradient-based pose tracking against Gaussians — novel contribution</li>
+        <li><em>Isotropic regularization</em> prevents elongation artifacts — essential for incremental monocular reconstruction</li>
+        <li>Covisibility IOU keyframing + random past KF replay handle memory and forgetting</li>
+        <li>RGB-D tracking <em>1.47 cm avg</em> — competitive with ORB-SLAM2 · Mono <em>3.96 cm</em> — best no-prior monocular method</li>
+      </ul>
+    </div>
+    <div>
+      <div class="card hi4" style="margin-bottom:.8rem">
+        <h3 style="color:var(--accent4)">What 3DGS uniquely brings</h3>
+        <ul>
+          <li>Near-photorealistic maps at interactive rates</li>
+          <li>Wide convergence basin → robust relocalization</li>
+          <li>Handles transparency, wires, complex materials</li>
+          <li>Compact: ~4 MB per room</li>
+        </ul>
+      </div>
+      <div class="callout gold">
+        W04→W05 arc: Occ → NeRF → 3DGS all now have SLAM variants. <em>Same pipeline. Different map.</em> The map representation determines everything.
+      </div>
+      <div style="margin-top:.7rem;font-size:.7rem;color:var(--muted);font-family:var(--mono)">
+        Matsuki, Murai, Kelly, Davison · CVPR 2024<br/>
+        rmurai.co.uk/projects/GaussianSplattingSLAM/
+      </div>
+    </div>
+  </div>
+</section>
+
+</div></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/reveal.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/plugin/notes/notes.min.js"></script>
+<script>
+Reveal.initialize({hash:true,slideNumber:true,transition:'fade',transitionSpeed:'fast',controls:true,progress:true,center:false,margin:.06,width:1280,height:720,plugins:[RevealNotes]});
+</script>
+</body>
+</html>

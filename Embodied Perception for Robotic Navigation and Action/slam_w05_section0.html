@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>W05 · Section 0 — Why SLAM? | CSIE5452</title>
+
+<!-- Reveal.js CDN -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/reveal.min.css"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/theme/black.min.css"/>
+
+<!-- Google Fonts -->
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet"/>
+
+<style>
+  /* ── Design System ── */
+  :root {
+    --bg:       #0a0f1a;
+    --surface:  #111827;
+    --border:   #1e2d45;
+    --accent:   #00d4ff;
+    --accent2:  #ff6b35;
+    --accent3:  #7fff6b;
+    --text:     #e8edf5;
+    --muted:    #6b7fa3;
+    --mono:     'Space Mono', monospace;
+    --sans:     'DM Sans', sans-serif;
+  }
+
+  .reveal { font-family: var(--sans); background: var(--bg); }
+  .reveal .slides { color: var(--text); }
+
+  /* slide number */
+  .reveal .slide-number {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    background: transparent;
+    color: var(--muted);
+    bottom: 18px; right: 22px;
+  }
+
+  /* ── Layout ── */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    align-items: start;
+    margin-top: 1.2rem;
+  }
+  .three-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1.4rem;
+    margin-top: 1.4rem;
+  }
+
+  /* ── Typography ── */
+  .reveal h1, .reveal h2, .reveal h3 {
+    font-family: var(--mono);
+    text-transform: none;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    text-align: left;
+  }
+  .reveal h1 { font-size: 2.1rem; line-height: 1.2; }
+  .reveal h2 { font-size: 1.45rem; border-bottom: 1px solid var(--border); padding-bottom: 0.4rem; margin-bottom: 0.6rem; }
+  .reveal h3 { font-size: 1.05rem; color: var(--accent); margin-bottom: 0.4rem; }
+
+  .label {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 0.5rem;
+    display: block;
+  }
+
+  /* ── Bullets ── */
+  .reveal ul { list-style: none; padding: 0; margin: 0; }
+  .reveal ul li {
+    font-size: 0.95rem;
+    line-height: 1.55;
+    padding: 0.28rem 0 0.28rem 1.4rem;
+    position: relative;
+    color: var(--text);
+    font-weight: 300;
+  }
+  .reveal ul li::before {
+    content: '▸';
+    position: absolute; left: 0;
+    color: var(--accent);
+    font-size: 0.8rem;
+  }
+  .reveal ul li strong { color: var(--accent2); font-weight: 700; }
+  .reveal ul li em { color: var(--accent3); font-style: normal; font-weight: 500; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem 1.2rem;
+  }
+  .card.hi { border-color: var(--accent); }
+
+  /* ── SVG diagrams ── */
+  svg text { font-family: var(--sans); }
+  .diagram-wrap { display: flex; justify-content: center; align-items: center; }
+
+  /* ── Highlight box ── */
+  .callout {
+    border-left: 3px solid var(--accent2);
+    background: #1a1208;
+    padding: 0.7rem 1rem;
+    border-radius: 0 6px 6px 0;
+    font-size: 0.9rem;
+    margin-top: 0.8rem;
+  }
+  .callout.blue {
+    border-color: var(--accent);
+    background: #06131e;
+  }
+
+  /* ── Slide-specific ── */
+  .title-slide { text-align: left; }
+  .title-slide .course-tag {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.14em;
+    color: var(--muted);
+    margin-bottom: 2rem;
+  }
+  .title-slide h1 { font-size: 2.6rem; margin-bottom: 0.5rem; }
+  .title-slide .subtitle {
+    font-size: 1.1rem;
+    color: var(--muted);
+    font-weight: 300;
+    margin-bottom: 2.5rem;
+  }
+  .title-slide .meta {
+    font-size: 0.78rem;
+    color: var(--muted);
+    font-family: var(--mono);
+    line-height: 2;
+  }
+  .accent-line {
+    width: 60px; height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    margin: 0.6rem 0 1.6rem;
+    border-radius: 2px;
+  }
+
+  /* pipeline steps */
+  .pipeline { display: flex; align-items: center; gap: 0; margin-top: 1.2rem; flex-wrap: nowrap; }
+  .pstep {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.5rem 0.7rem;
+    font-size: 0.72rem;
+    font-family: var(--mono);
+    text-align: center;
+    flex: 1;
+    line-height: 1.35;
+  }
+  .pstep.hi { border-color: var(--accent); color: var(--accent); }
+  .pstep.hi2 { border-color: var(--accent2); color: var(--accent2); }
+  .parrow { color: var(--muted); font-size: 1rem; padding: 0 0.2rem; flex-shrink: 0; }
+
+  /* roadmap */
+  .roadmap-item {
+    display: flex; align-items: flex-start; gap: 1rem;
+    padding: 0.65rem 0.9rem;
+    border-radius: 6px;
+    margin-bottom: 0.5rem;
+  }
+  .roadmap-item .num {
+    font-family: var(--mono);
+    font-size: 1.1rem;
+    font-weight: 700;
+    min-width: 1.8rem;
+    padding-top: 0.05rem;
+  }
+  .roadmap-item .desc { font-size: 0.85rem; line-height: 1.5; }
+  .roadmap-item .desc strong { display: block; font-size: 0.95rem; margin-bottom: 0.1rem; }
+
+  /* fragment fade */
+  .reveal .fragment { opacity: 0.18; }
+  .reveal .fragment.visible { opacity: 1; }
+</style>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+<!-- ═══════════════════════════════════════════════
+     SLIDE 1 — Title
+════════════════════════════════════════════════ -->
+<section data-background-color="#0a0f1a">
+  <div class="title-slide">
+    <h1>Why SLAM?</h1>
+    <h1 style="color:var(--accent)">Geometry of Localization</h1>
+    <div class="accent-line"></div>
+    <div class="subtitle">Section 0 of 4 · Conceptual Foundation · ~15 min</div>
+  </div>
+  <aside class="notes">
+Today we start Week 05, and the topic is SLAM — Simultaneous Localization and Mapping.
+
+Before we look at any paper, I want to spend about fifteen minutes on the question this entire week is built around: why does SLAM exist, and why is it hard?
+
+This section has no paper to read. It is entirely conceptual. My goal is that by the time we get to ORB-SLAM and NICE-SLAM, you already have the vocabulary and the intuition, so the papers feel like answers to a question you already understand.
+
+Let's start.
+  </aside>
+</section>
+
+<!-- ═══════════════════════════════════════════════
+     SLIDE 2 — The Core Problem
+════════════════════════════════════════════════ -->
+<section>
+  <h2>The Embodied Agent's Dilemma</h2>
+  <!-- NOTES ADDED BELOW THE CONTENT DIV — see aside at bottom of section -->
+  <div class="two-col">
+    <div>
+      <ul>
+        <li>To <strong>act</strong>, an agent needs to know <em>where it is</em></li>
+        <li>To know <em>where it is</em>, it needs a <strong>map</strong></li>
+        <li>To build a <strong>map</strong>, it must already know <em>where it is</em></li>
+      </ul>
+      <div class="callout" style="margin-top:1.2rem">
+        This circular dependency is the <span style="color:var(--accent);font-family:var(--mono)">SLAM problem</span>
+      </div>
+      <ul style="margin-top:1rem">
+        <li>Only sensor data available: <em>camera, IMU, LiDAR</em></li>
+        <li>No GPS indoors, no prior map guaranteed</li>
+      </ul>
+    </div>
+    <div>
+      <!-- SVG: circular dependency diagram -->
+      <svg viewBox="0 0 300 280" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:300px">
+        <defs>
+          <marker id="ah" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#00d4ff"/>
+          </marker>
+          <marker id="ah2" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+            <polygon points="0 0, 8 3, 0 6" fill="#ff6b35"/>
+          </marker>
+        </defs>
+        <!-- act node -->
+        <rect x="95" y="10" width="110" height="44" rx="8" fill="#111827" stroke="#00d4ff" stroke-width="1.5"/>
+        <text x="150" y="37" text-anchor="middle" fill="#00d4ff" font-size="13" font-family="'Space Mono',monospace">ACT</text>
+
+        <!-- pose node -->
+        <rect x="10" y="120" width="120" height="44" rx="8" fill="#111827" stroke="#7fff6b" stroke-width="1.5"/>
+        <text x="70" y="147" text-anchor="middle" fill="#7fff6b" font-size="11" font-family="'Space Mono',monospace">POSE (where?)</text>
+
+        <!-- map node -->
+        <rect x="170" y="120" width="120" height="44" rx="8" fill="#111827" stroke="#ff6b35" stroke-width="1.5"/>
+        <text x="230" y="147" text-anchor="middle" fill="#ff6b35" font-size="11" font-family="'Space Mono',monospace">MAP (what?)</text>
+
+        <!-- sensor node -->
+        <rect x="95" y="228" width="110" height="44" rx="8" fill="#1e2d45" stroke="#6b7fa3" stroke-width="1"/>
+        <text x="150" y="255" text-anchor="middle" fill="#6b7fa3" font-size="11" font-family="'Space Mono',monospace">SENSOR DATA</text>
+
+        <!-- arrows: pose → act, map → act -->
+        <line x1="70" y1="120" x2="118" y2="56" stroke="#00d4ff" stroke-width="1.5" marker-end="url(#ah)"/>
+        <line x1="230" y1="120" x2="182" y2="56" stroke="#00d4ff" stroke-width="1.5" marker-end="url(#ah)"/>
+
+        <!-- circular: map needs pose, pose needs map -->
+        <path d="M130 142 Q150 175 170 142" fill="none" stroke="#6b7fa3" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#ah)"/>
+        <path d="M170 164 Q150 197 130 164" fill="none" stroke="#6b7fa3" stroke-width="1.2" stroke-dasharray="4,3" marker-end="url(#ah)"/>
+
+        <!-- sensor → both -->
+        <line x1="140" y1="228" x2="90" y2="167" stroke="#6b7fa3" stroke-width="1" marker-end="url(#ah)"/>
+        <line x1="160" y1="228" x2="210" y2="167" stroke="#6b7fa3" stroke-width="1" marker-end="url(#ah)"/>
+
+        <text x="148" y="195" text-anchor="middle" fill="#6b7fa3" font-size="9" font-family="'DM Sans',sans-serif">needs each other</text>
+      </svg>
+    </div>
+  </div>
+  <aside class="notes">
+Let me start with a very simple scenario. Imagine a robot — or a person — dropped into an unfamiliar building. No GPS. No map handed to it. Just a camera.
+
+The question is: what does the agent need in order to act? To navigate, to pick something up, to avoid an obstacle?
+
+It needs to know where it is.
+
+But here is the problem. To know where it is, it needs a map of the environment — some model of the space around it. And to build that map, it needs to know where it was when it saw each part of the world, which means it needs its own position.
+
+Look at the diagram on the right. The three nodes — ACT, POSE, and MAP — form a triangle. POSE feeds ACT. MAP feeds ACT. But POSE and MAP depend on each other. The dashed arrows in the middle represent that circular dependency.
+
+This is not a software bug. It is a fundamental geometric constraint. The only input the agent has is raw sensor data — pixels from a camera, maybe inertial measurements. Everything else must be inferred simultaneously.
+
+This is the SLAM problem. Simultaneous Localization And Mapping. Solve both at once, from scratch.
+  </aside>
+</section>
+
+<!-- ═══════════════════════════════════════════════
+     SLIDE 3 — Localization vs Mapping
+════════════════════════════════════════════════ -->
+<section>
+  <h2>Two Sub-problems, One Joint Task</h2>
+  <div class="two-col">
+    <div>
+      <span class="label">Localization</span>
+      <div class="card hi" style="margin-bottom:1rem">
+        <h3>Where am I?</h3>
+        <ul>
+          <li>Estimate pose <em>x<sub>t</sub></em> given map <strong>M</strong></li>
+          <li>Kalman filter, particle filter, PnP solve</li>
+          <li>Easy <em>if</em> map is known</li>
+        </ul>
+      </div>
+      <span class="label">Mapping</span>
+      <div class="card" style="border-color:var(--accent2)">
+        <h3 style="color:var(--accent2)">What does the world look like?</h3>
+        <ul>
+          <li>Build <strong>M</strong> from observations <em>z<sub>1:t</sub></em></li>
+          <li>Occupancy grid, point cloud, mesh, implicit</li>
+          <li>Easy <em>if</em> pose is known</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="callout blue">
+        <strong style="color:var(--accent)">SLAM</strong> solves both <em>simultaneously</em> from scratch — no prior pose, no prior map
+      </div>
+      <svg viewBox="0 0 260 200" xmlns="http://www.w3.org/2000/svg" style="width:100%;margin-top:1rem">
+        <!-- trajectory -->
+        <polyline points="30,160 80,130 130,100 160,70 200,90 220,130" fill="none" stroke="#00d4ff" stroke-width="2"/>
+        <!-- landmarks -->
+        <circle cx="60" cy="60" r="6" fill="#ff6b35"/>
+        <circle cx="150" cy="40" r="6" fill="#ff6b35"/>
+        <circle cx="220" cy="60" r="6" fill="#ff6b35"/>
+        <circle cx="100" cy="155" r="6" fill="#ff6b35"/>
+        <circle cx="200" cy="165" r="6" fill="#ff6b35"/>
+        <!-- observation lines -->
+        <line x1="80" y1="130" x2="60" y2="60" stroke="#6b7fa3" stroke-width="1" stroke-dasharray="3,3"/>
+        <line x1="130" y1="100" x2="150" y2="40" stroke="#6b7fa3" stroke-width="1" stroke-dasharray="3,3"/>
+        <line x1="160" y1="70" x2="150" y2="40" stroke="#6b7fa3" stroke-width="1" stroke-dasharray="3,3"/>
+        <line x1="160" y1="70" x2="220" y2="60" stroke="#6b7fa3" stroke-width="1" stroke-dasharray="3,3"/>
+        <line x1="200" y1="90" x2="220" y2="60" stroke="#6b7fa3" stroke-width="1" stroke-dasharray="3,3"/>
+        <!-- robot -->
+        <circle cx="220" cy="130" r="9" fill="none" stroke="#00d4ff" stroke-width="2"/>
+        <circle cx="220" cy="130" r="3" fill="#00d4ff"/>
+        <!-- labels -->
+        <text x="30" y="185" fill="#00d4ff" font-size="10" font-family="'DM Sans',sans-serif">Robot trajectory</text>
+        <text x="155" y="185" fill="#ff6b35" font-size="10" font-family="'DM Sans',sans-serif">Landmarks (map)</text>
+      </svg>
+    </div>
+  </div>
+  <aside class="notes">
+Let's separate the two sub-problems so we can be precise about what makes each one hard.
+
+Localization asks: where am I? Formally, given a map M that I already have, estimate my current pose — my position and orientation in 3D space. If the map is given to you, this is a well-studied problem. You can use a Kalman filter, a particle filter, or a direct geometric solver like PnP. Hard in practice, but tractable in principle.
+
+Mapping asks: what does the world look like? Given my poses — which I already know — build a model M from what I have observed. Again, if the poses are given, this is also tractable. You triangulate landmarks, you fuse depth measurements, you build an occupancy grid or a point cloud.
+
+The catch is the italicized condition in each case. Localization is easy *if* the map is known. Mapping is easy *if* the pose is known. In SLAM, neither is known. You have to solve them together, iteratively refining your estimate of both.
+
+Look at the diagram on the right. The blue line is the robot's estimated trajectory. The orange dots are landmarks the robot has observed. The dashed lines connect each robot position to the landmarks it saw at that moment. Everything in that picture — every dot, every line — is an unknown that SLAM must estimate jointly from the raw pixel stream.
+
+This joint estimation is what gives SLAM its name, and its difficulty.
+  </aside>
+</section>
+
+<!-- ═══════════════════════════════════════════════
+     SLIDE 4 — Factor Graphs
+════════════════════════════════════════════════ -->
+<section>
+  <h2>Factor Graphs: The Probabilistic View</h2>
+  <div class="two-col">
+    <div>
+      <ul>
+        <li>SLAM = <strong>MAP inference</strong> over poses &amp; landmarks</li>
+        <li><em>Factor graph</em> separates variables from constraints</li>
+        <li><strong>Variable nodes</strong> — poses x<sub>t</sub>, landmark positions l<sub>k</sub></li>
+        <li><em>Factor nodes</em> — odometry, observations, priors</li>
+        <li>Optimization: minimize <strong>sum of squared errors</strong></li>
+      </ul>
+      <div class="callout">
+        Sparse structure → efficient solvers (g2o, GTSAM, Ceres)
+      </div>
+    </div>
+    <div>
+      <!-- Factor graph SVG -->
+      <svg viewBox="0 0 280 240" xmlns="http://www.w3.org/2000/svg" style="width:100%">
+        <defs>
+          <marker id="fah" markerWidth="6" markerHeight="5" refX="6" refY="2.5" orient="auto">
+            <polygon points="0 0,6 2.5,0 5" fill="#6b7fa3"/>
+          </marker>
+        </defs>
+        <!-- Poses: circles -->
+        <circle cx="50"  cy="100" r="18" fill="#111827" stroke="#00d4ff" stroke-width="2"/>
+        <text x="50"  y="105" text-anchor="middle" fill="#00d4ff" font-size="11" font-family="'Space Mono',monospace">x₁</text>
+        <circle cx="140" cy="100" r="18" fill="#111827" stroke="#00d4ff" stroke-width="2"/>
+        <text x="140" y="105" text-anchor="middle" fill="#00d4ff" font-size="11" font-family="'Space Mono',monospace">x₂</text>
+        <circle cx="230" cy="100" r="18" fill="#111827" stroke="#00d4ff" stroke-width="2"/>
+        <text x="230" y="105" text-anchor="middle" fill="#00d4ff" font-size="11" font-family="'Space Mono',monospace">x₃</text>
+
+        <!-- Landmark -->
+        <rect x="122" y="188" width="36" height="36" rx="4" fill="#111827" stroke="#ff6b35" stroke-width="2"/>
+        <text x="140" y="211" text-anchor="middle" fill="#ff6b35" font-size="11" font-family="'Space Mono',monospace">l₁</text>
+
+        <!-- Odometry factors: squares on edges -->
+        <rect x="78"  y="88" width="24" height="24" rx="3" fill="#1e2d45" stroke="#7fff6b" stroke-width="1.5"/>
+        <text x="90"  y="104" text-anchor="middle" fill="#7fff6b" font-size="9" font-family="'Space Mono',monospace">f₁₂</text>
+        <rect x="168" y="88" width="24" height="24" rx="3" fill="#1e2d45" stroke="#7fff6b" stroke-width="1.5"/>
+        <text x="180" y="104" text-anchor="middle" fill="#7fff6b" font-size="9" font-family="'Space Mono',monospace">f₂₃</text>
+
+        <!-- Observation factors -->
+        <rect x="80"  y="155" width="24" height="24" rx="3" fill="#1e2d45" stroke="#6b7fa3" stroke-width="1.5"/>
+        <text x="92"  y="170" text-anchor="middle" fill="#6b7fa3" font-size="9" font-family="'Space Mono',monospace">h₁</text>
+        <rect x="174" y="155" width="24" height="24" rx="3" fill="#1e2d45" stroke="#6b7fa3" stroke-width="1.5"/>
+        <text x="186" y="170" text-anchor="middle" fill="#6b7fa3" font-size="9" font-family="'Space Mono',monospace">h₂</text>
+
+        <!-- Edges -->
+        <line x1="68" y1="100" x2="78" y2="100" stroke="#7fff6b" stroke-width="1.2"/>
+        <line x1="102" y1="100" x2="140" y2="100" stroke="#7fff6b" stroke-width="1.2"/>
+        <line x1="158" y1="100" x2="168" y2="100" stroke="#7fff6b" stroke-width="1.2"/>
+        <line x1="192" y1="100" x2="230" y2="100" stroke="#7fff6b" stroke-width="1.2"/>
+
+        <line x1="80" y1="115" x2="92" y2="155" stroke="#6b7fa3" stroke-width="1.2" stroke-dasharray="3,2"/>
+        <line x1="104" y1="167" x2="122" y2="200" stroke="#6b7fa3" stroke-width="1.2" stroke-dasharray="3,2"/>
+        <line x1="180" y1="115" x2="185" y2="155" stroke="#6b7fa3" stroke-width="1.2" stroke-dasharray="3,2"/>
+        <line x1="186" y1="179" x2="158" y2="204" stroke="#6b7fa3" stroke-width="1.2" stroke-dasharray="3,2"/>
+
+        <!-- Legend -->
+        <circle cx="20" cy="225" r="6" fill="none" stroke="#00d4ff" stroke-width="1.5"/>
+        <text x="30" y="229" fill="#00d4ff" font-size="8" font-family="'DM Sans',sans-serif">pose / landmark</text>
+        <rect x="90" y="219" width="12" height="12" rx="2" fill="#1e2d45" stroke="#7fff6b" stroke-width="1.2"/>
+        <text x="106" y="229" fill="#7fff6b" font-size="8" font-family="'DM Sans',sans-serif">odometry factor</text>
+        <rect x="185" y="219" width="12" height="12" rx="2" fill="#1e2d45" stroke="#6b7fa3" stroke-width="1.2"/>
+        <text x="201" y="229" fill="#6b7fa3" font-size="8" font-family="'DM Sans',sans-serif">obs. factor</text>
+      </svg>
+    </div>
+  </div>
+  <aside class="notes">
+Now let's give this problem a mathematical shape. The standard formalism is the factor graph.
+
+A factor graph has two kinds of nodes. Variable nodes represent the unknowns we want to estimate — the robot's pose at each timestep, x-one, x-two, x-three, and the positions of landmarks in the world, l-one. These are the circles in the diagram.
+
+Factor nodes represent constraints — pieces of information that relate the variables to each other. There are two types here. The green squares are odometry factors: they encode what the robot's wheel encoders or IMU said about how it moved between two consecutive poses. The grey squares are observation factors: they encode what the camera saw — a landmark appeared at a certain pixel location, which constrains the relationship between the robot's pose and the landmark's position.
+
+SLAM is then formulated as maximum a posteriori inference over this graph — find the assignment of all variables that best satisfies all the constraints simultaneously. In practice this becomes a nonlinear least-squares problem: minimize the sum of squared residuals across all factors.
+
+The key insight is that this graph is sparse. Each pose is only connected to its neighbors and to the few landmarks it observed. That sparsity is what makes the problem tractable — solvers like g2o, GTSAM, and Ceres exploit it heavily, and they can optimize graphs with thousands of variables in real time.
+
+When we look at ORB-SLAM in the next section, you will see exactly this structure — a pose graph and a landmark set — being built and optimized continuously as the camera moves.
+  </aside>
+</section>
+
+<!-- ═══════════════════════════════════════════════
+     SLIDE 5 — Loop Closure
+════════════════════════════════════════════════ -->
+<section>
+  <h2>Loop Closure: Why It Matters</h2>
+  <div class="two-col">
+    <div>
+      <ul>
+        <li><strong>Odometry drift</strong> accumulates over time — errors compound</li>
+        <li><em>Loop closure</em>: agent recognizes a <strong>previously visited place</strong></li>
+        <li>Adds a long-range constraint → <em>corrects accumulated drift</em></li>
+        <li>Without it: map folds, trajectories diverge</li>
+        <li>Recognition via <strong>appearance</strong> (bag-of-words, DBoW) or geometry</li>
+      </ul>
+      <div class="callout blue">
+        Loop closure is what makes SLAM <em>globally consistent</em>
+      </div>
+    </div>
+    <div>
+      <!-- Loop closure SVG -->
+      <svg viewBox="0 0 280 240" xmlns="http://www.w3.org/2000/svg" style="width:100%">
+        <!-- Without loop closure: drifted path -->
+        <text x="10" y="18" fill="#ff6b35" font-size="10" font-family="'DM Sans',sans-serif">Without loop closure</text>
+        <path d="M30,100 Q60,40 120,35 Q180,30 210,70 Q240,110 220,140 Q200,165 180,155" fill="none" stroke="#ff6b35" stroke-width="1.5" stroke-dasharray="4,3"/>
+        <!-- Start marker -->
+        <circle cx="30" cy="100" r="5" fill="#7fff6b"/>
+        <text x="36" y="103" fill="#7fff6b" font-size="8" font-family="'DM Sans',sans-serif">start</text>
+        <!-- End marker drifted -->
+        <circle cx="180" cy="155" r="5" fill="#ff6b35"/>
+        <text x="186" y="158" fill="#ff6b35" font-size="8" font-family="'DM Sans',sans-serif">end (drifted)</text>
+        <!-- true end -->
+        <circle cx="30" cy="100" r="3" fill="none" stroke="#6b7fa3" stroke-width="1" stroke-dasharray="2,2"/>
+
+        <!-- With loop closure: corrected -->
+        <text x="10" y="188" fill="#00d4ff" font-size="10" font-family="'DM Sans',sans-serif">With loop closure</text>
+        <path d="M30,215 Q80,195 140,193 Q190,192 215,210 Q235,225 210,230 Q120,240 30,215" fill="none" stroke="#00d4ff" stroke-width="1.5"/>
+        <!-- loop closure constraint line -->
+        <line x1="207" y1="230" x2="30" y2="215" stroke="#7fff6b" stroke-width="1.2" stroke-dasharray="5,3"/>
+        <text x="95" y="245" text-anchor="middle" fill="#7fff6b" font-size="8" font-family="'DM Sans',sans-serif">loop constraint</text>
+      </svg>
+    </div>
+  </div>
+  <aside class="notes">
+There is one phenomenon that separates a SLAM system that works in small spaces from one that works in a building or a city. It is called loop closure.
+
+Here is the problem it solves. Every sensor measurement has noise. When you integrate noisy odometry over time — every small step, every small turn — the errors accumulate. After a hundred meters, your estimated position might be off by several meters. After a kilometer, by tens of meters. The trajectory drifts. This is unavoidable with odometry alone.
+
+Now look at the top diagram. The robot starts at the green dot, travels the dashed orange path, and ends up at the orange dot — which is nowhere near where it started, even though it has returned to the same physical location. The map it built along the way is geometrically inconsistent.
+
+Loop closure fixes this. At some point, the robot recognizes that it is looking at a place it has seen before. Maybe the same corner, the same doorway, the same set of feature points. This recognition adds a hard constraint to the factor graph: the current pose and the earlier pose must be close together, because they are both looking at the same place.
+
+When you add that constraint and re-optimize the graph, the entire trajectory snaps into a consistent shape — shown in the lower diagram in blue. The loop constraint, shown as the dashed green line, pulls the end of the trajectory back toward the start.
+
+This is what makes SLAM globally consistent. Without loop closure, you have a locally consistent map that slowly falls apart over distance. With loop closure, you have a map that self-corrects every time the robot revisits known territory.
+
+The hard part, which ORB-SLAM handles very cleverly, is the recognition step: how do you reliably identify that you have seen this place before, without false positives?
+  </aside>
+</section>
+
+<!-- ═══════════════════════════════════════════════
+     SLIDE 6 — Classical SLAM Pipeline
+════════════════════════════════════════════════ -->
+<section>
+  <h2>The Classical SLAM Pipeline</h2>
+  <div class="pipeline">
+    <div class="pstep hi">Sensor<br/>Input</div>
+    <div class="parrow">→</div>
+    <div class="pstep">Feature<br/>Extraction</div>
+    <div class="parrow">→</div>
+    <div class="pstep">Data<br/>Association</div>
+    <div class="parrow">→</div>
+    <div class="pstep hi2">Pose<br/>Estimation</div>
+    <div class="parrow">→</div>
+    <div class="pstep">Map<br/>Update</div>
+    <div class="parrow">⇄</div>
+    <div class="pstep hi">Loop<br/>Closure</div>
+  </div>
+  <div class="two-col" style="margin-top:1.4rem">
+    <ul>
+      <li><strong>Feature extraction</strong> — ORB, SIFT, SURF descriptors</li>
+      <li><em>Data association</em> — match features across frames</li>
+      <li><strong>Pose estimation</strong> — PnP, ICP, essential matrix</li>
+    </ul>
+    <ul>
+      <li><em>Map update</em> — insert new landmarks, refine poses</li>
+      <li><strong>Loop closure</strong> — place recognition + graph correction</li>
+      <li>Backend: <em>bundle adjustment</em> or pose-graph optimization</li>
+    </ul>
+  </div>
+  <div class="callout" style="margin-top:1rem; font-size:0.82rem">
+    Next section: ORB-SLAM is the canonical realization of this pipeline — we'll trace every stage through its code &amp; figures
+  </div>
+  <aside class="notes">
+Let me now put the pieces together into the classical SLAM pipeline — the architecture that dominated the field for about a decade, and that ORB-SLAM brought to its highest form.
+
+The pipeline flows left to right. It starts with sensor input — typically a monocular camera, a stereo pair, or an RGB-D sensor. The first thing you do with each new frame is extract features. In ORB-SLAM, those are ORB features — Oriented FAST and Rotated BRIEF — which are rotation-invariant, fast to compute, and fast to match.
+
+Next is data association: you take the features from the current frame and match them to features you have seen before — either in the previous frame, or in the existing map. This step is where most failures happen in classical systems; a bad match leads to a bad pose estimate.
+
+With good matches established, you run pose estimation — typically a PnP solve, which finds the camera pose that best explains where the matched 3D map points project in the current image.
+
+Once you have a pose, you update the map — add any new landmarks that appeared in this frame, refine the positions of existing ones.
+
+And then, running in a separate thread at lower frequency, loop closure continuously monitors for place revisits. When one is detected, it adds a constraint to the graph and triggers a global bundle adjustment to correct all accumulated drift.
+
+This is the skeleton. Every SLAM system you will see today — classical or neural — is a variation on this skeleton. The question is always: what represents the map? What does feature extraction look like? How is the optimization structured?
+
+In the next section, we will go deep on ORB-SLAM, which is the gold standard answer to all of those questions in the classical regime.
+  </aside>
+</section>
+
+<!-- ═══════════════════════════════════════════════
+     SLIDE 7 — Roadmap: Where We're Headed
+════════════════════════════════════════════════ -->
+<section>
+  <h2>Week 05 Roadmap</h2>
+  <div class="two-col">
+    <div>
+      <div class="roadmap-item" style="background:#0d1e14; border:1px solid #1e3a28">
+        <div class="num" style="color:#7fff6b">0</div>
+        <div class="desc"><strong style="color:#7fff6b">Why SLAM?</strong> Geometry of localization — you are here</div>
+      </div>
+      <div class="roadmap-item" style="background:#0d1a2e; border:1px solid #1e3060">
+        <div class="num" style="color:var(--accent)">1</div>
+        <div class="desc"><strong style="color:var(--accent)">ORB-SLAM</strong> Classical mastery — the pipeline in full</div>
+      </div>
+      <div class="roadmap-item" style="background:#1a1208; border:1px solid #3a2810">
+        <div class="num" style="color:var(--accent2)">2·3</div>
+        <div class="desc"><strong style="color:var(--accent2)">iMAP + NICE-SLAM</strong> NeRF meets moving agents</div>
+      </div>
+      <div class="roadmap-item" style="background:#100d1e; border:1px solid #2a1e40">
+        <div class="num" style="color:#c084fc">4</div>
+        <div class="desc"><strong style="color:#c084fc">Gaussian SLAM</strong> 3DGS closes the W04→W05 arc</div>
+      </div>
+    </div>
+    <div>
+      <div class="card hi" style="margin-bottom:1rem">
+        <h3>Connecting Thread</h3>
+        <ul>
+          <li>W04 taught Occ / NeRF / 3DGS as <em>reconstruction</em></li>
+          <li>W05 asks: can those representations work <strong>online</strong>, on a moving agent?</li>
+          <li>Each section = one answer to that question</li>
+        </ul>
+      </div>
+      <div class="callout">
+        By end of today: you will see <em>three competing representations</em> each solve SLAM in a fundamentally different way
+      </div>
+    </div>
+  </div>
+  <aside class="notes">
+Before we go deeper, let me show you the full arc of today's lecture so you know where everything is going.
+
+We are currently in Section 0 — the conceptual foundation. You now know what SLAM is, why it is hard, and what the classical solution looks like at a high level.
+
+Section 1 is ORB-SLAM. This is a deep dive. We will trace the tracking thread, the local mapping thread, and the loop closing thread. We will look at the actual system figures from the paper. The goal is to have a concrete, working mental model of the classical pipeline before we leave it behind.
+
+Sections 2 and 3 are where the story gets interesting. In Week 04, you learned about three representations for 3D scenes: occupancy grids, Neural Radiance Fields, and 3D Gaussian Splatting. Week 04 treated those as offline reconstruction methods — you have all your images, you train, you get a scene. Week 05 asks a different question: can those representations work online, as an agent moves through a new environment in real time?
+
+Section 2 is iMAP, which answers yes for the MLP case — but reveals serious limitations. Section 3 is NICE-SLAM, which fixes those limitations with hierarchical feature grids.
+
+Section 4 is Gaussian SLAM, which takes 3D Gaussian Splatting and asks whether it can serve as the map representation in a live SLAM system.
+
+By the end of today, you will have seen all three representation families from Week 04 — occupancy-inspired grids, NeRF-style MLPs, and 3DGS — each adapted into a SLAM system. That is the Week 04 to Week 05 bridge.
+
+Let's go to Section 1.
+  </aside>
+</section>
+
+<!-- ═══════════════════════════════════════════════
+     SLIDE 8 — Summary (stays up during Q&A)
+════════════════════════════════════════════════ -->
+<section>
+  <h2>Section 0 — Key Takeaways</h2>
+  <div class="two-col">
+    <div>
+      <ul>
+        <li>SLAM = <strong>simultaneous</strong> localization <em>and</em> mapping — circular dependency solved jointly</li>
+        <li>Factor graphs formalize SLAM as a <em>sparse nonlinear least-squares</em> problem</li>
+        <li><strong>Loop closure</strong> is essential for global consistency — without it, drift is unbounded</li>
+        <li>Classical pipeline: features → association → pose → map → loop close</li>
+        <li>Modern variants replace each block with <strong>neural representations</strong></li>
+      </ul>
+    </div>
+    <div>
+      <div class="card" style="border-color:#7fff6b; background:#0d1e14">
+        <h3 style="color:#7fff6b">Coming Up</h3>
+        <ul>
+          <li>Section 1: <em>ORB-SLAM</em> — classical pipeline in depth</li>
+          <li>Section 2&3: <em>Neural SLAM</em> — MLP and feature-grid maps</li>
+          <li>Section 4: <em>Gaussian SLAM</em> — 3DGS online</li>
+        </ul>
+      </div>
+      <div class="callout blue" style="margin-top:0.9rem">
+        "The map is not the territory — but for a robot, building the map <em>is</em> navigating the territory"
+      </div>
+    </div>
+  </div>
+  <aside class="notes">
+This slide stays up during questions, so I will keep this brief as a verbal summary.
+
+SLAM is the problem of building a map and estimating your own position at the same time, from sensor data alone. The circular dependency — you need a map to localize, you need a pose to map — is resolved by solving both jointly as a probabilistic inference problem.
+
+Factor graphs give us the right language: variable nodes for poses and landmarks, factor nodes for motion and observation constraints, and a sparse optimization that minimizes the total error across all constraints.
+
+Loop closure is the mechanism that prevents drift from destroying the map over long trajectories. It is not optional — without it, any real-world deployment will fail.
+
+The classical pipeline packages all of this into a sequence of well-defined stages: extract features, associate them, estimate the pose, update the map, detect loops. ORB-SLAM is the canonical realization of that pipeline.
+
+And the key insight for today's lecture is that the map representation — what "M" actually is — is a design choice. Classical systems use sparse point clouds. Neural systems use MLPs or feature grids. Gaussian systems use 3D Gaussians. The pipeline stays roughly the same. The representation changes everything about how you store, query, and render the map.
+
+Any questions before we move on to ORB-SLAM?
+  </aside>
+</section>
+
+</div><!-- /slides -->
+</div><!-- /reveal -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/reveal.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/plugin/notes/notes.min.js"></script>
+<script>
+Reveal.initialize({
+  hash: true,
+  slideNumber: true,
+  transition: 'fade',
+  transitionSpeed: 'fast',
+  controls: true,
+  progress: true,
+  center: false,
+  margin: 0.06,
+  width: 1280,
+  height: 720,
+  plugins: [ RevealNotes ]
+});
+</script>
+</body>
+</html>
