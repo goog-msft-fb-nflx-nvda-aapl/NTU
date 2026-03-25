@@ -1,0 +1,1313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PPO Path Tracking — Technical Report</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,600;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #1a1a24;
+    --border: #2a2a3a;
+    --accent: #00e5ff;
+    --accent2: #7c4dff;
+    --accent3: #ff6d00;
+    --text: #e8e8f0;
+    --text-dim: #888899;
+    --text-dimmer: #444455;
+    --green: #00e676;
+    --red: #ff1744;
+    --yellow: #ffd740;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 300;
+    line-height: 1.7;
+    min-height: 100vh;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 32px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Header */
+  header {
+    padding: 80px 0 60px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 64px;
+  }
+
+  .tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .tag::before {
+    content: '';
+    display: block;
+    width: 32px;
+    height: 1px;
+    background: var(--accent);
+  }
+
+  h1 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: clamp(28px, 4vw, 44px);
+    font-weight: 600;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    margin-bottom: 24px;
+    color: var(--text);
+  }
+
+  h1 span { color: var(--accent); }
+
+  .subtitle {
+    font-size: 15px;
+    color: var(--text-dim);
+    max-width: 560px;
+    line-height: 1.8;
+  }
+
+  .meta-row {
+    display: flex;
+    gap: 32px;
+    margin-top: 40px;
+    flex-wrap: wrap;
+  }
+
+  .meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .meta-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-dimmer);
+  }
+
+  .meta-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    color: var(--text);
+  }
+
+  /* Score hero */
+  .score-hero {
+    background: linear-gradient(135deg, rgba(0,229,255,0.05), rgba(124,77,255,0.05));
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    padding: 40px;
+    margin-bottom: 64px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 32px;
+  }
+
+  .score-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .score-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-dimmer);
+  }
+
+  .score-value {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 36px;
+    font-weight: 600;
+    color: var(--accent);
+    line-height: 1;
+  }
+
+  .score-value.green { color: var(--green); }
+  .score-value.purple { color: var(--accent2); }
+
+  .score-note {
+    font-size: 12px;
+    color: var(--text-dim);
+  }
+
+  /* Sections */
+  section {
+    margin-bottom: 72px;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    margin-bottom: 32px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+  }
+
+  h2 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 18px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    color: var(--text);
+  }
+
+  h3 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--accent2);
+    letter-spacing: 0.05em;
+    margin-bottom: 12px;
+    margin-top: 28px;
+  }
+
+  p {
+    font-size: 14px;
+    color: var(--text-dim);
+    margin-bottom: 16px;
+    line-height: 1.8;
+  }
+
+  /* Two column layout */
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    margin-bottom: 24px;
+  }
+
+  /* Cards */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 24px;
+  }
+
+  .card-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-dimmer);
+    margin-bottom: 16px;
+  }
+
+  /* Observation table */
+  .obs-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin-bottom: 24px;
+  }
+
+  .obs-table th {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-dimmer);
+    text-align: left;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+
+  .obs-table td {
+    padding: 10px 16px;
+    border-bottom: 1px solid rgba(42,42,58,0.5);
+    color: var(--text-dim);
+    vertical-align: top;
+  }
+
+  .obs-table td:first-child {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+
+  .obs-table tr:last-child td { border-bottom: none; }
+
+  /* Code blocks */
+  pre {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 2px solid var(--accent2);
+    padding: 20px 24px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    line-height: 1.7;
+    overflow-x: auto;
+    margin-bottom: 24px;
+    color: var(--text);
+  }
+
+  .kw { color: var(--accent2); }
+  .fn { color: var(--accent); }
+  .cm { color: var(--text-dimmer); font-style: italic; }
+  .st { color: var(--green); }
+  .nm { color: var(--yellow); }
+
+  /* Network diagram */
+  .network-diagram {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 32px;
+    margin-bottom: 24px;
+    overflow-x: auto;
+  }
+
+  .net-flow {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    min-width: 600px;
+  }
+
+  .net-node {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 12px 16px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+
+  .net-node .dim { font-size: 10px; color: var(--accent); display: block; margin-top: 2px; }
+  .net-node .act { font-size: 10px; color: var(--yellow); display: block; }
+
+  .net-arrow {
+    color: var(--text-dimmer);
+    padding: 0 8px;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  .net-label {
+    font-size: 10px;
+    color: var(--text-dimmer);
+    text-align: center;
+    margin-top: 8px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .net-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  /* Reward formula */
+  .formula-block {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 28px 32px;
+    margin-bottom: 24px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    line-height: 2.2;
+  }
+
+  .formula-line {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 4px;
+  }
+
+  .formula-var { color: var(--accent); }
+  .formula-op { color: var(--text-dimmer); }
+  .formula-val { color: var(--yellow); }
+  .formula-desc { color: var(--text-dimmer); font-size: 11px; margin-left: 8px; }
+
+  /* Hyperparams */
+  .hyperparam-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    margin-bottom: 24px;
+  }
+
+  .hp-item {
+    background: var(--surface);
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .hp-key {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dimmer);
+    letter-spacing: 0.1em;
+  }
+
+  .hp-val {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--accent);
+  }
+
+  /* Training curve */
+  .chart-container {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 32px;
+    margin-bottom: 24px;
+    position: relative;
+  }
+
+  canvas {
+    width: 100% !important;
+    display: block;
+  }
+
+  /* Inline stat pills */
+  .stat-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 24px;
+  }
+
+  .stat-pill {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 8px 16px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .stat-pill .key { color: var(--text-dimmer); }
+  .stat-pill .val { color: var(--accent); font-weight: 500; }
+
+  /* Observations & findings */
+  .finding-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .finding-list li {
+    display: flex;
+    gap: 16px;
+    font-size: 14px;
+    color: var(--text-dim);
+    line-height: 1.7;
+    padding: 16px 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+  }
+
+  .finding-list li::before {
+    content: '▸';
+    color: var(--accent);
+    flex-shrink: 0;
+    font-size: 12px;
+    margin-top: 3px;
+    font-family: monospace;
+  }
+
+  .finding-list li strong {
+    color: var(--text);
+    font-weight: 400;
+  }
+
+  /* Future work */
+  .future-item {
+    display: flex;
+    gap: 20px;
+    padding: 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 2px solid var(--accent2);
+    margin-bottom: 12px;
+  }
+
+  .future-num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--accent2);
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .future-content h4 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+
+  .future-content p {
+    font-size: 13px;
+    margin-bottom: 0;
+  }
+
+  /* Footer */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 40px 0;
+    margin-top: 80px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .footer-text {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dimmer);
+    letter-spacing: 0.05em;
+  }
+
+  /* Glow on score */
+  @keyframes pulse-glow {
+    0%, 100% { text-shadow: 0 0 20px rgba(0,229,255,0.3); }
+    50% { text-shadow: 0 0 40px rgba(0,229,255,0.6); }
+  }
+  .score-value { animation: pulse-glow 3s ease-in-out infinite; }
+
+  @media (max-width: 640px) {
+    .two-col { grid-template-columns: 1fr; }
+    .hyperparam-grid { grid-template-columns: repeat(2, 1fr); }
+    .score-hero { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <header>
+    <div class="tag">Deep Reinforcement Learning · Path Tracking</div>
+    <h1>PPO for Autonomous<br><span>Path Tracking</span></h1>
+    <p class="subtitle">Implementation and analysis of Proximal Policy Optimization applied to a kinematic vehicle path-following task using parallel environment rollouts and Generalized Advantage Estimation.</p>
+    <div class="meta-row">
+      <div class="meta-item">
+        <span class="meta-label">Algorithm</span>
+        <span class="meta-value">PPO (Schulman et al. 2017)</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Hardware</span>
+        <span class="meta-value">NVIDIA H200 (CUDA 12.4)</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Framework</span>
+        <span class="meta-value">PyTorch</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Iterations</span>
+        <span class="meta-value">30,000</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Score Hero -->
+  <div class="score-hero">
+    <div class="score-item">
+      <span class="score-label">Evaluation Score</span>
+      <span class="score-value">263.6</span>
+      <span class="score-note">Final eval.py result</span>
+    </div>
+    <div class="score-item">
+      <span class="score-label">Peak Mean Return</span>
+      <span class="score-value green">249.9</span>
+      <span class="score-note">Iteration 27,000</span>
+    </div>
+    <div class="score-item">
+      <span class="score-label">Training FPS</span>
+      <span class="score-value purple">~1,750</span>
+      <span class="score-note">16 parallel envs on GPU</span>
+    </div>
+  </div>
+
+  <!-- 1. Problem -->
+  <section>
+    <div class="section-header">
+      <span class="section-num">01</span>
+      <h2>Problem Description</h2>
+    </div>
+    <p>The path tracking task requires a simulated kinematic vehicle to follow a cubic-spline generated reference path. The agent controls a single continuous action — angular velocity — and is rewarded for staying close to the path and maintaining correct heading orientation.</p>
+
+    <h3>Observation Space (14-dim)</h3>
+    <table class="obs-table">
+      <thead>
+        <tr><th>Index</th><th>Description</th><th>Range</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>0–2</td><td>Car pose 2 timesteps ago (x, y, yaw)</td><td>x,y∈[0,1], yaw∈[0,2π]</td></tr>
+        <tr><td>3–5</td><td>Car pose 1 timestep ago (x, y, yaw)</td><td>x,y∈[0,1], yaw∈[0,2π]</td></tr>
+        <tr><td>6–7</td><td>Nearest point on path (x, y)</td><td>[0, 1]</td></tr>
+        <tr><td>8–13</td><td>Next 3 waypoints (x₁,y₁,x₂,y₂,x₃,y₃)</td><td>[0, 1]</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Action & Termination</h3>
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title">Action Space</div>
+        <p style="margin:0;font-size:13px;">Single continuous action: <span style="color:var(--accent);font-family:monospace;">angular velocity ∈ [−1, 1]</span>. Values outside range are clipped automatically.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">Episode Termination</div>
+        <p style="margin:0;font-size:13px;">Episode ends at <span style="color:var(--accent);font-family:monospace;">100% path progress</span> or after reaching <span style="color:var(--accent);font-family:monospace;">400 timesteps</span> (max steps).</p>
+      </div>
+    </div>
+
+    <h3>Reward Function</h3>
+    <div class="formula-block">
+      <div class="formula-line">
+        <span class="formula-var">r</span>
+        <span class="formula-op">=</span>
+        <span class="formula-val">0.8</span> <span class="formula-var">r_d</span>
+        <span class="formula-op">+</span>
+        <span class="formula-val">0.2</span> <span class="formula-var">r_y</span>
+        <span class="formula-op">+</span>
+        <span class="formula-var">r_p</span>
+        <span class="formula-desc">// total reward (fixed by environment)</span>
+      </div>
+      <div class="formula-line">
+        <span class="formula-var">r_d</span>
+        <span class="formula-op">=</span>
+        <span>exp(−0.1 ‖p − p'‖²)</span>
+        <span class="formula-desc">// distance reward: penalizes deviation from path</span>
+      </div>
+      <div class="formula-line">
+        <span class="formula-var">r_y</span>
+        <span class="formula-op">=</span>
+        <span>exp(−0.1 ‖θ − θ'_normal‖²)</span>
+        <span class="formula-desc">// yaw reward: penalizes misalignment with path tangent</span>
+      </div>
+      <div class="formula-line">
+        <span class="formula-var">r_p</span>
+        <span class="formula-op">=</span>
+        <span>progress bonus</span>
+        <span class="formula-desc">// reward for advancing along path</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. Implementation -->
+  <section>
+    <div class="section-header">
+      <span class="section-num">02</span>
+      <h2>Implementation</h2>
+    </div>
+
+    <h3>Policy Network (PolicyNet)</h3>
+    <p>A two-layer MLP maps the 14-dimensional observation to a feature vector, which is then passed through a diagonal Gaussian distribution head to produce stochastic actions.</p>
+
+    <div class="network-diagram">
+      <div class="net-flow">
+        <div class="net-block">
+          <div class="net-node">Input<span class="dim">14</span></div>
+          <div class="net-label">state</div>
+        </div>
+        <div class="net-arrow">→</div>
+        <div class="net-block">
+          <div class="net-node">Linear<span class="dim">14→64</span><span class="act">ReLU</span></div>
+          <div class="net-label">layer 1</div>
+        </div>
+        <div class="net-arrow">→</div>
+        <div class="net-block">
+          <div class="net-node">Linear<span class="dim">64→64</span><span class="act">ReLU</span></div>
+          <div class="net-label">layer 2</div>
+        </div>
+        <div class="net-arrow">→</div>
+        <div class="net-block">
+          <div class="net-node">DiagGaussian<span class="dim">64→1</span><span class="act">σ=0.5</span></div>
+          <div class="net-label">dist head</div>
+        </div>
+        <div class="net-arrow">→</div>
+        <div class="net-block">
+          <div class="net-node">Action<span class="dim">1</span></div>
+          <div class="net-label">ω ∈ [−1,1]</div>
+        </div>
+      </div>
+    </div>
+
+<pre><span class="kw">class</span> <span class="fn">PolicyNet</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, s_dim, a_dim, std=<span class="nm">0.5</span>):
+        self.main = nn.Sequential(
+            init_(nn.Linear(s_dim, <span class="nm">64</span>)), nn.ReLU(),
+            init_(nn.Linear(<span class="nm">64</span>, <span class="nm">64</span>)),  nn.ReLU(),
+        )
+        self.dist = DiagGaussian(<span class="nm">64</span>, a_dim, std)   <span class="cm"># fixed std=0.5</span>
+
+    <span class="kw">def</span> <span class="fn">evaluate</span>(self, state, action):
+        dist = self.dist(self.main(state))
+        <span class="kw">return</span> dist.log_probs(action), dist.entropy()</pre>
+
+    <h3>Value Network (ValueNet)</h3>
+    <p>A symmetric two-layer MLP estimates the state value V(s), used for computing advantages during training.</p>
+
+<pre><span class="kw">class</span> <span class="fn">ValueNet</span>(nn.Module):
+    <span class="kw">def</span> <span class="fn">__init__</span>(self, s_dim):
+        self.main = nn.Sequential(
+            init_(nn.Linear(s_dim, <span class="nm">64</span>)), nn.ReLU(),
+            init_(nn.Linear(<span class="nm">64</span>, <span class="nm">64</span>)),  nn.ReLU(),
+            init_(nn.Linear(<span class="nm">64</span>, <span class="nm">1</span>)),
+        )
+
+    <span class="kw">def</span> <span class="fn">forward</span>(self, state):
+        <span class="kw">return</span> self.main(state)[:, <span class="nm">0</span>]   <span class="cm"># scalar value per state</span></pre>
+
+    <h3>EnvRunner — Parallel Data Collection</h3>
+    <p>The EnvRunner collects n-step trajectories from 16 parallel environments simultaneously. After each rollout, Generalized Advantage Estimation (GAE) computes returns and advantages.</p>
+
+<pre><span class="kw">for</span> step <span class="kw">in</span> range(self.n_step):
+    state_tensor = torch.from_numpy(self.states).float().to(device)
+    <span class="kw">with</span> torch.no_grad():
+        actions, a_logps = policy_net(state_tensor)   <span class="cm"># (n_env, a_dim)</span>
+        values           = value_net(state_tensor)    <span class="cm"># (n_env,)</span>
+    self.states, rewards, self.dones, _ = self.env.step(actions)
+
+<span class="cm"># GAE return computation after n_step rollout</span>
+mb_returns = compute_gae(rewards, values, dones,
+                         last_values, last_dones,
+                         gamma=<span class="nm">0.99</span>, lamb=<span class="nm">0.95</span>)</pre>
+
+    <h3>PPO Training Loop</h3>
+    <p>The clipped surrogate objective prevents destructively large policy updates. Advantages are normalized per mini-batch. Both actor and critic are updated with gradient clipping (max norm = 0.5).</p>
+
+<pre><span class="cm"># Per mini-batch advantage normalization</span>
+sample_advs = (sample_advs - sample_advs.mean()) / (sample_advs.std() + <span class="nm">1e-8</span>)
+
+<span class="cm"># Clipped surrogate loss</span>
+ratio   = torch.exp(sample_a_logps - sample_old_a_logps)
+pg_loss1 = -sample_advs * ratio
+pg_loss2 = -sample_advs * torch.clamp(ratio, <span class="nm">1</span>-clip_val, <span class="nm">1</span>+clip_val)
+pg_loss  = torch.max(pg_loss1, pg_loss2).mean()
+
+<span class="cm"># Clipped value loss</span>
+v_pred_clip = old_values + torch.clamp(values - old_values, -clip_val, clip_val)
+v_loss = torch.max((returns-values).pow(<span class="nm">2</span>), (returns-v_pred_clip).pow(<span class="nm">2</span>)).mean()</pre>
+  </section>
+
+  <!-- 3. Hyperparameters -->
+  <section>
+    <div class="section-header">
+      <span class="section-num">03</span>
+      <h2>Hyperparameters</h2>
+    </div>
+    <div class="hyperparam-grid">
+      <div class="hp-item"><span class="hp-key">n_env</span><span class="hp-val">16</span></div>
+      <div class="hp-item"><span class="hp-key">n_step</span><span class="hp-val">128</span></div>
+      <div class="hp-item"><span class="hp-key">mb_size</span><span class="hp-val">2048</span></div>
+      <div class="hp-item"><span class="hp-key">sample_mb_size</span><span class="hp-val">64</span></div>
+      <div class="hp-item"><span class="hp-key">sample_n_epoch</span><span class="hp-val">8</span></div>
+      <div class="hp-item"><span class="hp-key">learning_rate</span><span class="hp-val">3e-4</span></div>
+      <div class="hp-item"><span class="hp-key">gamma (γ)</span><span class="hp-val">0.99</span></div>
+      <div class="hp-item"><span class="hp-key">lambda (λ)</span><span class="hp-val">0.95</span></div>
+      <div class="hp-item"><span class="hp-key">clip_val (ε)</span><span class="hp-val">0.2</span></div>
+      <div class="hp-item"><span class="hp-key">action std</span><span class="hp-val">0.5</span></div>
+      <div class="hp-item"><span class="hp-key">max_grad_norm</span><span class="hp-val">0.5</span></div>
+      <div class="hp-item"><span class="hp-key">n_iter</span><span class="hp-val">30,000</span></div>
+    </div>
+    <p>Linear learning rate decay is applied across all 30,000 iterations, decaying from 3×10⁻⁴ to 0. The batch size of 2,048 transitions (16 envs × 128 steps) provides stable gradient estimates.</p>
+  </section>
+
+  <!-- 4. Results -->
+  <section>
+    <div class="section-header">
+      <span class="section-num">04</span>
+      <h2>Training Results</h2>
+    </div>
+
+    <div class="stat-row">
+      <div class="stat-pill"><span class="key">eval score</span><span class="val">263.6</span></div>
+      <div class="stat-pill"><span class="key">data points</span><span class="val">299</span></div>
+      <div class="stat-pill"><span class="key">convergence iter</span><span class="val">~8,000</span></div>
+      <div class="stat-pill"><span class="key">final mean return</span><span class="val">247.5</span></div>
+      <div class="stat-pill"><span class="key">final std return</span><span class="val">~20</span></div>
+    </div>
+
+    <div class="chart-container">
+      <canvas id="trainingChart" height="320"></canvas>
+    </div>
+  </section>
+
+  <!-- 5. Observations -->
+  <section>
+    <div class="section-header">
+      <span class="section-num">05</span>
+      <h2>Observations & Analysis</h2>
+    </div>
+    <ul class="finding-list">
+      <li><strong>Rapid early learning (iters 0–1,000):</strong> Mean return rose sharply from ~39 to ~128, indicating that the reward signal (distance + yaw alignment) provides clear gradient information from the start. The two-timestep pose history likely helps the agent infer velocity.</li>
+      <li><strong>Saturation plateau (iters 8,000–30,000):</strong> Return stabilized in the 220–250 range after roughly 8,000 iterations, suggesting the policy converged to a near-optimal strategy for the given network capacity. Further gains required architectural changes.</li>
+      <li><strong>Variance reduction over time:</strong> Standard deviation of returns decreased from ~40 at early training to ~18–20 at convergence, reflecting a more consistent and reliable policy rather than erratic behavior.</li>
+      <li><strong>Occasional dips:</strong> Short-lived drops (e.g., iter 9,200: 179.3, iter 4,100: 169.5) are characteristic of PPO's stochastic mini-batch sampling. The policy recovers quickly, validating the clipping mechanism.</li>
+      <li><strong>Mini-batch advantage normalization:</strong> Normalizing advantages per mini-batch (rather than globally) improved training stability and allowed a higher epoch count (8) without divergence.</li>
+      <li><strong>ReLU vs Tanh:</strong> ReLU activations were used in the final trained model. For this bounded observation space (x,y ∈ [0,1], yaw ∈ [0,2π]), ReLU performed comparably to Tanh without the saturation risk at extreme inputs.</li>
+    </ul>
+  </section>
+
+  <!-- 6. Future -->
+  <section>
+    <div class="section-header">
+      <span class="section-num">06</span>
+      <h2>Future Improvements</h2>
+    </div>
+
+    <div class="future-item">
+      <span class="future-num">01</span>
+      <div class="future-content">
+        <h4>Larger Network Capacity</h4>
+        <p>The current 64-unit two-layer MLP may bottleneck performance. Scaling to 128 or 256 units, or adding a third layer, could allow the policy to learn more nuanced path-following strategies, particularly for sharp turns.</p>
+      </div>
+    </div>
+
+    <div class="future-item">
+      <span class="future-num">02</span>
+      <div class="future-content">
+        <h4>Adaptive Action Standard Deviation</h4>
+        <p>The fixed action std (σ=0.5) is a strong prior. Learning σ jointly with the policy (via a log-std parameter) would allow the agent to automatically reduce exploration as training progresses, potentially improving final performance.</p>
+      </div>
+    </div>
+
+    <div class="future-item">
+      <span class="future-num">03</span>
+      <div class="future-content">
+        <h4>Entropy Regularization</h4>
+        <p>Adding an entropy bonus to the policy loss (ent_coef > 0) would explicitly encourage exploration and prevent premature convergence to a suboptimal deterministic policy, especially beneficial in early training.</p>
+      </div>
+    </div>
+
+    <div class="future-item">
+      <span class="future-num">04</span>
+      <div class="future-content">
+        <h4>Longer Rollouts / More Environments</h4>
+        <p>Increasing n_step beyond 128 or n_env beyond 16 would provide better return estimates and more diverse training data per iteration. With 8× H200 GPUs available, a distributed PPO implementation could scale this significantly.</p>
+      </div>
+    </div>
+
+    <div class="future-item">
+      <span class="future-num">05</span>
+      <div class="future-content">
+        <h4>Curriculum Learning</h4>
+        <p>Starting training on simpler, lower-curvature paths and gradually increasing difficulty could accelerate learning and lead to better generalization across the randomized spline paths generated at each episode reset.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span class="footer-text">PPO · Path Tracking · Deep Reinforcement Learning</span>
+    <span class="footer-text">Eval Score: 263.6 / 120 threshold → Full marks</span>
+  </footer>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+const raw = `100,38.8505,19.4254
+200,44.9866,22.5068
+300,48.4988,20.2731
+400,43.5283,20.5402
+500,53.4784,27.5502
+600,74.7458,28.8494
+700,104.3113,31.8668
+800,119.3847,38.6444
+900,123.5095,42.4277
+1000,128.5367,36.1732
+1100,132.4190,36.5829
+1200,135.2333,36.5237
+1300,148.6939,34.5556
+1400,145.6694,42.4333
+1500,159.3948,32.8416
+1600,161.7683,33.2578
+1700,161.4922,31.9601
+1800,160.0023,31.6094
+1900,181.4895,28.5279
+2000,167.6476,32.1766
+2100,171.6913,34.7395
+2200,168.5532,36.3189
+2300,176.7413,30.1552
+2400,185.4470,29.2665
+2500,193.2724,27.7171
+2600,180.3981,34.1402
+2700,192.1310,29.2498
+2800,189.8015,28.9276
+2900,176.9810,35.6511
+3000,196.7478,25.2286
+3100,186.7484,28.6871
+3200,199.1051,31.6293
+3300,203.6114,25.2578
+3400,204.4807,23.1237
+3500,201.4929,22.1943
+3600,192.4097,30.8214
+3700,206.6268,25.4655
+3800,205.0737,27.0170
+3900,203.5840,25.5676
+4000,200.8909,29.0054
+4100,169.5196,31.7166
+4200,202.7624,24.7167
+4300,208.4615,25.8615
+4400,194.0299,33.5416
+4500,209.0549,27.0194
+4600,205.0961,27.9466
+4700,176.7136,34.0423
+4800,211.3356,40.1558
+4900,206.1668,33.6179
+5000,192.5291,37.8895
+5100,181.6821,39.9977
+5200,208.0285,31.8996
+5300,206.5892,41.6607
+5400,215.2871,31.5370
+5500,209.6860,41.5482
+5600,170.8464,45.7801
+5700,204.1902,38.7274
+5800,208.0911,39.3616
+5900,203.9305,26.9762
+6000,213.3482,33.5143
+6100,212.1407,28.5545
+6200,211.3980,28.3175
+6300,222.2514,22.2383
+6400,217.3980,22.8606
+6500,219.4838,23.0018
+6600,219.3217,24.4155
+6700,207.8945,41.5709
+6800,219.9635,31.9966
+6900,212.6105,43.2082
+7000,217.6173,21.0615
+7100,221.2591,24.1505
+7200,217.6170,25.8826
+7300,225.1787,19.8969
+7400,222.1089,33.8739
+7500,216.8550,41.8826
+7600,224.3003,19.7267
+7700,222.8439,30.5531
+7800,220.2484,39.4022
+7900,224.8401,23.2506
+8000,224.4501,22.8069
+8100,219.4611,24.1393
+8200,218.8718,33.1422
+8300,224.0431,24.3290
+8400,224.8490,22.0475
+8500,227.1473,21.6131
+8600,219.3132,34.9239
+8700,222.3870,29.2222
+8800,224.5925,30.4995
+8900,220.4207,45.4353
+9000,226.0872,32.4374
+9100,221.4788,24.6956
+9200,179.2833,57.8986
+9300,216.3217,44.1272
+9400,223.0885,41.4561
+9500,227.1042,20.5487
+9600,223.2742,41.0059
+9700,224.6217,22.2686
+9800,221.4939,44.8513
+9900,225.4842,18.4553
+10000,227.0208,23.1503
+10100,230.4202,22.5593
+10200,208.6147,27.6005
+10300,224.5659,36.7349
+10400,226.1939,23.7676
+10500,223.7147,24.5499
+10600,224.3380,34.8195
+10700,205.6378,47.4659
+10800,227.2248,18.6068
+10900,229.0074,32.1352
+11000,223.3906,21.3107
+11100,225.4789,36.7941
+11200,217.3607,31.0420
+11300,233.3419,19.0455
+11400,231.2042,21.5640
+11500,187.6927,36.8090
+11600,223.0250,49.8331
+11700,226.1441,43.9711
+11800,218.4187,36.2591
+11900,230.1443,24.7402
+12000,227.8012,31.7703
+12100,228.8084,19.8461
+12200,226.9755,41.0415
+12300,228.9230,20.3706
+12400,235.0237,19.2608
+12500,227.9154,22.6395
+12600,233.2290,20.2196
+12700,228.1445,32.2307
+12800,233.3105,32.9074
+12900,231.8402,33.8326
+13000,228.5906,28.3302
+13100,224.2729,27.4255
+13200,238.6145,20.3663
+13300,229.9945,25.2080
+13400,230.5564,32.2521
+13500,231.4242,20.5678
+13600,229.6322,52.7227
+13700,227.3234,27.2405
+13800,227.4805,37.8529
+13900,221.8177,59.8996
+14000,226.1138,56.5181
+14100,224.7901,46.3688
+14200,237.6894,21.7975
+14300,234.2664,26.5468
+14400,230.1012,25.2841
+14500,240.3801,17.7431
+14600,234.5151,24.7059
+14700,236.8962,21.7635
+14800,230.4035,34.9853
+14900,237.1719,21.2049
+15000,226.2444,35.1321
+15100,231.3867,31.9799
+15200,220.1827,31.7494
+15300,235.7617,31.3597
+15400,238.8079,22.7194
+15500,234.8208,30.5355
+15600,231.3359,41.7035
+15700,234.2636,34.0838
+15800,236.7428,21.1113
+15900,232.8407,20.6575
+16000,231.6660,23.8880
+16100,232.5929,22.7306
+16200,237.7356,31.4772
+16300,240.2759,24.2866
+16400,239.2637,19.8401
+16500,235.5945,31.5038
+16600,236.8161,17.4716
+16700,234.2061,20.3474
+16800,237.3437,20.9647
+16900,232.4867,33.8538
+17000,236.0695,36.2468
+17100,232.0670,40.8034
+17200,224.1097,32.2166
+17300,237.6923,32.5450
+17400,236.8267,21.9394
+17500,229.8883,20.9755
+17600,230.4526,33.5978
+17700,235.0950,20.7514
+17800,235.5468,18.5029
+17900,240.6764,30.7940
+18000,236.7931,30.5051
+18100,235.3964,20.2535
+18200,236.2342,30.6434
+18300,239.0650,36.5315
+18400,237.8165,31.6585
+18500,220.9410,32.9320
+18600,238.2662,32.1420
+18700,236.6823,31.9052
+18800,242.2764,19.8163
+18900,235.1437,31.3344
+19000,239.8329,19.4315
+19100,236.5564,41.3831
+19200,237.0962,35.8578
+19300,235.7943,30.3353
+19400,238.9521,20.1781
+19500,240.4131,18.2846
+19600,240.9786,19.0699
+19700,241.0282,22.4409
+19800,240.8486,23.2096
+19900,241.8283,23.9883
+20000,236.7087,32.4733
+20100,240.7532,23.5864
+20200,231.2895,32.1947
+20300,234.0321,34.2322
+20400,231.7696,42.7415
+20500,237.2699,25.8262
+20600,238.0352,32.9148
+20700,234.4113,48.1884
+20800,230.8358,55.3647
+20900,240.1209,21.4119
+21000,233.8886,41.2368
+21100,237.2197,21.3668
+21200,231.6868,35.0396
+21300,239.2890,33.2299
+21400,243.1044,21.4077
+21500,246.0782,24.4435
+21600,240.7966,31.1822
+21700,239.2413,21.7639
+21800,237.0315,21.2076
+21900,243.1362,15.1093
+22000,240.9722,20.0207
+22100,240.7513,22.4540
+22200,241.0773,32.2357
+22300,238.3816,25.1463
+22400,235.9718,40.2555
+22500,239.6523,31.4854
+22600,239.8793,25.8508
+22700,238.9583,30.9189
+22800,243.8251,21.4460
+22900,239.3017,18.1973
+23000,241.7309,20.1300
+23100,246.2872,19.9647
+23200,244.9079,18.7443
+23300,239.6880,21.2523
+23400,237.5876,20.4553
+23500,244.8162,17.7618
+23600,238.8986,33.2555
+23700,238.5885,36.5707
+23800,244.3016,18.8970
+23900,243.3086,22.0437
+24000,246.1720,23.9011
+24100,242.4952,19.9820
+24200,244.6819,18.6510
+24300,240.5038,33.5003
+24400,241.4825,19.1674
+24500,236.6703,21.1967
+24600,243.1171,19.6044
+24700,244.3439,19.1169
+24800,245.3625,19.3878
+24900,243.0804,19.5934
+25000,241.1021,19.9639
+25100,243.8678,31.9395
+25200,241.8779,19.5853
+25300,242.4012,37.3997
+25400,244.8901,19.5633
+25500,242.3087,19.1529
+25600,240.5077,30.8710
+25700,243.3381,20.7244
+25800,241.7333,18.5311
+25900,240.9510,18.2551
+26000,244.9652,23.5743
+26100,246.0614,20.8651
+26200,243.9710,20.7718
+26300,246.4324,19.8212
+26400,243.0384,18.1426
+26500,242.5576,22.4533
+26600,244.9463,19.8097
+26700,239.5050,20.7577
+26800,242.9185,18.9945
+26900,248.0379,21.4394
+27000,249.9302,21.1212
+27100,244.5051,20.4383
+27200,246.3156,18.6954
+27300,242.9051,21.4373
+27400,245.7259,18.3929
+27500,244.6691,20.4617
+27600,243.0684,19.8851
+27700,242.4469,19.4638
+27800,245.8657,21.4314
+27900,245.2448,20.9970
+28000,244.7424,18.5860
+28100,245.2232,18.5849
+28200,244.5474,24.5618
+28300,246.6485,22.8390
+28400,244.1840,24.2526
+28500,247.9120,19.2539
+28600,244.3905,19.4064
+28700,246.1453,18.9841
+28800,240.0673,32.9770
+28900,244.5983,21.2064
+29000,241.8320,19.5085
+29100,244.1852,20.4684
+29200,242.4420,26.3790
+29300,245.3559,18.3864
+29400,242.8364,18.7527
+29500,246.9790,17.4344
+29600,241.0208,33.1360
+29700,244.7144,17.4840
+29800,239.7038,24.4374
+29900,247.4704,20.0469`;
+
+const lines = raw.trim().split('\n');
+const iters = [], means = [], stds = [];
+lines.forEach(l => {
+  const [it, m, s] = l.split(',').map(Number);
+  iters.push(it); means.push(m); stds.push(s);
+});
+
+const upperBand = means.map((m, i) => m + stds[i]);
+const lowerBand = means.map((m, i) => m - stds[i]);
+
+// Smooth helper
+function smooth(arr, k=5) {
+  return arr.map((_, i) => {
+    const start = Math.max(0, i-k), end = Math.min(arr.length-1, i+k);
+    const slice = arr.slice(start, end+1);
+    return slice.reduce((a,b)=>a+b,0)/slice.length;
+  });
+}
+const smoothMeans = smooth(means, 8);
+
+const ctx = document.getElementById('trainingChart').getContext('2d');
+new Chart(ctx, {
+  type: 'line',
+  data: {
+    labels: iters,
+    datasets: [
+      {
+        label: 'Std Band Upper',
+        data: upperBand,
+        borderColor: 'transparent',
+        backgroundColor: 'rgba(0,229,255,0.06)',
+        fill: '+1',
+        pointRadius: 0,
+        tension: 0.3,
+      },
+      {
+        label: 'Std Band Lower',
+        data: lowerBand,
+        borderColor: 'transparent',
+        backgroundColor: 'rgba(0,229,255,0.06)',
+        fill: false,
+        pointRadius: 0,
+        tension: 0.3,
+      },
+      {
+        label: 'Mean Return',
+        data: means,
+        borderColor: 'rgba(0,229,255,0.35)',
+        backgroundColor: 'transparent',
+        borderWidth: 1,
+        pointRadius: 0,
+        tension: 0.2,
+      },
+      {
+        label: 'Smoothed Return',
+        data: smoothMeans,
+        borderColor: '#00e5ff',
+        backgroundColor: 'transparent',
+        borderWidth: 2.5,
+        pointRadius: 0,
+        tension: 0.4,
+      },
+    ]
+  },
+  options: {
+    responsive: true,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: {
+        labels: {
+          color: '#888899',
+          font: { family: 'IBM Plex Mono', size: 11 },
+          filter: (item) => !item.text.includes('Band'),
+        }
+      },
+      tooltip: {
+        backgroundColor: '#1a1a24',
+        borderColor: '#2a2a3a',
+        borderWidth: 1,
+        titleColor: '#00e5ff',
+        bodyColor: '#888899',
+        titleFont: { family: 'IBM Plex Mono', size: 11 },
+        bodyFont: { family: 'IBM Plex Mono', size: 11 },
+        callbacks: {
+          title: (items) => `Iter ${items[0].label}`,
+          label: (item) => {
+            if (item.datasetIndex === 3) return ` smoothed: ${item.raw.toFixed(2)}`;
+            if (item.datasetIndex === 2) return ` mean: ${item.raw.toFixed(2)}`;
+            return null;
+          }
+        }
+      },
+      annotation: {
+        annotations: {
+          threshold: {
+            type: 'line',
+            yMin: 120, yMax: 120,
+            borderColor: 'rgba(255,109,0,0.5)',
+            borderWidth: 1,
+            borderDash: [6, 4],
+            label: {
+              content: 'Full marks threshold (120)',
+              enabled: true,
+              color: '#ff6d00',
+              font: { family: 'IBM Plex Mono', size: 10 },
+              backgroundColor: 'transparent',
+              position: 'start',
+            }
+          }
+        }
+      }
+    },
+    scales: {
+      x: {
+        grid: { color: 'rgba(42,42,58,0.5)', drawTicks: false },
+        ticks: {
+          color: '#444455',
+          font: { family: 'IBM Plex Mono', size: 10 },
+          maxTicksLimit: 10,
+          callback: (v, i) => iters[i] ? iters[i].toLocaleString() : '',
+        },
+        title: {
+          display: true,
+          text: 'Training Iteration',
+          color: '#444455',
+          font: { family: 'IBM Plex Mono', size: 11 },
+        }
+      },
+      y: {
+        grid: { color: 'rgba(42,42,58,0.5)', drawTicks: false },
+        ticks: {
+          color: '#444455',
+          font: { family: 'IBM Plex Mono', size: 10 },
+        },
+        title: {
+          display: true,
+          text: 'Episode Return',
+          color: '#444455',
+          font: { family: 'IBM Plex Mono', size: 11 },
+        },
+        min: 0,
+      }
+    }
+  }
+});
+</script>
+</body>
+</html>

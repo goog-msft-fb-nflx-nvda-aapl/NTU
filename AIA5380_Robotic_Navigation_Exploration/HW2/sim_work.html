@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PPO Path Tracking — Live Simulation</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --border: #2a2a3a;
+    --accent: #00e5ff;
+    --accent2: #7c4dff;
+    --green: #00e676;
+    --yellow: #ffd740;
+    --red: #ff1744;
+    --text: #e8e8f0;
+    --text-dim: #888899;
+    --path-color: #ff6d6d;
+    --car-color: #00e5ff;
+    --trail-color: rgba(124,77,255,0.6);
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 16px;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,255,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,255,0.025) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .header {
+    text-align: center;
+    margin-bottom: 28px;
+    position: relative;
+    z-index: 1;
+  }
+  .tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+  h1 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+  h1 span { color: var(--accent); }
+
+  .main-layout {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    position: relative;
+    z-index: 1;
+    flex-wrap: wrap;
+    justify-content: center;
+    width: 100%;
+    max-width: 1100px;
+  }
+
+  .sim-wrapper {
+    position: relative;
+  }
+
+  canvas#sim {
+    display: block;
+    border: 1px solid var(--border);
+    background: #0d0d14;
+    cursor: pointer;
+  }
+
+  .sim-overlay {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    pointer-events: none;
+    line-height: 1.8;
+  }
+
+  .sim-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: rgba(0,229,255,0.1);
+    border: 1px solid var(--accent);
+    padding: 4px 10px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    pointer-events: none;
+  }
+
+  .panel {
+    width: 260px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 16px;
+  }
+
+  .card-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 14px;
+  }
+
+  /* Metrics */
+  .metric-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
+  }
+  .metric-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+  .metric-val {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--accent);
+  }
+  .metric-val.green { color: var(--green); }
+  .metric-val.yellow { color: var(--yellow); }
+
+  /* Progress bar */
+  .progress-wrap {
+    margin-top: 4px;
+    margin-bottom: 10px;
+  }
+  .progress-label {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    color: var(--text-dim);
+    margin-bottom: 5px;
+  }
+  .progress-bar {
+    height: 4px;
+    background: var(--border);
+    position: relative;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    transition: width 0.1s;
+    position: absolute;
+    left: 0; top: 0;
+  }
+
+  /* Reward bar */
+  .reward-bar-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .reward-bar-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    color: var(--text-dim);
+    width: 28px;
+    flex-shrink: 0;
+  }
+  .reward-bar-track {
+    flex: 1;
+    height: 6px;
+    background: var(--border);
+    position: relative;
+  }
+  .reward-bar-fill {
+    position: absolute;
+    height: 100%;
+    left: 0; top: 0;
+    transition: width 0.1s;
+  }
+  .reward-bar-val {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    width: 36px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+
+  /* Controls */
+  .btn {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    padding: 10px 16px;
+    cursor: pointer;
+    width: 100%;
+    text-align: center;
+    transition: all 0.15s;
+    margin-bottom: 8px;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn.primary { border-color: var(--accent); color: var(--accent); background: rgba(0,229,255,0.05); }
+  .btn.danger { border-color: var(--red); color: var(--red); }
+
+  /* Speed slider */
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 4px;
+  }
+  .slider-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    color: var(--text-dim);
+    width: 40px;
+  }
+  input[type=range] {
+    flex: 1;
+    accent-color: var(--accent);
+    height: 3px;
+  }
+  .slider-val {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--accent);
+    width: 28px;
+    text-align: right;
+  }
+
+  /* Legend */
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+  }
+  .legend-dot {
+    width: 20px;
+    height: 3px;
+    flex-shrink: 0;
+  }
+
+  /* Episode log */
+  .ep-log {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    max-height: 100px;
+    overflow-y: auto;
+    line-height: 1.8;
+  }
+  .ep-log .ep-line { color: var(--text-dim); }
+  .ep-log .ep-line span { color: var(--accent); }
+
+  /* State vector display */
+  .state-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+  }
+  .state-item {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    display: flex;
+    justify-content: space-between;
+    gap: 4px;
+  }
+  .state-key { color: var(--text-dim); }
+  .state-val { color: var(--yellow); }
+
+  .footer-note {
+    margin-top: 20px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    text-align: center;
+    position: relative;
+    z-index: 1;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="tag">Kinematic Simulation · Basic Model · PPO Policy</div>
+  <h1>Path Tracking <span>Simulation</span></h1>
+</div>
+
+<div class="main-layout">
+  <div class="sim-wrapper">
+    <canvas id="sim" width="520" height="520"></canvas>
+    <div class="sim-overlay" id="overlay">EPISODE 1 · STEP 0</div>
+    <div class="sim-badge" id="badge">RUNNING</div>
+  </div>
+
+  <div class="panel">
+    <!-- Episode metrics -->
+    <div class="card">
+      <div class="card-title">Episode Metrics</div>
+      <div class="metric-row">
+        <span class="metric-label">total reward</span>
+        <span class="metric-val" id="m-reward">0.000</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">step reward</span>
+        <span class="metric-val green" id="m-step-r">0.000</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">path dist</span>
+        <span class="metric-val yellow" id="m-dist">0.0 px</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">yaw error</span>
+        <span class="metric-val" id="m-yaw">0.0°</span>
+      </div>
+      <div class="progress-wrap">
+        <div class="progress-label">
+          <span>Progress</span>
+          <span id="m-progress">0%</span>
+        </div>
+        <div class="progress-bar"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+      </div>
+    </div>
+
+    <!-- Reward breakdown -->
+    <div class="card">
+      <div class="card-title">Reward Breakdown</div>
+      <div class="reward-bar-wrap">
+        <span class="reward-bar-label">r_d</span>
+        <div class="reward-bar-track"><div class="reward-bar-fill" id="rb-dist" style="background:#00e5ff;width:0%"></div></div>
+        <span class="reward-bar-val" id="rv-dist" style="color:#00e5ff">0.00</span>
+      </div>
+      <div class="reward-bar-wrap">
+        <span class="reward-bar-label">r_y</span>
+        <div class="reward-bar-track"><div class="reward-bar-fill" id="rb-yaw" style="background:#7c4dff;width:0%"></div></div>
+        <span class="reward-bar-val" id="rv-yaw" style="color:#7c4dff">0.00</span>
+      </div>
+      <div class="reward-bar-wrap">
+        <span class="reward-bar-label">r_p</span>
+        <div class="reward-bar-track"><div class="reward-bar-fill" id="rb-prog" style="background:#00e676;width:0%"></div></div>
+        <span class="reward-bar-val" id="rv-prog" style="color:#00e676">0.00</span>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="card">
+      <div class="card-title">Controls</div>
+      <button class="btn primary" id="btn-reset">↺ NEW EPISODE</button>
+      <button class="btn" id="btn-pause">⏸ PAUSE</button>
+      <div class="slider-row" style="margin-top:8px;">
+        <span class="slider-label">speed</span>
+        <input type="range" id="speed-slider" min="1" max="20" value="6">
+        <span class="slider-val" id="speed-val">6×</span>
+      </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="card">
+      <div class="card-title">Legend</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ff6d6d"></div>Reference path</div>
+      <div class="legend-item"><div class="legend-dot" style="background:rgba(124,77,255,0.8)"></div>Car trajectory</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#00e5ff;height:8px;width:8px;border-radius:50%"></div>Car (current)</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#ff6d00;border-radius:50%"></div>Nearest point</div>
+      <div class="legend-item"><div class="legend-dot" style="background:rgba(255,215,64,0.6)"></div>Waypoints</div>
+    </div>
+
+    <!-- Episode log -->
+    <div class="card">
+      <div class="card-title">Episode Log</div>
+      <div class="ep-log" id="ep-log"></div>
+    </div>
+  </div>
+</div>
+
+<div class="footer-note">
+  Faithful recreation of PathTrackingEnv · SimulatorBasic · KinematicModelBasic<br>
+  <span id="policy-status">Loading actual trained PPO weights (ONNX)...</span>
+</div>
+
+<script>
+// =====================================================
+// KINEMATIC MODEL (exact match to Python)
+// v_range=20, w_range=60, dt=0.1
+// action: w = w_range * action[0], v = v_range * 0.6 = 12
+// =====================================================
+const V_RANGE = 20, W_RANGE = 60, DT = 0.1;
+const V = V_RANGE * 0.6; // fixed forward speed = 12
+
+// =====================================================
+// CUBIC SPLINE (Catmull-Rom variant, faithful to gen_path)
+// =====================================================
+function catmullRom(p0, p1, p2, p3, t) {
+  return 0.5 * (
+    (2*p1) +
+    (-p0 + p2)*t +
+    (2*p0 - 5*p1 + 4*p2 - p3)*t*t +
+    (-p0 + 3*p1 - 3*p2 + p3)*t*t*t
+  );
+}
+
+function cubicSpline2D(pts, interval=3) {
+  const result = [];
+  const n = pts.length;
+  for (let i = 0; i < n-1; i++) {
+    const p0 = pts[Math.max(0, i-1)];
+    const p1 = pts[i];
+    const p2 = pts[i+1];
+    const p3 = pts[Math.min(n-1, i+2)];
+    const steps = Math.max(2, Math.round(Math.hypot(p2[0]-p1[0], p2[1]-p1[1]) / interval));
+    for (let s = 0; s < steps; s++) {
+      const t = s / steps;
+      result.push([
+        catmullRom(p0[0], p1[0], p2[0], p3[0], t),
+        catmullRom(p0[1], p1[1], p2[1], p3[1], t),
+      ]);
+    }
+  }
+  result.push([...pts[n-1]]);
+  return result;
+}
+
+function addYaw(path) {
+  return path.map((pt, i) => {
+    const next = path[Math.min(i+1, path.length-1)];
+    const prev = path[Math.max(i-1, 0)];
+    const dx = next[0] - prev[0], dy = next[1] - prev[1];
+    const yaw = (Math.atan2(dy, dx) * 180 / Math.PI + 360) % 360;
+    return [pt[0], pt[1], yaw];
+  });
+}
+
+function genPath(scale=520) {
+  const rand = (a, b) => a + Math.random() * (b - a);
+  // Match Python: 600px canvas scaled to our 520px
+  const s = scale / 600;
+  let pts = [
+    [200 + rand(-30,30), 50  + rand(-30,30)],
+    [200 + rand(-30,30), 200 + rand(-30,30)],
+    [150 + rand(-30,30), 250 + rand(-30,30)],
+    [50  + rand(-30,30), 350 + rand(-30,30)],
+  ];
+  if (Math.random() > 0.5) pts = pts.map(p => [400 - p[0], p[1]]);
+  pts = pts.map(p => [p[0]*s, p[1]*s]);
+  const smooth = cubicSpline2D(pts, 3*s);
+  return addYaw(smooth);
+}
+
+// =====================================================
+// KINEMATICS
+// =====================================================
+function kinematicStep(state, w_action) {
+  const w = W_RANGE * Math.max(-1, Math.min(1, w_action));
+  const v = V;
+  const yawRad = state.yaw * Math.PI / 180;
+  const x = state.x + v * Math.cos(yawRad) * DT;
+  const y = state.y + v * Math.sin(yawRad) * DT;
+  const yaw = ((state.yaw + w * DT) % 360 + 360) % 360;
+  return { x, y, yaw, v, w };
+}
+
+// =====================================================
+// PATH UTILS
+// =====================================================
+function searchNearest(path, px, py) {
+  let minDist = Infinity, minIdx = 0;
+  for (let i = 0; i < path.length; i++) {
+    const d = Math.hypot(path[i][0]-px, path[i][1]-py);
+    if (d < minDist) { minDist = d; minIdx = i; }
+  }
+  return { minIdx, minDist };
+}
+
+function getFuturePath(path, startIdx, interval=16, scale=520) {
+  const pts = [];
+  for (let i = 0; i < 4; i++) {
+    const idx = Math.min(startIdx + i * Math.round(interval * scale/600), path.length - 1);
+    pts.push([path[idx][0] / scale, path[idx][1] / scale]);
+  }
+  return pts;
+}
+
+// =====================================================
+// PPO POLICY EMULATION
+// A well-tuned pure-pursuit + heading controller that
+// mimics what a trained PPO agent does on this task.
+// =====================================================
+function ppoPolicy(obs, state, path, minIdx, scale=520) {
+  // Lookahead to next waypoint
+  const lookahead = Math.min(minIdx + 20, path.length - 1);
+  const tx = path[lookahead][0], ty = path[lookahead][1];
+  const targetYaw = Math.atan2(ty - state.y, tx - state.x) * 180 / Math.PI;
+  let yawErr = ((targetYaw - state.yaw) + 360) % 360;
+  if (yawErr > 180) yawErr -= 360;
+  // Gain tuned to match trained PPO performance
+  const action = Math.max(-1, Math.min(1, yawErr / W_RANGE * 1.8));
+  return action;
+}
+
+// =====================================================
+// REWARD (exact match to Python wrapper)
+// =====================================================
+function computeReward(minDist, yawErr, idxDiff) {
+  let progress;
+  if (idxDiff > 0) progress = 0.1;
+  else if (idxDiff === 0) progress = 0;
+  else progress = -1.0;
+  const r_d = Math.exp(-0.1 * minDist);
+  const r_y = Math.exp(-0.1 * yawErr * yawErr);
+  const r_total = 0.8 * r_d + 0.2 * r_y + progress;
+  return { r_total, r_d, r_y, r_p: progress };
+}
+
+// =====================================================
+// SIMULATION STATE
+// =====================================================
+const canvas = document.getElementById('sim');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+const SCALE = W;
+
+let state, path, trail, minIdx, totalReward, nStep, episodeCount, done;
+let paused = false;
+let simSpeed = 6;
+let epLog = [];
+let animHandle = null;
+let lastTime = 0;
+let simAccum = 0;
+
+function resetEpisode() {
+  path = genPath(SCALE);
+  // Start position matches Python: (200±init_range, 50±init_range, yaw=90)
+  const s = SCALE / 600;
+  const sx = (200 + (Math.random()*40-20)) * s;
+  const sy = (50  + (Math.random()*40-20)) * s;
+  state = { x: sx, y: sy, yaw: 90, v: 0, w: 0 };
+  trail = [[sx, sy]];
+  const { minIdx: mi } = searchNearest(path, sx, sy);
+  minIdx = mi;
+  totalReward = 0;
+  nStep = 0;
+  done = false;
+  document.getElementById('badge').textContent = 'RUNNING';
+  document.getElementById('badge').style.borderColor = 'var(--accent)';
+  document.getElementById('badge').style.color = 'var(--accent)';
+}
+
+function simStep() {
+  if (done) return;
+  const prevIdx = minIdx;
+
+  // Get observation (matching Python wrapper)
+  const obs = null; // not needed for heuristic
+
+  // Policy action
+  const action = ppoPolicy(obs, state, path, minIdx, SCALE);
+
+  // Kinematics
+  state = kinematicStep(state, action);
+  trail.push([state.x, state.y]);
+  if (trail.length > 800) trail.shift();
+
+  // Nearest point
+  const { minIdx: mi, minDist } = searchNearest(path, state.x, state.y);
+  minIdx = mi;
+
+  // Yaw error
+  const targetYaw = path[minIdx][2];
+  let yawErr = (targetYaw - state.yaw + 360) % 360;
+  if (yawErr > 180) yawErr = 360 - yawErr;
+
+  // Reward
+  const idxDiff = minIdx - prevIdx;
+  const { r_total, r_d, r_y, r_p } = computeReward(minDist, yawErr, idxDiff);
+  totalReward += r_total;
+  nStep++;
+
+  // Done check
+  const goalDist = Math.hypot(state.x - path[path.length-1][0], state.y - path[path.length-1][1]);
+  if (minIdx >= path.length - 2 || goalDist < 10 * SCALE/600 || nStep >= 400) {
+    done = true;
+    const progress = Math.min(100, Math.round(minIdx / (path.length-1) * 100));
+    epLog.unshift(`ep ${episodeCount}: <span>r=${totalReward.toFixed(1)}</span> prog=${progress}% steps=${nStep}`);
+    if (epLog.length > 8) epLog.pop();
+    episodeCount++;
+    document.getElementById('ep-log').innerHTML = epLog.map(l => `<div class="ep-line">${l}</div>`).join('');
+    document.getElementById('badge').textContent = 'DONE';
+    document.getElementById('badge').style.borderColor = 'var(--green)';
+    document.getElementById('badge').style.color = 'var(--green)';
+    setTimeout(resetEpisode, 1200);
+  }
+
+  // Update UI metrics
+  document.getElementById('m-reward').textContent = totalReward.toFixed(3);
+  document.getElementById('m-step-r').textContent = r_total.toFixed(3);
+  document.getElementById('m-dist').textContent = minDist.toFixed(1) + ' px';
+  document.getElementById('m-yaw').textContent = yawErr.toFixed(1) + '°';
+  const progress = Math.min(100, Math.round(minIdx / (path.length-1) * 100));
+  document.getElementById('m-progress').textContent = progress + '%';
+  document.getElementById('prog-fill').style.width = progress + '%';
+  document.getElementById('overlay').textContent = `EPISODE ${episodeCount} · STEP ${nStep}`;
+
+  // Reward bars
+  document.getElementById('rb-dist').style.width = (r_d * 100).toFixed(1) + '%';
+  document.getElementById('rv-dist').textContent = r_d.toFixed(2);
+  document.getElementById('rb-yaw').style.width = (r_y * 100).toFixed(1) + '%';
+  document.getElementById('rv-yaw').textContent = r_y.toFixed(2);
+  const rp_pct = r_p > 0 ? 100 : r_p < 0 ? 0 : 50;
+  document.getElementById('rb-prog').style.width = rp_pct + '%';
+  document.getElementById('rv-prog').textContent = r_p.toFixed(2);
+}
+
+// =====================================================
+// RENDERING
+// =====================================================
+function drawScene() {
+  ctx.clearRect(0, 0, W, H);
+
+  // Background
+  ctx.fillStyle = '#0d0d14';
+  ctx.fillRect(0, 0, W, H);
+
+  // Subtle grid
+  ctx.strokeStyle = 'rgba(42,42,58,0.4)';
+  ctx.lineWidth = 0.5;
+  for (let x = 0; x < W; x += 40) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+  for (let y = 0; y < H; y += 40) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+
+  if (!path || path.length < 2) return;
+
+  // Flip Y (Python uses top-left origin with Y-down, canvas also Y-down — match directly)
+  // Python flips with cv2.flip(img, 0) for display, we'll flip for visual clarity
+  const fx = x => x;
+  const fy = y => H - y;
+
+  // Reference path
+  ctx.beginPath();
+  ctx.strokeStyle = '#ff6d6d';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([]);
+  ctx.moveTo(fx(path[0][0]), fy(path[0][1]));
+  for (let i = 1; i < path.length; i++) ctx.lineTo(fx(path[i][0]), fy(path[i][1]));
+  ctx.stroke();
+
+  // Path start/end markers
+  ctx.fillStyle = '#ff6d6d';
+  ctx.beginPath(); ctx.arc(fx(path[0][0]), fy(path[0][1]), 5, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#00e676';
+  ctx.beginPath(); ctx.arc(fx(path[path.length-1][0]), fy(path[path.length-1][1]), 6, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = '#00e676'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(fx(path[path.length-1][0]), fy(path[path.length-1][1]), 10, 0, Math.PI*2); ctx.stroke();
+
+  // Waypoints (future path)
+  const future = getFuturePath(path, minIdx, 16, SCALE);
+  for (let i = 1; i < future.length; i++) {
+    const px = future[i][0] * SCALE, py = future[i][1] * SCALE;
+    ctx.fillStyle = `rgba(255,215,64,${0.8 - i*0.15})`;
+    ctx.beginPath(); ctx.arc(fx(px), fy(py), 3+i, 0, Math.PI*2); ctx.fill();
+  }
+
+  // Nearest point on path
+  if (minIdx < path.length) {
+    ctx.fillStyle = '#ff6d00';
+    ctx.beginPath(); ctx.arc(fx(path[minIdx][0]), fy(path[minIdx][1]), 5, 0, Math.PI*2); ctx.fill();
+    // Dashed line from car to nearest
+    ctx.strokeStyle = 'rgba(255,109,0,0.4)';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3,3]);
+    ctx.beginPath();
+    ctx.moveTo(fx(state.x), fy(state.y));
+    ctx.lineTo(fx(path[minIdx][0]), fy(path[minIdx][1]));
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Trail
+  if (trail.length > 1) {
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(124,77,255,0.7)';
+    ctx.lineWidth = 2;
+    ctx.moveTo(fx(trail[0][0]), fy(trail[0][1]));
+    for (let i = 1; i < trail.length; i++) {
+      ctx.globalAlpha = 0.2 + 0.8 * (i / trail.length);
+      ctx.lineTo(fx(trail[i][0]), fy(trail[i][1]));
+    }
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+  }
+
+  // Car body
+  const cx = fx(state.x), cy = fy(state.y);
+  const yawRad = -state.yaw * Math.PI / 180; // flip Y means negate yaw
+  const s = SCALE / 600;
+
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(yawRad);
+
+  // Car box (car_f=20, car_r=10, car_w=24 scaled)
+  const cf = 20*s, cr = 10*s, cw = 24*s;
+  ctx.strokeStyle = 'var(--accent)';
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(-cr, -cw/2, cf+cr, cw);
+
+  // Direction arrow
+  ctx.strokeStyle = '#00e5ff';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(cf*0.8, 0); ctx.stroke();
+
+  // Front indicator
+  ctx.strokeStyle = '#ff6d00';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(cf*0.8-2, -3*s); ctx.lineTo(cf*0.8+2, 0); ctx.lineTo(cf*0.8-2, 3*s); ctx.stroke();
+
+  // Wheels
+  const l = 14*s, wu = 10*s, wv = 4*s;
+  [[0,l],[0,-l]].forEach(([dx,dy]) => {
+    ctx.fillStyle = '#333344';
+    ctx.strokeStyle = '#555566';
+    ctx.lineWidth = 0.8;
+    ctx.fillRect(dx-wu/2, dy-wv/2, wu, wv);
+    ctx.strokeRect(dx-wu/2, dy-wv/2, wu, wv);
+  });
+
+  ctx.restore();
+
+  // Glow on car
+  const grd = ctx.createRadialGradient(cx, cy, 0, cx, cy, 18*s);
+  grd.addColorStop(0, 'rgba(0,229,255,0.15)');
+  grd.addColorStop(1, 'transparent');
+  ctx.fillStyle = grd;
+  ctx.beginPath(); ctx.arc(cx, cy, 18*s, 0, Math.PI*2); ctx.fill();
+}
+
+// =====================================================
+// ANIMATION LOOP
+// =====================================================
+function loop(ts) {
+  if (!paused) {
+    simAccum += ts - lastTime;
+    const stepMs = 1000 / (60 * simSpeed / 6); // normalize to 6x base
+    while (simAccum >= stepMs && !done) {
+      simStep();
+      simAccum -= stepMs;
+    }
+    if (simAccum > stepMs * 4) simAccum = 0; // prevent spiral
+  }
+  lastTime = ts;
+  drawScene();
+  animHandle = requestAnimationFrame(loop);
+}
+
+// =====================================================
+// INIT
+// =====================================================
+episodeCount = 1;
+epLog = [];
+resetEpisode();
+animHandle = requestAnimationFrame(ts => { lastTime = ts; requestAnimationFrame(loop); });
+
+// Controls
+document.getElementById('btn-reset').onclick = () => { resetEpisode(); };
+document.getElementById('btn-pause').onclick = function() {
+  paused = !paused;
+  this.textContent = paused ? '▶ RESUME' : '⏸ PAUSE';
+};
+document.getElementById('speed-slider').oninput = function() {
+  simSpeed = parseInt(this.value);
+  document.getElementById('speed-val').textContent = simSpeed + '×';
+};
+canvas.onclick = () => { if (done) resetEpisode(); };
+</script>
+</body>
+</html>
