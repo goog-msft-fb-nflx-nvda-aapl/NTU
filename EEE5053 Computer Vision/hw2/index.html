@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Scene Recognition & Image Classification</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #ffffff; --bg2: #f7f7f5; --bg3: #f0eeea;
+    --text: #1a1a18; --text2: #5a5a56; --text3: #8a8a85;
+    --border: rgba(0,0,0,0.1); --border2: rgba(0,0,0,0.18);
+    --accent: #4a42c8; --accent2: #e8e6fb;
+    --teal: #0f6e56; --teal2: #e1f5ee;
+    --radius: 10px; --radius-lg: 16px;
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+         background: var(--bg); color: var(--text); line-height: 1.7; font-size: 16px; }
+
+  .hero { padding: 5rem 2rem 4rem; max-width: 760px; margin: 0 auto; border-bottom: 0.5px solid var(--border); }
+  .hero-tag { font-size: 12px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase;
+              color: var(--accent); background: var(--accent2); display: inline-block;
+              padding: 4px 10px; border-radius: 20px; margin-bottom: 1.25rem; }
+  .hero h1 { font-size: 2.4rem; font-weight: 600; line-height: 1.2; margin-bottom: 1rem; }
+  .hero p { font-size: 1.05rem; color: var(--text2); max-width: 600px; }
+
+  nav { position: sticky; top: 0; background: var(--bg); border-bottom: 0.5px solid var(--border);
+        z-index: 100; padding: 0 2rem; }
+  .nav-inner { max-width: 760px; margin: 0 auto; display: flex; gap: 0; overflow-x: auto; }
+  nav a { display: inline-block; padding: 1rem 1.25rem; font-size: 14px; color: var(--text2);
+          text-decoration: none; white-space: nowrap; border-bottom: 2px solid transparent; }
+  nav a:hover { color: var(--text); }
+  nav a.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  main { max-width: 760px; margin: 0 auto; padding: 3rem 2rem 6rem; }
+  section { margin-bottom: 4rem; scroll-margin-top: 60px; }
+
+  h2 { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.4rem; }
+  h3 { font-size: 1.05rem; font-weight: 600; margin: 2rem 0 0.75rem; color: var(--text); }
+  p { margin-bottom: 1rem; color: var(--text2); }
+  ul, ol { margin: 0 0 1rem 1.25rem; color: var(--text2); }
+  li { margin-bottom: 0.4rem; }
+
+  .section-label { font-size: 12px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase;
+                   color: var(--text3); margin-bottom: 0.5rem; }
+
+  .card { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius-lg);
+          padding: 1.5rem; margin-bottom: 1.5rem; }
+
+  .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin: 1.5rem 0; }
+  .metric { background: var(--bg2); border-radius: var(--radius); padding: 1rem 1.25rem; }
+  .metric-label { font-size: 12px; color: var(--text3); margin-bottom: 4px; }
+  .metric-value { font-size: 1.6rem; font-weight: 600; color: var(--text); }
+  .metric-sub { font-size: 12px; color: var(--text3); margin-top: 2px; }
+
+  .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 1.5rem 0; }
+  @media (max-width: 500px) { .result-grid { grid-template-columns: 1fr; } }
+
+  .result-card { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius);
+                 padding: 1.25rem; }
+  .result-card .name { font-size: 13px; font-weight: 500; color: var(--text2); margin-bottom: 6px; }
+  .result-card .acc { font-size: 2rem; font-weight: 600; color: var(--text); }
+  .result-card .badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 20px;
+                        margin-top: 6px; }
+  .badge-pass { background: var(--teal2); color: var(--teal); }
+  .badge-best { background: var(--accent2); color: var(--accent); }
+
+  .img-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 1.5rem 0; }
+  .img-row.single { grid-template-columns: 1fr; }
+  @media (max-width: 500px) { .img-row { grid-template-columns: 1fr; } }
+  .img-wrap { border: 0.5px solid var(--border); border-radius: var(--radius); overflow: hidden; background: var(--bg2); }
+  .img-wrap img { width: 100%; display: block; }
+  .img-cap { font-size: 12px; color: var(--text3); padding: 8px 12px; border-top: 0.5px solid var(--border); }
+
+  .curve-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 1.5rem 0; }
+  @media (max-width: 500px) { .curve-grid { grid-template-columns: 1fr; } }
+
+  .pipeline { display: flex; gap: 0; margin: 1.5rem 0; overflow-x: auto; }
+  .pipe-step { flex: 1; min-width: 110px; background: var(--bg2); border: 0.5px solid var(--border);
+               padding: 1rem 0.75rem; text-align: center; position: relative; }
+  .pipe-step:not(:last-child)::after { content: '→'; position: absolute; right: -10px; top: 50%;
+    transform: translateY(-50%); color: var(--text3); font-size: 14px; z-index: 1; background: var(--bg); padding: 0 2px; }
+  .pipe-step:first-child { border-radius: var(--radius) 0 0 var(--radius); }
+  .pipe-step:last-child  { border-radius: 0 var(--radius) var(--radius) 0; }
+  .pipe-label { font-size: 12px; color: var(--text3); margin-bottom: 4px; }
+  .pipe-title { font-size: 13px; font-weight: 500; color: var(--text); }
+
+  .tag-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 0.75rem 0 1rem; }
+  .tag { font-size: 12px; background: var(--bg3); border: 0.5px solid var(--border);
+         color: var(--text2); padding: 3px 10px; border-radius: 20px; }
+
+  .obs { border-left: 3px solid var(--accent); padding: 0.75rem 1rem; margin: 1.5rem 0;
+         background: var(--accent2); border-radius: 0 var(--radius) var(--radius) 0; }
+  .obs p { color: var(--text); margin: 0; font-size: 15px; }
+
+  .improve-list { list-style: none; margin: 0; padding: 0; }
+  .improve-list li { padding: 0.75rem 0; border-bottom: 0.5px solid var(--border);
+                     display: flex; gap: 12px; align-items: flex-start; color: var(--text2); }
+  .improve-list li:last-child { border-bottom: none; }
+  .improve-num { font-size: 12px; font-weight: 600; color: var(--accent); background: var(--accent2);
+                 width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center;
+                 justify-content: center; flex-shrink: 0; margin-top: 2px; }
+
+  hr { border: none; border-top: 0.5px solid var(--border); margin: 3rem 0; }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-tag">Computer Vision</div>
+  <h1>Scene Recognition &amp;<br>Image Classification</h1>
+  <p>Exploring classical Bag-of-Words pipelines and modern CNN architectures on scene and object recognition benchmarks.</p>
+</div>
+
+<nav>
+  <div class="nav-inner">
+    <a href="#part1" class="active">Part 1 — BoW</a>
+    <a href="#part2">Part 2 — CNN</a>
+    <a href="#results">Results</a>
+    <a href="#observations">Observations</a>
+    <a href="#improvements">Further Work</a>
+  </div>
+</nav>
+
+<main>
+
+<!-- ======== PART 1 ======== -->
+<section id="part1">
+  <div class="section-label">Part 1</div>
+  <h2>Bag-of-Words Scene Recognition</h2>
+  <p>Classical computer vision pipeline for 15-class scene recognition. Two feature representations were evaluated with a custom K-Nearest Neighbor classifier on a dataset of 100 train / 100 test images per category.</p>
+
+  <h3>Pipeline</h3>
+  <div class="pipeline">
+    <div class="pipe-step"><div class="pipe-label">Step 1</div><div class="pipe-title">Feature extraction</div></div>
+    <div class="pipe-step"><div class="pipe-label">Step 2</div><div class="pipe-title">Visual vocabulary</div></div>
+    <div class="pipe-step"><div class="pipe-label">Step 3</div><div class="pipe-title">BoW histogram</div></div>
+    <div class="pipe-step"><div class="pipe-label">Step 4</div><div class="pipe-title">KNN classify</div></div>
+  </div>
+
+  <h3>Feature representations</h3>
+  <div class="card">
+    <p style="font-weight:500;color:var(--text);margin-bottom:6px;">Tiny Image</p>
+    <p style="margin:0;">Each image is center-cropped and resized to 16×16, yielding a 256-dimensional feature vector. Zero-mean normalized and scaled to unit length.</p>
+  </div>
+  <div class="card">
+    <p style="font-weight:500;color:var(--text);margin-bottom:6px;">Bag of SIFT</p>
+    <p>Dense SIFT descriptors (128-dim) are extracted from all training images. K-Means clustering (k=400) builds the visual vocabulary. Each image is then represented as a normalized frequency histogram over the 400 visual words.</p>
+    <div class="tag-row">
+      <span class="tag">Step size 5 (vocab)</span>
+      <span class="tag">Step size 3 (features)</span>
+      <span class="tag">k=400 visual words</span>
+      <span class="tag">L2 assignment</span>
+    </div>
+  </div>
+
+  <h3>KNN classifier</h3>
+  <p>Custom implementation (no sklearn KNeighborsClassifier). k=15 neighbors, L1 distance via <code>scipy.spatial.distance.cdist</code>, majority vote. L1 distance outperforms L2 for histogram features.</p>
+
+  <h3>Results</h3>
+  <div class="result-grid">
+    <div class="result-card">
+      <div class="name">Tiny Image + KNN</div>
+      <div class="acc">22.6%</div>
+      <span class="badge badge-pass">Baseline passed</span>
+    </div>
+    <div class="result-card">
+      <div class="name">Bag of SIFT + KNN</div>
+      <div class="acc">62.1%</div>
+      <span class="badge badge-pass">Strong baseline passed</span>
+    </div>
+  </div>
+
+  <h3>Confusion matrices</h3>
+  <div class="img-row">
+    <div class="img-wrap">
+      <img src="./report_images/tiny_image.png" alt="Tiny image confusion matrix">
+      <div class="img-cap">Tiny Image — near-uniform misclassification</div>
+    </div>
+    <div class="img-wrap">
+      <img src="./report_images/bag_of_sift.png" alt="Bag of SIFT confusion matrix">
+      <div class="img-cap">Bag of SIFT — errors clustered in similar categories</div>
+    </div>
+  </div>
+</section>
+
+<hr>
+
+<!-- ======== PART 2 ======== -->
+<section id="part2">
+  <div class="section-label">Part 2</div>
+  <h2>CNN Image Classification</h2>
+  <p>CIFAR-10 classification (32×32 RGB, 10 classes) using two CNN approaches: a custom VGG-style network trained from scratch, and a modified pretrained ResNet18.</p>
+
+  <h3>Model A — MyNet (from scratch)</h3>
+  <div class="card">
+    <p style="font-weight:500;color:var(--text);margin-bottom:8px;">VGG-style CNN with Batch Normalization</p>
+    <p style="margin-bottom:12px;">Four convolutional blocks progressively doubling channels (64→128→256→512), each ending with 2×2 MaxPool. Classifier head uses two FC layers with Dropout(0.5).</p>
+    <div class="tag-row">
+      <span class="tag">10,266,058 parameters</span>
+      <span class="tag">4 conv blocks</span>
+      <span class="tag">BatchNorm</span>
+      <span class="tag">Dropout 0.5</span>
+      <span class="tag">Kaiming init</span>
+    </div>
+  </div>
+
+  <h3>Model B — ResNet18 (modified)</h3>
+  <div class="card">
+    <p style="font-weight:500;color:var(--text);margin-bottom:8px;">Pretrained ResNet18 adapted for 32×32 inputs</p>
+    <p style="margin-bottom:12px;">Two key modifications: (1) conv1 changed from 7×7/stride-2 to 3×3/stride-1 to preserve spatial resolution on small inputs; (2) first maxpool replaced with Identity to avoid aggressive downsampling. Final FC replaced for 10-class output.</p>
+    <div class="tag-row">
+      <span class="tag">11,173,962 parameters</span>
+      <span class="tag">conv1: 3×3 stride-1</span>
+      <span class="tag">maxpool → Identity</span>
+      <span class="tag">ImageNet pretrained</span>
+      <span class="tag">Residual connections</span>
+    </div>
+  </div>
+
+  <h3>What makes ResNet different?</h3>
+  <p>ResNet introduces <strong>residual (skip) connections</strong>: each block outputs F(x) + x rather than just F(x). This allows gradients to bypass layers during backpropagation, solving the vanishing gradient problem and enabling effective training of much deeper networks — something plain CNNs like MyNet cannot do at scale.</p>
+
+  <h3>Training setup</h3>
+  <div class="tag-row">
+    <span class="tag">SGD, momentum 0.9</span>
+    <span class="tag">lr=0.1, ×0.1 at ep 50/75/90</span>
+    <span class="tag">weight decay 5e-4</span>
+    <span class="tag">100 epochs, batch 128</span>
+    <span class="tag">Cross-Entropy loss</span>
+    <span class="tag">8× NVIDIA H200</span>
+  </div>
+
+  <h3>Data augmentation</h3>
+  <div class="tag-row">
+    <span class="tag">RandomCrop(32, pad=4)</span>
+    <span class="tag">RandomHorizontalFlip</span>
+    <span class="tag">ColorJitter</span>
+    <span class="tag">RandomRotation(15°)</span>
+    <span class="tag">ImageNet normalization</span>
+  </div>
+</section>
+
+<hr>
+
+<!-- ======== RESULTS ======== -->
+<section id="results">
+  <div class="section-label">Results</div>
+  <h2>Performance summary</h2>
+
+  <div class="metrics">
+    <div class="metric">
+      <div class="metric-label">Tiny Image</div>
+      <div class="metric-value">22.6%</div>
+      <div class="metric-sub">15-class scene recognition</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Bag of SIFT</div>
+      <div class="metric-value">62.1%</div>
+      <div class="metric-sub">15-class scene recognition</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">MyNet</div>
+      <div class="metric-value">88.2%</div>
+      <div class="metric-sub">CIFAR-10 validation</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">ResNet18</div>
+      <div class="metric-value">88.7%</div>
+      <div class="metric-sub">CIFAR-10 validation</div>
+    </div>
+  </div>
+
+  <h3>Learning curves — MyNet</h3>
+  <div class="curve-grid">
+    <div class="img-wrap"><img src="./report_images/mynet_train_acc.png" alt="MyNet train accuracy"><div class="img-cap">Training accuracy</div></div>
+    <div class="img-wrap"><img src="./report_images/mynet_train_loss.png" alt="MyNet train loss"><div class="img-cap">Training loss</div></div>
+    <div class="img-wrap"><img src="./report_images/mynet_val_acc.png" alt="MyNet val accuracy"><div class="img-cap">Validation accuracy</div></div>
+    <div class="img-wrap"><img src="./report_images/mynet_val_loss.png" alt="MyNet val loss"><div class="img-cap">Validation loss</div></div>
+  </div>
+
+  <h3>Learning curves — ResNet18</h3>
+  <div class="curve-grid">
+    <div class="img-wrap"><img src="./report_images/resnet18_train_acc.png" alt="ResNet18 train accuracy"><div class="img-cap">Training accuracy</div></div>
+    <div class="img-wrap"><img src="./report_images/resnet18_train_loss.png" alt="ResNet18 train loss"><div class="img-cap">Training loss</div></div>
+    <div class="img-wrap"><img src="./report_images/resnet18_val_acc.png" alt="ResNet18 val accuracy"><div class="img-cap">Validation accuracy</div></div>
+    <div class="img-wrap"><img src="./report_images/resnet18_val_loss.png" alt="ResNet18 val loss"><div class="img-cap">Validation loss</div></div>
+  </div>
+</section>
+
+<hr>
+
+<!-- ======== OBSERVATIONS ======== -->
+<section id="observations">
+  <div class="section-label">Observations</div>
+  <h2>Key observations</h2>
+
+  <h3>Part 1 — BoW</h3>
+  <div class="obs"><p>Bag of SIFT outperforms Tiny Image by 39.5 percentage points. Tiny images discard local texture and are sensitive to lighting and spatial layout; BoW captures discriminative mid-level patterns orderlessly.</p></div>
+  <p>The Bag of SIFT confusion matrix shows errors concentrated among visually similar categories — Coast vs. OpenCountry, Street vs. InsideCity — which is semantically expected. Tiny Image shows near-uniform confusion across all categories.</p>
+  <p>L1 distance (Minkowski p=1) outperforms L2 for normalized histograms, consistent with literature on sparse high-dimensional features. Using k=15 neighbors with majority vote improves robustness over 1-NN.</p>
+
+  <h3>Part 2 — CNN</h3>
+  <div class="obs"><p>Both models exceed the strong baseline (88%). The modified ResNet18 slightly outperforms MyNet (88.7% vs. 88.2%), but the gap is small given the comparable parameter counts.</p></div>
+  <p>The ResNet18 learning curves show faster early convergence and smoother validation loss decay, a direct benefit of pretrained ImageNet weights and residual connections. MyNet shows slightly higher training-validation gap, indicating mild overfitting despite Dropout regularization.</p>
+  <p>The conv1 and maxpool modifications to ResNet18 are critical for 32×32 inputs. Without them, the original 7×7/stride-2 conv + maxpool would reduce the feature map to 8×8 after the first two operations, discarding most spatial information in shallow layers.</p>
+</section>
+
+<hr>
+
+<!-- ======== FURTHER WORK ======== -->
+<section id="improvements">
+  <div class="section-label">Further work</div>
+  <h2>Potential improvements</h2>
+
+  <ul class="improve-list">
+    <li>
+      <span class="improve-num">1</span>
+      <span><strong>Spatial Pyramid Matching (Part 1):</strong> Divide the image into sub-regions at multiple scales and concatenate per-region BoW histograms. This reintroduces spatial layout information lost in the orderless BoW, substantially improving scene recognition accuracy.</span>
+    </li>
+    <li>
+      <span class="improve-num">2</span>
+      <span><strong>Semi-supervised learning (Part 2):</strong> Apply the trained ResNet18 to the 30,000 unlabeled images. Pseudo-label samples with confidence above a threshold and add them to the training set for a second fine-tuning round.</span>
+    </li>
+    <li>
+      <span class="improve-num">3</span>
+      <span><strong>Stronger augmentation:</strong> CutMix, Mixup, or AutoAugment policies tuned for CIFAR-10 can push accuracy above 90% on ResNet18 without architectural changes.</span>
+    </li>
+    <li>
+      <span class="improve-num">4</span>
+      <span><strong>Cosine annealing LR schedule:</strong> Replace the step-decay schedule with cosine annealing with warm restarts for smoother convergence and better final accuracy.</span>
+    </li>
+    <li>
+      <span class="improve-num">5</span>
+      <span><strong>Fisher Vector / VLAD encoding (Part 1):</strong> Replace the simple BoW histogram with Fisher Vector or VLAD encoding, which capture higher-order statistics of descriptor distributions and significantly outperform standard BoW on scene benchmarks.</span>
+    </li>
+  </ul>
+</section>
+
+</main>
+
+<script>
+  const sections = document.querySelectorAll('section[id]');
+  const links = document.querySelectorAll('nav a');
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'));
+        const active = document.querySelector(`nav a[href="#${e.target.id}"]`);
+        if (active) active.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-40% 0px -55% 0px' });
+  sections.forEach(s => obs.observe(s));
+</script>
+</body>
+</html>
