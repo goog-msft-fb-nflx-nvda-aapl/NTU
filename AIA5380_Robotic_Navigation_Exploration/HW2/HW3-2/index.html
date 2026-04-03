@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Teaching a Machine to Run — RL Flag Capture Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:ital,wght@0,400;0,500;1,400&family=DM+Sans:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:        #0a0a0f;
+    --surface:   #111118;
+    --border:    #1e1e2e;
+    --accent:    #c8f135;
+    --accent2:   #5bf0c8;
+    --muted:     #4a4a6a;
+    --text:      #e8e8f0;
+    --text-dim:  #8888aa;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* ── NOISE OVERLAY ── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 999;
+    opacity: 0.4;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    position: relative;
+    border-bottom: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .hero-left {
+    padding: 10vh 6vw 8vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    position: relative;
+    z-index: 2;
+  }
+
+  .hero-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 2rem;
+    opacity: 0;
+    animation: fadeUp 0.6s 0.2s forwards;
+  }
+
+  .hero-title {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(3rem, 6vw, 6rem);
+    font-weight: 800;
+    line-height: 0.95;
+    letter-spacing: -0.03em;
+    margin-bottom: 2.5rem;
+    opacity: 0;
+    animation: fadeUp 0.7s 0.35s forwards;
+  }
+
+  .hero-title em {
+    font-style: normal;
+    color: var(--accent);
+  }
+
+  .hero-desc {
+    font-size: 1.05rem;
+    color: var(--text-dim);
+    max-width: 420px;
+    opacity: 0;
+    animation: fadeUp 0.7s 0.5s forwards;
+  }
+
+  .hero-right {
+    position: relative;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .hero-grid {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 48px 48px;
+    opacity: 0.5;
+  }
+
+  .hero-stats {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    border-top: 1px solid var(--border);
+  }
+
+  .stat {
+    padding: 2rem 1.5rem;
+    border-right: 1px solid var(--border);
+    opacity: 0;
+    animation: fadeUp 0.6s forwards;
+  }
+  .stat:nth-child(1) { animation-delay: 0.6s; }
+  .stat:nth-child(2) { animation-delay: 0.75s; }
+  .stat:nth-child(3) { animation-delay: 0.9s; border-right: none; }
+
+  .stat-value {
+    font-family: 'Syne', sans-serif;
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: var(--accent);
+    display: block;
+  }
+
+  .stat-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 0.25rem;
+  }
+
+  /* floating dots decoration */
+  .dot {
+    position: absolute;
+    border-radius: 50%;
+    background: var(--accent);
+    opacity: 0.15;
+    animation: pulse 4s ease-in-out infinite;
+  }
+  .dot:nth-child(1) { width: 320px; height: 320px; top: -80px; right: -80px; animation-delay: 0s; }
+  .dot:nth-child(2) { width: 180px; height: 180px; top: 40%; left: 20%; background: var(--accent2); animation-delay: 2s; }
+
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 0.12; }
+    50%       { transform: scale(1.08); opacity: 0.2; }
+  }
+
+  /* ── SECTION SHELL ── */
+  section {
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 8vh 6vw;
+  }
+
+  .section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent2);
+    margin-bottom: 3rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  .section-heading {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(1.8rem, 3.5vw, 3rem);
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    margin-bottom: 2rem;
+  }
+
+  /* ── PROBLEM ── */
+  .problem-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 3rem;
+    margin-top: 3rem;
+  }
+
+  .problem-text p {
+    color: var(--text-dim);
+    margin-bottom: 1.2rem;
+    font-size: 1rem;
+  }
+
+  .obs-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+  }
+
+  .obs-cell {
+    background: var(--surface);
+    padding: 1.25rem 1.5rem;
+  }
+
+  .obs-key {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--accent);
+    margin-bottom: 0.4rem;
+  }
+
+  .obs-val {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+  }
+
+  /* ── REWARD ── */
+  .reward-cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    margin-top: 3rem;
+  }
+
+  .reward-card {
+    background: var(--surface);
+    padding: 2rem 1.5rem;
+    transition: background 0.2s;
+  }
+  .reward-card:hover { background: #15151f; }
+
+  .reward-icon {
+    font-size: 1.8rem;
+    margin-bottom: 1rem;
+  }
+
+  .reward-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 0.75rem;
+  }
+
+  .reward-formula {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--accent);
+    background: rgba(200, 241, 53, 0.06);
+    padding: 0.5rem 0.75rem;
+    border-left: 2px solid var(--accent);
+    margin-bottom: 0.75rem;
+    line-height: 1.6;
+  }
+
+  .reward-desc {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+  }
+
+  /* ── TRAINING ── */
+  .training-layout {
+    display: grid;
+    grid-template-columns: 1fr 1.4fr;
+    gap: 4rem;
+    margin-top: 3rem;
+    align-items: start;
+  }
+
+  .param-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+  }
+
+  .param-table tr {
+    border-bottom: 1px solid var(--border);
+  }
+
+  .param-table td {
+    padding: 0.75rem 0;
+    vertical-align: top;
+  }
+
+  .param-table td:first-child {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    width: 55%;
+  }
+
+  .param-table td:last-child {
+    font-family: 'DM Mono', monospace;
+    color: var(--accent2);
+  }
+
+  .pipeline {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .pipe-step {
+    display: flex;
+    gap: 1.5rem;
+    align-items: flex-start;
+    padding: 1.5rem 0;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+
+  .pipe-num {
+    font-family: 'Syne', sans-serif;
+    font-size: 2rem;
+    font-weight: 800;
+    color: var(--border);
+    line-height: 1;
+    flex-shrink: 0;
+    width: 2.5rem;
+    transition: color 0.3s;
+  }
+
+  .pipe-step:hover .pipe-num { color: var(--accent); }
+
+  .pipe-content strong {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+    display: block;
+    margin-bottom: 0.4rem;
+  }
+
+  .pipe-content p {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+  }
+
+  /* ── RESULTS ── */
+  .results-table-wrap {
+    margin-top: 3rem;
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+
+  .results-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+  }
+
+  .results-table th {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 1rem 1.5rem;
+    text-align: left;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    font-weight: 400;
+  }
+
+  .results-table td {
+    padding: 0.9rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+
+  .results-table tr:last-child td { border-bottom: none; }
+
+  .results-table tr.highlight td { background: rgba(200, 241, 53, 0.03); }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.75rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: 2px;
+  }
+
+  .badge-green { background: rgba(200,241,53,0.1); color: var(--accent); }
+  .badge-red   { background: rgba(255,80,80,0.1);  color: #ff7070; }
+  .badge-best  { background: rgba(91,240,200,0.1); color: var(--accent2); }
+
+  .model-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    color: var(--text-dim);
+  }
+
+  /* ── VIDEO ── */
+  .video-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    margin-top: 3rem;
+  }
+
+  .video-block {
+    background: var(--surface);
+    overflow: hidden;
+  }
+
+  .video-header {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .video-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 700;
+  }
+
+  .video-pill {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 0.2rem 0.6rem;
+    border-radius: 2px;
+  }
+
+  .pill-random { background: rgba(255,80,80,0.1); color: #ff7070; }
+  .pill-trained { background: rgba(200,241,53,0.1); color: var(--accent); }
+
+  video {
+    width: 100%;
+    display: block;
+    aspect-ratio: 16/9;
+    background: #000;
+  }
+
+  .video-caption {
+    padding: 1rem 1.5rem;
+    font-size: 0.82rem;
+    color: var(--text-dim);
+    border-top: 1px solid var(--border);
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    padding: 3rem 6vw;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  footer p {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .reveal {
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.6s ease, transform 0.6s ease;
+  }
+  .reveal.visible {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    .hero             { grid-template-columns: 1fr; }
+    .hero-right       { display: none; }
+    .problem-grid     { grid-template-columns: 1fr; }
+    .reward-cards     { grid-template-columns: 1fr 1fr; }
+    .training-layout  { grid-template-columns: 1fr; }
+    .video-grid       { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 600px) {
+    .reward-cards { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════
+     HERO
+══════════════════════════════════════════ -->
+<header class="hero">
+  <div class="hero-left">
+    <p class="hero-tag">Reinforcement Learning · PPO · Unity 3D</p>
+    <h1 class="hero-title">Teaching a<br>Machine<br>to <em>Run.</em></h1>
+    <p class="hero-desc">
+      A PPO-trained agent learns to navigate 2.5D terrain and capture
+      all 10 flags — purely from reward signals, no hard-coded rules.
+    </p>
+  </div>
+
+  <div class="hero-right">
+    <div class="dot"></div>
+    <div class="dot"></div>
+    <div class="hero-grid"></div>
+    <div class="hero-stats">
+      <div class="stat">
+        <span class="stat-value">100%</span>
+        <span class="stat-label">Flag Capture Rate</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value">~31s</span>
+        <span class="stat-label">Avg. Completion</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value">10k</span>
+        <span class="stat-label">Training Episodes</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+
+<!-- ══════════════════════════════════════════
+     PROBLEM
+══════════════════════════════════════════ -->
+<section>
+  <div class="section-inner">
+    <p class="section-label reveal">01 — Problem</p>
+    <h2 class="section-heading reveal">Navigate. Survive. Capture.</h2>
+
+    <div class="problem-grid">
+      <div class="problem-text reveal">
+        <p>
+          The agent operates in <strong>Proly</strong>, a 2.5D racing game built in Unity.
+          The map contains 10 sequentially ordered flags. The agent must capture them all
+          as fast as possible while staying alive — falling into water resets health to zero.
+        </p>
+        <p>
+          The challenge: the agent receives only a compact observation vector and must
+          learn to move, navigate obstacles, and avoid cliffs without any hand-crafted
+          movement logic.
+        </p>
+        <p>
+          Actions are continuous 2D accelerations <code style="font-family:'DM Mono',monospace;color:var(--accent2);font-size:0.85em">(Ax, Ay) ∈ [−1, 1]²</code>,
+          giving full directional freedom at every timestep.
+        </p>
+      </div>
+
+      <div class="reveal">
+        <div class="obs-grid">
+          <div class="obs-cell">
+            <div class="obs-key">target_position</div>
+            <div class="obs-val">Relative vector to next flag</div>
+          </div>
+          <div class="obs-cell">
+            <div class="obs-key">agent_health</div>
+            <div class="obs-val">Current health (0 = dead)</div>
+          </div>
+          <div class="obs-cell">
+            <div class="obs-key">last_checkpoint_index</div>
+            <div class="obs-val">Index of last flag captured</div>
+          </div>
+          <div class="obs-cell">
+            <div class="obs-key">terrain_grid</div>
+            <div class="obs-val">5×5 local terrain map<br><span style="color:var(--accent);font-size:0.8em">0 normal · −1 water · 1 obstacle</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════════════════
+     REWARD
+══════════════════════════════════════════ -->
+<section>
+  <div class="section-inner">
+    <p class="section-label reveal">02 — Reward Design</p>
+    <h2 class="section-heading reveal">Four signals.<br>One objective.</h2>
+
+    <div class="reward-cards">
+      <div class="reward-card reveal">
+        <div class="reward-icon">🚩</div>
+        <div class="reward-name">Flag Capture</div>
+        <div class="reward-formula">+10.0 × Δcheckpoint_index</div>
+        <div class="reward-desc">The dominant signal. A large reward fires the moment a new flag is captured, directly aligning the agent with the evaluation metric.</div>
+      </div>
+
+      <div class="reward-card reveal">
+        <div class="reward-icon">📍</div>
+        <div class="reward-name">Distance Shaping</div>
+        <div class="reward-formula">+0.1 × (prev_dist − curr_dist)</div>
+        <div class="reward-desc">Dense per-step reward for closing in on the next target. Penalizes drifting away. Accelerates early learning before the first flag is reached.</div>
+      </div>
+
+      <div class="reward-card reveal">
+        <div class="reward-icon">❤️</div>
+        <div class="reward-name">Survival</div>
+        <div class="reward-formula">−10.0 if health ≤ 0<br>+0.01 per alive step</div>
+        <div class="reward-desc">A large death penalty discourages cliff falls. The small alive bonus discourages unnecessary idling and rewards continuous movement.</div>
+      </div>
+
+      <div class="reward-card reveal">
+        <div class="reward-icon">🌊</div>
+        <div class="reward-name">Terrain Awareness</div>
+        <div class="reward-formula">−0.05 per adjacent water tile</div>
+        <div class="reward-desc">Penalizes standing next to water in the 4-connected neighborhood. Teaches edge avoidance without any hard-coded rules.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════════════════
+     TRAINING
+══════════════════════════════════════════ -->
+<section>
+  <div class="section-inner">
+    <p class="section-label reveal">03 — Training</p>
+    <h2 class="section-heading reveal">PPO on three maps,<br>in parallel.</h2>
+
+    <div class="training-layout">
+      <div class="reveal">
+        <p style="color:var(--text-dim);margin-bottom:2rem;font-size:0.95rem;">
+          Three independent models are trained — one per map — using a
+          <code style="font-family:'DM Mono',monospace;color:var(--accent2);font-size:0.85em">MAP_ID</code>
+          environment variable to route each run to its own checkpoint file.
+          The best-generalizing model is selected as the final agent.
+        </p>
+        <table class="param-table">
+          <tr><td>Algorithm</td><td>PPO (Stable-Baselines3)</td></tr>
+          <tr><td>Policy</td><td>MLP [128, 128] + Tanh</td></tr>
+          <tr><td>Learning rate</td><td>3 × 10⁻⁴</td></tr>
+          <tr><td>n_steps</td><td>2048</td></tr>
+          <tr><td>Batch size</td><td>64</td></tr>
+          <tr><td>Epochs per update</td><td>10</td></tr>
+          <tr><td>Gamma (γ)</td><td>0.99</td></tr>
+          <tr><td>Entropy coef</td><td>0.01</td></tr>
+          <tr><td>Episodes</td><td>10,000 per map</td></tr>
+          <tr><td>Hardware</td><td>NVIDIA H200 (per map)</td></tr>
+        </table>
+      </div>
+
+      <div class="pipeline reveal">
+        <div class="pipe-step">
+          <span class="pipe-num">01</span>
+          <div class="pipe-content">
+            <strong>Game loop → observation</strong>
+            <p>MLGame3D bridge delivers raw observation dict each frame. Flattened vector fed to PPO policy.</p>
+          </div>
+        </div>
+        <div class="pipe-step">
+          <span class="pipe-num">02</span>
+          <div class="pipe-content">
+            <strong>Reward computation</strong>
+            <p>RewardManager compares current and previous observation to compute the composite reward signal.</p>
+          </div>
+        </div>
+        <div class="pipe-step">
+          <span class="pipe-num">03</span>
+          <div class="pipe-content">
+            <strong>Rollout buffer fill</strong>
+            <p>Transitions accumulate in the SB3 rollout buffer. When full (2048 steps), returns and advantages are computed.</p>
+          </div>
+        </div>
+        <div class="pipe-step">
+          <span class="pipe-num">04</span>
+          <div class="pipe-content">
+            <strong>Policy update</strong>
+            <p>PPO gradient update runs at episode reset. Model checkpoint saved after every update.</p>
+          </div>
+        </div>
+        <div class="pipe-step" style="border-bottom:none;">
+          <span class="pipe-num">05</span>
+          <div class="pipe-content">
+            <strong>Resume-safe checkpointing</strong>
+            <p>Training can be interrupted and resumed at any time — model reloads from the last saved zip automatically.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════════════════
+     RESULTS
+══════════════════════════════════════════ -->
+<section>
+  <div class="section-inner">
+    <p class="section-label reveal">04 — Results</p>
+    <h2 class="section-heading reveal">Model 3 generalizes<br>across all maps.</h2>
+
+    <div class="results-table-wrap reveal">
+      <table class="results-table">
+        <thead>
+          <tr>
+            <th>Model</th>
+            <th>Trained on</th>
+            <th>Map 1</th>
+            <th>Map 2</th>
+            <th>Map 3</th>
+            <th>Success Rate</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><span class="model-tag">model_map1</span></td>
+            <td>Map 1</td>
+            <td><span class="badge badge-green">✓ 10/10</span></td>
+            <td><span class="badge badge-green">✓ 10/10</span></td>
+            <td><span class="badge badge-green">✓ 10/10</span></td>
+            <td>100%</td>
+          </tr>
+          <tr>
+            <td><span class="model-tag">model_map2</span></td>
+            <td>Map 2</td>
+            <td><span class="badge badge-red">✗ 2/10</span></td>
+            <td><span class="badge badge-green">✓ 10/10</span></td>
+            <td><span class="badge badge-red">✗ 7/10</span></td>
+            <td>67%</td>
+          </tr>
+          <tr class="highlight">
+            <td><span class="model-tag">model_map3</span> <span class="badge badge-best" style="margin-left:0.5rem">★ selected</span></td>
+            <td>Map 3</td>
+            <td><span class="badge badge-green">✓ 10/10</span></td>
+            <td><span class="badge badge-green">✓ 10/10</span></td>
+            <td><span class="badge badge-green">✓ 10/10</span></td>
+            <td>100%</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="reveal" style="margin-top:1.5rem;font-size:0.88rem;color:var(--text-dim);">
+      Each model evaluated over 3 episodes × 3 maps with different random seeds.
+      Model 3, trained on the most geometrically diverse map, achieves perfect flag capture
+      across all layouts with an average completion time of ~31 seconds.
+    </p>
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════════════════
+     VIDEO
+══════════════════════════════════════════ -->
+<section>
+  <div class="section-inner">
+    <p class="section-label reveal">05 — Comparison</p>
+    <h2 class="section-heading reveal">Random policy vs.<br>Trained agent.</h2>
+
+    <div class="video-grid reveal">
+      <div class="video-block">
+        <div class="video-header">
+          <span class="video-title">Random Policy</span>
+          <span class="video-pill pill-random">Baseline</span>
+        </div>
+        <video src="random.mp4" controls muted loop playsinline></video>
+        <div class="video-caption">
+          Untrained agent moves randomly — falls off cliffs, ignores flags,
+          captures 0/10 checkpoints.
+        </div>
+      </div>
+
+      <div class="video-block">
+        <div class="video-header">
+          <span class="video-title">Trained Agent (Model 3)</span>
+          <span class="video-pill pill-trained">PPO · 10k episodes</span>
+        </div>
+        <video src="trained.mp4" controls muted loop playsinline></video>
+        <div class="video-caption">
+          After training, the agent navigates directly toward each flag,
+          avoids water, and completes all 10 checkpoints in ~31 seconds.
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════════════════
+     FOOTER
+══════════════════════════════════════════ -->
+<footer>
+  <p>PPO · Stable-Baselines3 · Unity MLAgents · Proly 1.4.0-beta.2</p>
+  <p>NVIDIA H200 · 10,000 episodes · 3 maps</p>
+</footer>
+
+<script>
+  // Scroll reveal
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((e, i) => {
+      if (e.isIntersecting) {
+        setTimeout(() => e.target.classList.add('visible'), i * 80);
+        observer.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.12 });
+
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
