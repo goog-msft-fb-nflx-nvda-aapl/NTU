@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rectified Flow — MNIST & FLUX</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, sans-serif; font-size: 16px; line-height: 1.7; color: #1a1a1a; background: #f9f8f6; }
+  a { color: #185fa5; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .site-header { background: #fff; border-bottom: 0.5px solid #ddd; padding: 1.5rem 0; }
+  .site-header .inner { max-width: 900px; margin: 0 auto; padding: 0 2rem; }
+  .site-header h1 { font-size: 22px; font-weight: 500; letter-spacing: -0.3px; }
+  .site-header p { font-size: 14px; color: #666; margin-top: 4px; }
+
+  .container { max-width: 900px; margin: 0 auto; padding: 0 2rem; }
+
+  section { padding: 3rem 0; border-bottom: 0.5px solid #e8e6e0; }
+  section:last-child { border-bottom: none; }
+
+  h2 { font-size: 20px; font-weight: 500; margin-bottom: 0.5rem; color: #1a1a1a; }
+  h3 { font-size: 16px; font-weight: 500; margin: 1.5rem 0 0.4rem; color: #1a1a1a; }
+  p { margin-bottom: 0.9rem; color: #333; }
+  p:last-child { margin-bottom: 0; }
+
+  .tag { display: inline-block; font-size: 12px; padding: 2px 10px; border-radius: 20px; margin-right: 6px; margin-bottom: 6px; }
+  .tag-blue  { background: #e6f1fb; color: #185fa5; }
+  .tag-teal  { background: #e1f5ee; color: #0f6e56; }
+  .tag-amber { background: #faeeda; color: #854f0b; }
+  .tag-coral { background: #faece7; color: #993c1d; }
+  .tag-purple{ background: #eeedfe; color: #534ab7; }
+
+  .section-label { font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.08em; color: #888; margin-bottom: 0.75rem; }
+
+  .card { background: #fff; border: 0.5px solid #ddd; border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 1rem; }
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem; margin-top: 1rem; }
+
+  .metric-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin: 1.25rem 0; }
+  .metric { background: #f3f2ee; border-radius: 8px; padding: 0.9rem 1rem; }
+  .metric .label { font-size: 12px; color: #777; margin-bottom: 4px; }
+  .metric .value { font-size: 22px; font-weight: 500; color: #1a1a1a; }
+
+  .fig { margin: 1.5rem 0; }
+  .fig img { width: 100%; border-radius: 8px; border: 0.5px solid #ddd; display: block; }
+  .fig .caption { font-size: 13px; color: #666; margin-top: 8px; line-height: 1.5; }
+
+  .finding { border-left: 3px solid #e8e6e0; padding-left: 1rem; margin: 1rem 0; }
+  .finding.blue   { border-color: #378add; }
+  .finding.teal   { border-color: #1d9e75; }
+  .finding.amber  { border-color: #ef9f27; }
+  .finding.coral  { border-color: #d85a30; }
+  .finding.purple { border-color: #7f77dd; }
+
+  .finding p { margin-bottom: 0; }
+
+  .math { font-family: 'Georgia', serif; font-style: italic; background: #f3f2ee; border-radius: 6px; padding: 0.75rem 1rem; margin: 1rem 0; font-size: 15px; color: #333; display: block; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 1rem 0; }
+  th { text-align: left; font-weight: 500; font-size: 12px; color: #777; text-transform: uppercase; letter-spacing: 0.06em; padding: 6px 10px; border-bottom: 0.5px solid #ddd; }
+  td { padding: 8px 10px; border-bottom: 0.5px solid #eee; color: #333; }
+  tr:last-child td { border-bottom: none; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  @media (max-width: 640px) { .two-col { grid-template-columns: 1fr; } }
+
+  .pill-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 0.75rem 0; }
+  .pill { font-size: 13px; padding: 4px 14px; border-radius: 20px; border: 0.5px solid #ddd; background: #fff; color: #444; }
+
+  footer { padding: 2rem 0; text-align: center; font-size: 13px; color: #999; }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="inner">
+    <h1>Rectified Flow — From MNIST to Text-to-Image</h1>
+    <p>Training, sampling, and editing experiments with rectified flow models</p>
+  </div>
+</header>
+
+<main class="container">
+
+<!-- ── Overview ─────────────────────────────────────────────────────────── -->
+<section>
+  <div class="section-label">Overview</div>
+  <p>
+    Rectified Flow (RF) defines a straight-line transport between a source distribution
+    <em>X</em><sub>0</sub> ~ N(0,I) and a target data distribution <em>X</em><sub>1</sub> ~ q:
+  </p>
+  <code class="math">X<sub>t</sub> = t · X<sub>1</sub> + (1−t) · X<sub>0</sub>,  t ∈ [0,1]</code>
+  <p>
+    A neural network v<sub>θ</sub> is trained to regress the constant velocity X<sub>1</sub> − X<sub>0</sub>
+    along each trajectory. Because the paths are straight, first-order Euler integration is highly
+    accurate even with very few steps — a key advantage over score-based diffusion models.
+  </p>
+  <p>
+    We explore RF at two scales: a lightweight UNet trained from scratch on MNIST (28×28 grayscale),
+    and FLUX.1-dev, a ~12B-parameter Diffusion Transformer producing 1024×1024 images.
+  </p>
+  <div class="pill-row">
+    <span class="pill">Rectified Flow</span>
+    <span class="pill">MNIST generation</span>
+    <span class="pill">FLUX.1-dev</span>
+    <span class="pill">Euler sampler</span>
+    <span class="pill">SDE sampler</span>
+    <span class="pill">Classifier-free guidance</span>
+    <span class="pill">Image editing</span>
+  </div>
+</section>
+
+<!-- ── Part 1: MNIST ─────────────────────────────────────────────────────── -->
+<section id="mnist">
+  <div class="section-label">Experiment 1</div>
+  <h2>MNIST digit generation</h2>
+  <p>
+    We train a SongUNet on 60,000 MNIST images for 200 epochs, exploring unconditional and
+    class-conditional generation, sampling efficiency, and classifier-free guidance.
+  </p>
+
+  <div class="metric-row">
+    <div class="metric"><div class="label">Model parameters</div><div class="value">5.6M</div></div>
+    <div class="metric"><div class="label">Image resolution</div><div class="value">28×28</div></div>
+    <div class="metric"><div class="label">Training epochs</div><div class="value">200</div></div>
+    <div class="metric"><div class="label">Final EMA loss</div><div class="value">~0.16</div></div>
+  </div>
+
+  <h3>Training convergence</h3>
+  <p>
+    Both unconditional and conditional models converge rapidly. The loss drops from ~0.85 to ~0.18
+    in the first 10 epochs, then slowly plateaus near 0.16–0.17 by epoch 200.
+    The conditional model (label_dropout = 0.1) achieves a slightly lower final loss.
+  </p>
+
+  <div class="two-col">
+    <div class="fig">
+      <img src="loss_curve_uncond.png" alt="Unconditional training loss">
+      <div class="caption">Unconditional model loss curve (200 epochs)</div>
+    </div>
+    <div class="fig">
+      <img src="loss_curve_cond.png" alt="Conditional training loss">
+      <div class="caption">Conditional model loss curve (200 epochs)</div>
+    </div>
+  </div>
+
+  <h3>Generation quality across training stages</h3>
+  <p>
+    Snapshots taken at fixed noise using the Euler sampler (50 steps) show a clear progression
+    from noisy blobs at epoch 1 to sharp, consistent digits by epoch 50–100.
+  </p>
+  <div class="fig">
+    <img src="training_stages.png" alt="Training stages">
+    <div class="caption">Unconditional samples at epochs 1, 10, 50, 100, 200. Same fixed noise X₀ across all panels.</div>
+  </div>
+
+  <h3>Effect of sampling steps</h3>
+  <p>
+    We sweep the Euler sampler from 2 to 100 steps, keeping the noise seed fixed.
+    Quality saturates quickly — beyond 16 steps, results are visually indistinguishable.
+  </p>
+  <div class="fig">
+    <img src="steps_sweep.png" alt="Steps sweep">
+    <div class="caption">Euler sampler with num_steps ∈ {2, 4, 8, 16, 32, 50, 100}. Unconditional model, same noise seed.</div>
+  </div>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="finding blue"><p><strong>2–4 steps:</strong> Severe blurring and distortion from large discretization error.</p></div>
+    </div>
+    <div class="card">
+      <div class="finding teal"><p><strong>8 steps:</strong> Digits become recognizable; minor stroke inconsistencies remain.</p></div>
+    </div>
+    <div class="card">
+      <div class="finding amber"><p><strong>16+ steps:</strong> Visually converged. RF's straight paths make Euler highly accurate.</p></div>
+    </div>
+  </div>
+
+  <h3>Classifier-free guidance (CFG)</h3>
+  <p>
+    The conditional model is trained with 10% label dropout, enabling CFG at inference.
+    The guided velocity is:
+  </p>
+  <code class="math">v<sup>CFG</sup><sub>t</sub>(x) = v<sub>t</sub>(x, ∅) + s · (v<sub>t</sub>(x, y) − v<sub>t</sub>(x, ∅))</code>
+  <p>
+    Higher guidance scale s amplifies the conditional direction, increasing class fidelity
+    at the cost of intra-class diversity.
+  </p>
+  <div class="fig">
+    <img src="cfg_sweep.png" alt="CFG sweep">
+    <div class="caption">CFG scale s ∈ {0.5, 1.0, 2.0, 3.0, 5.0}. Each row = one digit class (0–9), 10 samples per class.</div>
+  </div>
+
+  <table>
+    <thead><tr><th>CFG scale s</th><th>Class fidelity</th><th>Intra-class diversity</th><th>Character</th></tr></thead>
+    <tbody>
+      <tr><td>0.5</td><td>Low</td><td>High</td><td>Mixed class identities per row</td></tr>
+      <tr><td>1.0</td><td>Good</td><td>Moderate</td><td>Correct class, some style variation</td></tr>
+      <tr><td>2.0–3.0</td><td>High</td><td>Low</td><td>Consistent, sharp — recommended range</td></tr>
+      <tr><td>5.0</td><td>Very high</td><td>Very low</td><td>Near-identical samples — mode collapse</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ── Part 2: FLUX ──────────────────────────────────────────────────────── -->
+<section id="flux">
+  <div class="section-label">Experiment 2</div>
+  <h2>Text-to-image inference with FLUX.1-dev</h2>
+  <p>
+    FLUX.1-dev is a ~12B-parameter Diffusion Transformer trained under the rectified flow
+    framework, producing 1024×1024 images. We explore sampler behavior, the num_steps–quality
+    trade-off, CFG at image scale, and image editing.
+  </p>
+
+  <div class="metric-row">
+    <div class="metric"><div class="label">Model scale</div><div class="value">~12B</div></div>
+    <div class="metric"><div class="label">Resolution</div><div class="value">1024²</div></div>
+    <div class="metric"><div class="label">Latent space</div><div class="value">VAE</div></div>
+    <div class="metric"><div class="label">Default CFG</div><div class="value">3.5</div></div>
+  </div>
+
+  <h3>Image generation — three prompts</h3>
+  <p>
+    Euler sampler, 28 steps, CFG s = 3.5. FLUX produces high-fidelity images with strong
+    prompt adherence across diverse scene types.
+  </p>
+  <div class="fig">
+    <img src="part_a_three_prompts.png" alt="Three prompts">
+    <div class="caption">Left to right: (1) snow-capped mountain at golden hour, (2) futuristic neon city at night, (3) astronaut portrait on Mars.</div>
+  </div>
+
+  <h3>Sampler comparison — Euler vs SDE across num_steps</h3>
+  <p>
+    We compare the deterministic Euler sampler with the stochastic SDE sampler (noise_scale = 2.0)
+    across num_steps ∈ {4, 8, 16, 28}.
+  </p>
+  <div class="fig">
+    <img src="part_b_sampler_comparison.png" alt="Sampler comparison">
+    <div class="caption">Euler (top row) vs SDE (bottom row). Prompt: "a photo of a cat holding a sign that says Rectified Flow". CFG s = 3.5.</div>
+  </div>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="finding coral"><p><strong>4–8 steps:</strong> Both samplers produce incoherent outputs. SDE's additional noise further degrades quality at low step counts.</p></div>
+    </div>
+    <div class="card">
+      <div class="finding teal"><p><strong>16 steps:</strong> Structure and text partially emerge. SDE shows slight texture variation.</p></div>
+    </div>
+    <div class="card">
+      <div class="finding blue"><p><strong>28 steps:</strong> Both converge to sharp, coherent images. SDE produces marginally richer texture from stochastic exploration.</p></div>
+    </div>
+  </div>
+
+  <h3>CFG scale sweep</h3>
+  <p>
+    At image scale, CFG effects are visually pronounced. We sweep s ∈ {1.0, 2.0, 3.5, 7.5, 10.0}.
+  </p>
+  <div class="fig">
+    <img src="part_c_cfg_sweep.png" alt="CFG sweep FLUX">
+    <div class="caption">CFG scale s ∈ {1.0, 2.0, 3.5, 7.5, 10.0}. Euler sampler, 28 steps.</div>
+  </div>
+
+  <table>
+    <thead><tr><th>CFG scale s</th><th>Prompt adherence</th><th>Quality</th><th>Artifact risk</th></tr></thead>
+    <tbody>
+      <tr><td>1.0</td><td>Weak — text absent</td><td>Low contrast</td><td>None</td></tr>
+      <tr><td>2.0</td><td>Improving</td><td>Good</td><td>None</td></tr>
+      <tr><td>3.5 (default)</td><td>Strong</td><td>Excellent</td><td>None</td></tr>
+      <tr><td>7.5</td><td>Very strong</td><td>Oversaturated</td><td>Moderate</td></tr>
+      <tr><td>10.0</td><td>Extreme</td><td>Degraded</td><td>High</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ── Part 3: Editing ───────────────────────────────────────────────────── -->
+<section id="editing">
+  <div class="section-label">Experiment 3</div>
+  <h2>Image editing with FLUX</h2>
+  <p>
+    We explore two editing paradigms: simple renoising and soft interpolation editing,
+    which blends analytic Gaussian velocity with the learned velocity field.
+  </p>
+
+  <h3>Method 1 — simple renoising</h3>
+  <p>
+    Given image latent X<sub>1</sub>, form a noisy interpolate at time t = 0.12:
+  </p>
+  <code class="math">X<sub>t</sub> = t · X<sub>1</sub> + (1−t) · ε,  ε ~ N(0,I)</code>
+  <p>
+    Then run the Euler sampler from X<sub>t</sub> with the edit prompt.
+    Works well for structurally similar edits (cat → tiger) but struggles with large semantic changes.
+  </p>
+
+  <h3>Method 2 — soft interpolation editing</h3>
+  <p>
+    Replace the velocity field with a time-varying convex combination:
+  </p>
+  <code class="math">ṽ<sub>θ</sub>(X<sub>t</sub>, t) = η(t) · v<sup>analytic</sup>(X<sub>t</sub>, t) + (1−η(t)) · v<sub>θ</sub>(X<sub>t</sub>, t)</code>
+  <p>
+    The analytic velocity anchors the trajectory toward the source image at early steps.
+    η(t) decays exponentially over [t<sub>start</sub>, t<sub>end</sub>], then drops to zero —
+    letting the learned velocity drive the edit at later steps.
+    This preserves source structure while enabling large appearance changes.
+  </p>
+
+  <div class="fig">
+    <img src="edit_a_summary.png" alt="Editing example">
+    <div class="caption">Left: original cat. Center: simple renoising → tiger. Right: soft interpolation → tiger. Source structure (pose, background) is better preserved by method 2.</div>
+  </div>
+
+  <h3>Parameter exploration on custom image</h3>
+  <p>
+    We vary t<sub>end</sub>, η<sub>base</sub>, noise scale, and sampler type to control the
+    edit strength vs. source fidelity trade-off.
+  </p>
+  <div class="fig">
+    <img src="edit_b_summary.png" alt="Custom editing">
+    <div class="caption">Original cat (left) edited with four configurations: tiger (Euler), lion (SDE noise=2), silver statue (SDE noise=5), spacesuit (SDE noise=10).</div>
+  </div>
+
+  <table>
+    <thead><tr><th>Config</th><th>t<sub>end</sub></th><th>η<sub>base</sub></th><th>Noise scale</th><th>Sampler</th><th>Effect</th></tr></thead>
+    <tbody>
+      <tr><td>Tiger</td><td>0.25</td><td>0.93</td><td>—</td><td>Euler</td><td>Strong source fidelity</td></tr>
+      <tr><td>Lion</td><td>0.25</td><td>0.93</td><td>2.0</td><td>SDE</td><td>Similar structure, richer texture</td></tr>
+      <tr><td>Silver statue</td><td>0.20</td><td>0.85</td><td>5.0</td><td>SDE</td><td>Larger appearance change</td></tr>
+      <tr><td>Spacesuit</td><td>0.15</td><td>0.80</td><td>10.0</td><td>SDE</td><td>Dramatic edit, lower fidelity</td></tr>
+    </tbody>
+  </table>
+
+  <div class="card-grid" style="margin-top:1rem;">
+    <div class="card">
+      <div class="finding blue"><p>Smaller t<sub>end</sub> and η<sub>base</sub> allow the learned velocity to dominate earlier, enabling more dramatic edits at the cost of source fidelity.</p></div>
+    </div>
+    <div class="card">
+      <div class="finding amber"><p>Higher SDE noise scale introduces diversity and bridges large appearance gaps, but risks spatial incoherence at very high values.</p></div>
+    </div>
+    <div class="card">
+      <div class="finding teal"><p>Euler preserves source structure most faithfully. SDE with moderate noise (2–5) offers a useful middle ground.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- ── Takeaways ─────────────────────────────────────────────────────────── -->
+<section id="takeaways">
+  <div class="section-label">Key takeaways</div>
+  <h2>What we learned</h2>
+
+  <div class="card-grid">
+    <div class="card">
+      <div class="section-label">Straight trajectories = few steps</div>
+      <p>RF's training objective produces near-straight transport paths. 16 steps on MNIST and 28 steps on FLUX are sufficient for high-quality results — far fewer than diffusion models require.</p>
+    </div>
+    <div class="card">
+      <div class="section-label">CFG is a universal dial</div>
+      <p>At both scales, s = 2–3.5 is the practical sweet spot. Below that, class/prompt adherence is weak. Above ~7, oversaturation and mode collapse emerge regardless of model size.</p>
+    </div>
+    <div class="card">
+      <div class="section-label">SDE adds diversity, not quality</div>
+      <p>The stochastic sampler does not improve sharpness over Euler at sufficient steps. It adds texture variation and, in editing, helps bridge large semantic gaps.</p>
+    </div>
+    <div class="card">
+      <div class="section-label">Editing = velocity interpolation</div>
+      <p>The soft interpolation framework gives precise control over source fidelity vs. edit strength via the η(t) schedule. Simple renoising is sufficient only for small structural changes.</p>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="container">
+    Experiments run on NVIDIA H200 (143 GB) &nbsp;·&nbsp;
+    FLUX.1-dev via <a href="https://huggingface.co/black-forest-labs/FLUX.1-dev">HuggingFace</a> &nbsp;·&nbsp;
+    <a href="https://arxiv.org/abs/2209.03003">Liu et al., 2022</a>
+  </div>
+</footer>
+
+</body>
+</html>
