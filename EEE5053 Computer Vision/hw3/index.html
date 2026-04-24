@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Projective Geometry & Image Warping</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@300;400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0f0e0d;
+    --paper: #f5f1eb;
+    --accent: #c8411a;
+    --accent2: #1a5fc8;
+    --muted: #7a746e;
+    --rule: #d4cec6;
+    --card: #edeae3;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+
+  /* Grain overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.4;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    position: relative;
+    border-bottom: 1px solid var(--rule);
+    overflow: hidden;
+  }
+
+  .hero-text {
+    padding: 10vh 6vw 10vh 8vw;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+    z-index: 2;
+  }
+
+  .hero-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    font-weight: 400;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 2rem;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.2s forwards;
+  }
+
+  .hero-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(2.8rem, 5vw, 5rem);
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    margin-bottom: 2rem;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.4s forwards;
+  }
+
+  .hero-title em {
+    font-style: italic;
+    color: var(--accent);
+  }
+
+  .hero-desc {
+    font-size: 1.05rem;
+    color: var(--muted);
+    max-width: 38ch;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.6s forwards;
+    margin-bottom: 3rem;
+  }
+
+  .hero-meta {
+    display: flex;
+    gap: 2.5rem;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.8s forwards;
+  }
+
+  .hero-meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+
+  .hero-meta-item span:first-child {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .hero-meta-item span:last-child {
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+
+  .hero-image {
+    position: relative;
+    overflow: hidden;
+    opacity: 0;
+    animation: fadeIn 1.2s 0.3s forwards;
+  }
+
+  .hero-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+    display: block;
+  }
+
+  .hero-image::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to right, var(--paper) 0%, transparent 30%);
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(245, 241, 235, 0.92);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--rule);
+    padding: 0 8vw;
+    display: flex;
+    gap: 0;
+  }
+
+  nav a {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-decoration: none;
+    padding: 1.1rem 1.4rem;
+    transition: color 0.2s;
+    border-bottom: 2px solid transparent;
+  }
+
+  nav a:hover { color: var(--ink); border-bottom-color: var(--accent); }
+
+  /* ── SECTIONS ── */
+  section {
+    padding: 8vh 8vw;
+    border-bottom: 1px solid var(--rule);
+    opacity: 0;
+    transform: translateY(24px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+
+  section.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .section-header {
+    display: flex;
+    align-items: baseline;
+    gap: 1.5rem;
+    margin-bottom: 3.5rem;
+  }
+
+  .section-num {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+  }
+
+  .section-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(1.8rem, 3vw, 2.8rem);
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+  }
+
+  /* ── TEXT BLOCKS ── */
+  .prose {
+    max-width: 72ch;
+    font-size: 1rem;
+    color: #3a3530;
+    line-height: 1.8;
+  }
+
+  .prose + .prose { margin-top: 1.2rem; }
+
+  .prose strong { font-weight: 500; color: var(--ink); }
+
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4rem;
+    align-items: start;
+  }
+
+  .three-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 2rem;
+    align-items: start;
+  }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--rule);
+    padding: 2rem;
+    position: relative;
+  }
+
+  .card-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 0.8rem;
+  }
+
+  .card-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.3rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .card p {
+    font-size: 0.9rem;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+
+  /* ── FIGURES ── */
+  figure {
+    margin: 0;
+  }
+
+  figure img {
+    width: 100%;
+    display: block;
+    border: 1px solid var(--rule);
+  }
+
+  figcaption {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    margin-top: 0.7rem;
+    padding-left: 0.2rem;
+    border-left: 2px solid var(--accent);
+    padding-left: 0.6rem;
+  }
+
+  .figure-row {
+    display: grid;
+    gap: 1.5rem;
+    margin: 2.5rem 0;
+  }
+
+  .figure-row.cols-2 { grid-template-columns: 1fr 1fr; }
+  .figure-row.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .figure-row.cols-5 { grid-template-columns: repeat(5, 1fr); }
+
+  .figure-full { margin: 2.5rem 0; }
+  .figure-full img { width: 100%; border: 1px solid var(--rule); }
+
+  /* ── VIDEO ── */
+  .video-wrapper {
+    position: relative;
+    padding-bottom: 56.25%;
+    height: 0;
+    overflow: hidden;
+    border: 1px solid var(--rule);
+    margin: 2.5rem 0;
+  }
+
+  .video-wrapper iframe {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    border: none;
+  }
+
+  /* ── OBSERVATION BOX ── */
+  .observation {
+    border-left: 3px solid var(--accent);
+    padding: 1.5rem 2rem;
+    background: var(--card);
+    margin: 2.5rem 0;
+  }
+
+  .observation-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 0.6rem;
+  }
+
+  .observation p {
+    font-size: 0.95rem;
+    color: #3a3530;
+    line-height: 1.75;
+  }
+
+  /* ── DIVIDER ── */
+  .rule {
+    border: none;
+    border-top: 1px solid var(--rule);
+    margin: 3rem 0;
+  }
+
+  /* ── FUTURE WORK ── */
+  .fw-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin-top: 2rem;
+  }
+
+  .fw-item {
+    padding: 1.5rem;
+    border: 1px solid var(--rule);
+    position: relative;
+  }
+
+  .fw-item::before {
+    content: attr(data-num);
+    font-family: 'DM Serif Display', serif;
+    font-size: 3rem;
+    color: var(--rule);
+    position: absolute;
+    top: 0.5rem;
+    right: 1rem;
+    line-height: 1;
+  }
+
+  .fw-item h4 {
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    font-size: 0.95rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .fw-item p {
+    font-size: 0.85rem;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    padding: 4rem 8vw;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  footer span {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.68rem;
+    color: var(--muted);
+    letter-spacing: 0.1em;
+  }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 900px) {
+    .hero { grid-template-columns: 1fr; }
+    .hero-image { height: 40vh; }
+    .hero-image::after { background: linear-gradient(to bottom, transparent 60%, var(--paper)); }
+    .two-col, .three-col, .fw-grid { grid-template-columns: 1fr; }
+    .figure-row.cols-3, .figure-row.cols-5 { grid-template-columns: 1fr 1fr; }
+    nav { padding: 0 4vw; overflow-x: auto; }
+    section { padding: 6vh 5vw; }
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="hero-text">
+    <div class="hero-label">Computer Vision &mdash; Projective Geometry</div>
+    <h1 class="hero-title">Homography<br>Estimation &amp;<br><em>Image Warping</em></h1>
+    <p class="hero-desc">From planar augmented reality to panoramic stitching — a study of projective transformations and their practical applications in computer vision.</p>
+    <div class="hero-meta">
+      <div class="hero-meta-item">
+        <span>Author</span>
+        <span>James Christian</span>
+      </div>
+      <div class="hero-meta-item">
+        <span>ID</span>
+        <span>R13921031</span>
+      </div>
+      <div class="hero-meta-item">
+        <span>Year</span>
+        <span>2026</span>
+      </div>
+    </div>
+  </div>
+  <div class="hero-image">
+    <img src="images/output1.png" alt="Times Square AR result">
+  </div>
+</header>
+
+<!-- NAV -->
+<nav>
+  <a href="#homography">Homography</a>
+  <a href="#ar">Planar AR</a>
+  <a href="#unwarp">Unwarp</a>
+  <a href="#panorama">Panorama</a>
+  <a href="#future">Future Work</a>
+</nav>
+
+<!-- PART 1 -->
+<section id="homography">
+  <div class="section-header">
+    <span class="section-num">01</span>
+    <h2 class="section-title">Homography Estimation &amp; Forward Warping</h2>
+  </div>
+
+  <div class="two-col">
+    <div>
+      <p class="prose">A <strong>homography</strong> is a projective transformation between two planes, represented as a 3×3 matrix H. It maps any point on one plane to its corresponding point on another, preserving straight lines but not parallelism or distances.</p>
+      <p class="prose" style="margin-top:1.2rem">Given at least four point correspondences, the homography is estimated using the <strong>Direct Linear Transform (DLT)</strong> method. Each correspondence contributes two linear equations, forming an overdetermined system Ah = 0. The solution is the eigenvector of A<sup>T</sup>A corresponding to the smallest eigenvalue, found via SVD — specifically, the last row of V<sup>T</sup>.</p>
+      <p class="prose" style="margin-top:1.2rem">With the homography in hand, each source image is <strong>forward-warped</strong> onto the destination canvas: every source pixel coordinate is projected through H to its destination location, where it is deposited via nearest-neighbor assignment. While intuitive, forward warping can leave unfilled holes at the destination — a limitation addressed in subsequent parts.</p>
+    </div>
+    <div>
+      <div class="figure-row cols-5">
+        <figure><img src="images/img1.jpg" alt="img1"><figcaption>Source 1</figcaption></figure>
+        <figure><img src="images/img2.jpg" alt="img2"><figcaption>Source 2</figcaption></figure>
+        <figure><img src="images/img3.jpg" alt="img3"><figcaption>Source 3</figcaption></figure>
+        <figure><img src="images/img4.jpg" alt="img4"><figcaption>Source 4</figcaption></figure>
+        <figure><img src="images/img5.jpg" alt="img5"><figcaption>Source 5</figcaption></figure>
+      </div>
+      <figure>
+        <img src="images/times.jpg" alt="Canvas">
+        <figcaption>Destination canvas — Times Square</figcaption>
+      </figure>
+    </div>
+  </div>
+
+  <div class="figure-full" style="margin-top:3rem">
+    <figure>
+      <img src="images/output1.png" alt="Forward warped output">
+      <figcaption>Result — five source images forward-warped onto the Times Square canvas using estimated homographies</figcaption>
+    </figure>
+  </div>
+
+  <div class="observation">
+    <div class="observation-label">Observation</div>
+    <p>All five images are correctly projected onto their respective billboard regions on the canvas, demonstrating that the DLT-SVD pipeline accurately recovers the projective transformation from only four point correspondences. Minor pixel-level holes are visible at thin boundaries — an expected artifact of forward warping, where not every destination pixel may receive a mapped source pixel.</p>
+  </div>
+</section>
+
+<!-- PART 2 -->
+<section id="ar">
+  <div class="section-header">
+    <span class="section-num">02</span>
+    <h2 class="section-title">Marker-Based Planar Augmented Reality</h2>
+  </div>
+
+  <div class="two-col">
+    <div>
+      <p class="prose">This part demonstrates real-time planar AR using <strong>ArUco fiducial markers</strong>. An ArUco marker is a synthetic square marker with a unique binary pattern that can be reliably detected and its four corners precisely localized, even under varying lighting and viewpoint conditions.</p>
+      <p class="prose" style="margin-top:1.2rem">For each video frame, the marker corners are detected and used as destination correspondences. The corners of the reference image serve as source correspondences. A homography is estimated between the two, and the reference image is <strong>backward-warped</strong> onto the frame: for every destination pixel within the marker region, the inverse homography H<sup>-1</sup> maps it back to a source coordinate, which is sampled using <strong>bilinear interpolation</strong>.</p>
+      <p class="prose" style="margin-top:1.2rem">Bilinear interpolation computes a weighted average of the four neighboring pixels surrounding the sub-pixel source location, producing smooth gradients and avoiding the blocky appearance of nearest-neighbor sampling. Unlike forward warping, backward warping guarantees a dense, hole-free result.</p>
+    </div>
+    <div>
+      <figure>
+        <img src="images/hehe.jpg" alt="Reference image">
+        <figcaption>Reference image overlaid onto the detected marker region each frame</figcaption>
+      </figure>
+    </div>
+  </div>
+
+  <div class="video-wrapper">
+    <iframe src="https://www.youtube-nocookie.com/embed/pbjULvv7CJA" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" title="Planar AR result video"></iframe>
+  </div>
+
+  <div class="figure-row cols-3">
+    <figure><img src="images/check_frame50.png" alt="Frame 50"><figcaption>Frame 50</figcaption></figure>
+    <figure><img src="images/check_frame150.png" alt="Frame 150"><figcaption>Frame 150</figcaption></figure>
+    <figure><img src="images/check_frame250.png" alt="Frame 250"><figcaption>Frame 250</figcaption></figure>
+  </div>
+
+  <div class="observation">
+    <div class="observation-label">Observation</div>
+    <p>The reference image tracks the marker faithfully across all 353 frames, correctly adjusting for changes in viewpoint, scale, and orientation. The bilinear interpolation produces smooth texture rendering with no visible pixelation. Frames where the marker is partially out of view are handled gracefully — no warping is applied, and the original frame is preserved.</p>
+  </div>
+</section>
+
+<!-- PART 3 -->
+<section id="unwarp">
+  <div class="section-header">
+    <span class="section-num">03</span>
+    <h2 class="section-title">Unwarping a Hidden Secret</h2>
+  </div>
+
+  <p class="prose">Two images of a QR code affixed to a wall at an angle were acquired under different conditions. The goal is to recover the flat, scannable QR code from each perspective-distorted image using backward warping with a manually-specified homography.</p>
+
+  <div class="figure-row cols-2" style="margin-top: 2.5rem">
+    <figure>
+      <img src="images/BL_secret1.png" alt="Secret 1">
+      <figcaption>Source A — digitally rendered perspective image</figcaption>
+    </figure>
+    <figure>
+      <img src="images/BL_secret2.png" alt="Secret 2">
+      <figcaption>Source B — real photograph taken with a smartphone</figcaption>
+    </figure>
+  </div>
+
+  <div class="figure-row cols-2">
+    <figure>
+      <img src="images/output3_1.png" alt="Unwarped 1">
+      <figcaption>Recovered QR code from Source A</figcaption>
+    </figure>
+    <figure>
+      <img src="images/output3_2.png" alt="Unwarped 2">
+      <figcaption>Recovered QR code from Source B</figcaption>
+    </figure>
+  </div>
+
+  <div class="observation">
+    <div class="observation-label">Observation — Same URL, Different Quality</div>
+    <p>Both recovered QR codes successfully decode to <strong>http://media.ee.ntu.edu.tw/courses/cv/25S/</strong>, yet their visual quality differs noticeably. Source A, being a digitally synthesized image, contains <em>only</em> projective distortion — exactly what a homography models. The recovered code is sharp and geometrically perfect.</p>
+    <p style="margin-top:0.8rem">Source B is a real camera photograph. Beyond perspective distortion, it carries <strong>radial and tangential lens distortion</strong>, sensor noise, slight motion blur, and non-uniform illumination from the environment. A single homography cannot correct these non-linear optical effects, resulting in a slightly blurred and softened QR code. The QR code standard's built-in error correction allows the code to remain scannable despite this degradation — but the recovered image is visibly lower quality.</p>
+    <p style="margin-top:0.8rem">This experiment highlights a fundamental limitation of homography: it is a purely projective model and has no capacity to compensate for the radiometric and optical imperfections inherent to physical imaging systems.</p>
+  </div>
+</section>
+
+<!-- PART 4 -->
+<section id="panorama">
+  <div class="section-header">
+    <span class="section-num">04</span>
+    <h2 class="section-title">Panorama Stitching via RANSAC</h2>
+  </div>
+
+  <div class="two-col">
+    <div>
+      <p class="prose">Panorama stitching extends homography estimation to the problem of compositing multiple overlapping images into a single wide-angle view. The key insight is that when a camera rotates purely about its optical center, any two frames are related by a homography — regardless of scene depth.</p>
+      <p class="prose" style="margin-top:1.2rem">Feature correspondences between consecutive frames are established automatically using <strong>ORB (Oriented FAST and Rotated BRIEF)</strong> keypoint detection and brute-force Hamming-distance descriptor matching. ORB is efficient, rotation-invariant, and performs well under illumination changes.</p>
+      <p class="prose" style="margin-top:1.2rem">Because feature matches inevitably include outliers (incorrect correspondences), <strong>RANSAC (Random Sample Consensus)</strong> is used to robustly estimate the homography. In each of 2000 iterations, four correspondences are randomly sampled, a candidate homography is computed via DLT, and all matches are tested against it using a reprojection error threshold of 3.0 pixels. The homography with the most inliers is selected.</p>
+      <p class="prose" style="margin-top:1.2rem">For three-image stitching, homographies are <strong>chained</strong>: the transformation mapping frame 3 into the coordinate space of frame 1 is H<sub>1→2</sub> · H<sub>2→3</sub>. Each frame is backward-warped onto a growing canvas initialized from frame 1.</p>
+    </div>
+    <div>
+      <div class="figure-row cols-3" style="margin-top:0">
+        <figure><img src="images/frame1.jpg" alt="Frame 1"><figcaption>Frame 1</figcaption></figure>
+        <figure><img src="images/frame2.jpg" alt="Frame 2"><figcaption>Frame 2</figcaption></figure>
+        <figure><img src="images/frame3.jpg" alt="Frame 3"><figcaption>Frame 3</figcaption></figure>
+      </div>
+      <div class="card" style="margin-top:1.5rem">
+        <div class="card-label">RANSAC Statistics</div>
+        <table style="width:100%;font-family:'DM Mono',monospace;font-size:0.78rem;border-collapse:collapse;">
+          <tr style="border-bottom:1px solid var(--rule)">
+            <td style="padding:0.5rem 0;color:var(--muted)">Frame 1 ↔ Frame 2</td>
+            <td style="padding:0.5rem 0;text-align:right;font-weight:500">96 / 100 inliers</td>
+          </tr>
+          <tr>
+            <td style="padding:0.5rem 0;color:var(--muted)">Frame 2 ↔ Frame 3</td>
+            <td style="padding:0.5rem 0;text-align:right;font-weight:500">86 / 100 inliers</td>
+          </tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="figure-full">
+    <figure>
+      <img src="images/output4.png" alt="Panorama output">
+      <figcaption>Stitched panorama — three frames composited into a single wide-angle view</figcaption>
+    </figure>
+  </div>
+
+  <div class="observation">
+    <div class="observation-label">Observation — When Does Panorama Stitching Fail?</div>
+    <p>The stitched result correctly aligns all three frames into a coherent wide-angle view. A faint seam is visible at the frame 1–2 boundary, attributable to exposure differences between frames — a photometric artifact rather than a geometric one. The high inlier counts (96% and 86%) confirm that ORB + RANSAC robustly recovers the underlying homography.</p>
+    <p style="margin-top:0.8rem">However, homography-based stitching is <strong>not universally applicable</strong>. It fails in two important scenarios: (1) when the camera undergoes <strong>translation</strong> rather than pure rotation, parallax causes objects at different depths to shift by different amounts — no single homography can reconcile this; (2) when the scene is <strong>non-planar</strong> and the camera translates, different depth layers require different transformations, leading to ghosting and misalignment. Successful stitching requires either a purely rotating camera or a scene that is approximately planar.</p>
+  </div>
+</section>
+
+<!-- FUTURE WORK -->
+<section id="future">
+  <div class="section-header">
+    <span class="section-num">05</span>
+    <h2 class="section-title">Future Work</h2>
+  </div>
+
+  <p class="prose">The implementations presented here demonstrate the core pipeline of homography-based image warping. Several directions could meaningfully extend this work:</p>
+
+  <div class="fw-grid">
+    <div class="fw-item" data-num="1">
+      <h4>Lens Distortion Correction</h4>
+      <p>Pre-correcting radial and tangential lens distortion using camera calibration (Zhang's method) before applying homography would significantly improve unwarping quality for real photographs, as demonstrated in Part 3.</p>
+    </div>
+    <div class="fw-item" data-num="2">
+      <h4>Multi-Band Blending</h4>
+      <p>The visible seams in the panorama result from photometric differences between frames. Laplacian pyramid blending or Poisson image compositing would produce seamless transitions by blending low and high frequency components separately.</p>
+    </div>
+    <div class="fw-item" data-num="3">
+      <h4>Cylindrical / Spherical Projection</h4>
+      <p>For wide field-of-view panoramas spanning more than ~120°, projecting images onto a cylindrical or spherical surface before stitching reduces perspective distortion at the periphery and allows full 360° panoramas.</p>
+    </div>
+    <div class="fw-item" data-num="4">
+      <h4>Deep Feature Matching</h4>
+      <p>Replacing ORB with learned descriptors such as SuperPoint or DISK, combined with SuperGlue matching, would improve correspondence robustness in textureless regions and under significant illumination changes.</p>
+    </div>
+    <div class="fw-item" data-num="5">
+      <h4>Optical Flow for AR Tracking</h4>
+      <p>Augmenting ArUco detection with Lucas-Kanade optical flow would maintain stable AR overlay tracking in frames where the marker is partially occluded or motion-blurred, reducing flickering in the output video.</p>
+    </div>
+    <div class="fw-item" data-num="6">
+      <h4>Parallax-Tolerant Stitching</h4>
+      <p>Extending the pipeline with depth estimation or structure-from-motion would enable stitching of images taken with translating cameras, handling parallax through per-pixel disparity rather than a global homography.</p>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <span>James Christian &mdash; R13921031</span>
+  <span>Projective Geometry &amp; Image Warping &mdash; 2026</span>
+</footer>
+
+<script>
+  // Intersection observer for section reveal
+  const sections = document.querySelectorAll('section');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.08 });
+  sections.forEach(s => observer.observe(s));
+</script>
+
+</body>
+</html>
