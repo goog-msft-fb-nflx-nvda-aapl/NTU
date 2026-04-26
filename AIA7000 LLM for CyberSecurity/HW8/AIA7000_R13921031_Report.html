@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AIA7000 — Agentic Workflow Report | R13921031</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c10;
+    --surface: #111318;
+    --surface2: #181c24;
+    --border: #1f2530;
+    --accent: #00e5a0;
+    --accent2: #4d9fff;
+    --warn: #ff9d3d;
+    --danger: #ff4d6a;
+    --text: #e8eaf0;
+    --muted: #6b7280;
+    --mono: 'Space Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.7;
+  }
+
+  /* HERO */
+  .hero {
+    position: relative;
+    overflow: hidden;
+    padding: 80px 60px 60px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(135deg, #0a0c10 60%, #0d1a14 100%);
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -120px; right: -120px;
+    width: 480px; height: 480px;
+    background: radial-gradient(circle, rgba(0,229,160,0.07) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .hero-tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 18px;
+    opacity: 0.8;
+  }
+  .hero h1 {
+    font-family: var(--mono);
+    font-size: clamp(22px, 4vw, 38px);
+    font-weight: 700;
+    line-height: 1.2;
+    color: #fff;
+    margin-bottom: 12px;
+  }
+  .hero h1 span { color: var(--accent); }
+  .hero-sub {
+    font-size: 15px;
+    color: var(--muted);
+    margin-bottom: 36px;
+    max-width: 560px;
+  }
+  .meta-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 16px;
+    max-width: 720px;
+  }
+  .meta-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 18px;
+  }
+  .meta-card .label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .meta-card .value {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  /* LAYOUT */
+  .container {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 0 48px;
+  }
+
+  section {
+    padding: 56px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    color: var(--accent);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  h2 {
+    font-family: var(--mono);
+    font-size: 20px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 20px;
+  }
+
+  h3 {
+    font-family: var(--sans);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 8px;
+    margin-top: 24px;
+  }
+
+  p { color: #b0b8c8; margin-bottom: 14px; }
+
+  /* GRAPH DIAGRAM */
+  .graph-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 40px 20px;
+    margin: 28px 0;
+    overflow-x: auto;
+  }
+
+  .graph-svg { display: block; margin: 0 auto; }
+
+  /* CODE BLOCKS */
+  pre {
+    background: #0d1117;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    padding: 20px 24px;
+    overflow-x: auto;
+    margin: 16px 0;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.7;
+    color: #c9d1d9;
+  }
+  .kw { color: #ff79c6; }
+  .fn { color: #50fa7b; }
+  .str { color: #f1fa8c; }
+  .cm { color: #6272a4; }
+  .ty { color: #8be9fd; }
+
+  /* NODE PILLS */
+  .node-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin: 20px 0;
+  }
+  .node-pill {
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-weight: 700;
+  }
+  .node-pill.purple { background: rgba(139,92,246,0.15); border: 1px solid rgba(139,92,246,0.4); color: #a78bfa; }
+  .node-pill.coral  { background: rgba(255,77,106,0.12); border: 1px solid rgba(255,77,106,0.35); color: #fb7185; }
+  .node-pill.teal   { background: rgba(0,229,160,0.1);   border: 1px solid rgba(0,229,160,0.3);  color: var(--accent); }
+  .node-pill.gray   { background: rgba(107,114,128,0.15); border: 1px solid rgba(107,114,128,0.3); color: var(--muted); }
+  .arrow-sep { color: var(--muted); font-size: 18px; }
+
+  /* TEST RESULTS TABLE */
+  .test-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+    font-size: 13px;
+  }
+  .test-table th {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    text-align: left;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .test-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid #161b23;
+    color: #b0b8c8;
+    vertical-align: top;
+  }
+  .test-table tr:hover td { background: var(--surface2); }
+  .badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 4px;
+    display: inline-block;
+  }
+  .badge.critical  { background: rgba(255,77,106,0.15); color: #ff4d6a; border: 1px solid rgba(255,77,106,0.3); }
+  .badge.suspicious{ background: rgba(255,157,61,0.15); color: #ff9d3d; border: 1px solid rgba(255,157,61,0.3); }
+  .badge.benign    { background: rgba(0,229,160,0.1);   color: var(--accent); border: 1px solid rgba(0,229,160,0.25); }
+  .badge.pass      { background: rgba(0,229,160,0.1);   color: var(--accent); border: 1px solid rgba(0,229,160,0.25); }
+  .badge.fail      { background: rgba(255,77,106,0.15); color: #ff4d6a; border: 1px solid rgba(255,77,106,0.3); }
+
+  /* RESULT SUMMARY BOX */
+  .result-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px 28px;
+    margin: 24px 0;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .result-stat { text-align: center; }
+  .result-stat .num {
+    font-family: var(--mono);
+    font-size: 36px;
+    font-weight: 700;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .result-stat .num.green { color: var(--accent); }
+  .result-stat .num.red   { color: var(--danger); }
+  .result-stat .desc { font-size: 12px; color: var(--muted); }
+  .result-divider { width: 1px; height: 52px; background: var(--border); }
+
+  /* CALLOUT */
+  .callout {
+    border-left: 3px solid var(--accent2);
+    background: rgba(77,159,255,0.06);
+    border-radius: 0 8px 8px 0;
+    padding: 14px 20px;
+    margin: 20px 0;
+    font-size: 14px;
+    color: #90afd8;
+  }
+  .callout.warn {
+    border-color: var(--warn);
+    background: rgba(255,157,61,0.06);
+    color: #c9a06b;
+  }
+
+  /* PROMPT DIFF */
+  .diff-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 20px 0;
+  }
+  @media (max-width: 640px) { .diff-grid { grid-template-columns: 1fr; } }
+  .diff-box {
+    background: #0d1117;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    font-family: var(--mono);
+    font-size: 11px;
+    line-height: 1.6;
+    color: #c9d1d9;
+  }
+  .diff-box .diff-title {
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .diff-box.before .diff-title { color: var(--danger); }
+  .diff-box.after  .diff-title { color: var(--accent); }
+  .diff-add { color: #56d364; }
+  .diff-rem { color: #f85149; }
+
+  /* FOOTER */
+  footer {
+    padding: 40px 48px;
+    text-align: center;
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    border-top: 1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="container" style="padding:0">
+    <div class="hero-tag">AIA7000 · Agentic Workflow · Assignment Report</div>
+    <h1>Log Analysis Agent<br><span>using LangGraph</span></h1>
+    <p class="hero-sub">A cybersecurity-focused agentic system that autonomously classifies system logs, enriches threat intelligence, and generates structured incident reports.</p>
+    <div class="meta-grid">
+      <div class="meta-card"><div class="label">Student ID</div><div class="value">R13921031</div></div>
+      <div class="meta-card"><div class="label">Name</div><div class="value">James Christian</div></div>
+      <div class="meta-card"><div class="label">Program</div><div class="value">NTU GINM</div></div>
+      <div class="meta-card"><div class="label">Course</div><div class="value">AIA7000</div></div>
+      <div class="meta-card"><div class="label">Framework</div><div class="value">LangGraph</div></div>
+      <div class="meta-card"><div class="label">LLM</div><div class="value">llama3.2 (Ollama)</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+<!-- OVERVIEW -->
+<section>
+  <div class="section-label">01 — Overview</div>
+  <h2>Task Description</h2>
+  <p>The goal of this assignment is to build a <strong style="color:var(--text)">Log Analysis Agent</strong> using the LangGraph framework. The agent receives raw system or authentication log lines as input and autonomously decides how to process each one based on its security severity.</p>
+  <p>The agent demonstrates agentic behavior through conditional branching: benign logs skip enrichment and go directly to report generation, while suspicious or critical logs are first enriched with threat intelligence before a report is produced.</p>
+  <div class="callout">
+    All inference runs locally on an H200 server via <strong>Ollama</strong> with the <code>llama3.2</code> model — no paid API keys required.
+  </div>
+</section>
+
+<!-- ENVIRONMENT -->
+<section>
+  <div class="section-label">02 — Environment</div>
+  <h2>Setup &amp; Dependencies</h2>
+  <p>The agent runs entirely on a remote H200 GPU server with the following configuration:</p>
+
+  <h3>Hardware &amp; OS</h3>
+  <pre>Server   : H200 node (Ubuntu 22.04)
+Access   : SSH with localhost port forward
+GPU      : NVIDIA H200</pre>
+
+  <h3>Python Environment</h3>
+  <pre>Conda env : rl_hw3
+Python    : 3.12.13
+Ollama    : http://localhost:11434
+Model     : llama3.2:latest (3.2B, Q4_K_M GGUF)</pre>
+
+  <h3>Installed Libraries</h3>
+  <pre><span class="cm"># All installed via pip, no API keys required</span>
+langgraph
+langchain
+langchain-community
+langchain-ollama</pre>
+</section>
+
+<!-- ARCHITECTURE -->
+<section>
+  <div class="section-label">03 — Architecture</div>
+  <h2>Agent Graph Design</h2>
+  <p>The agent is implemented as a directed graph with three processing nodes and one conditional routing function. The graph is compiled using <code>StateGraph</code> from LangGraph.</p>
+
+  <div class="node-row">
+    <div class="node-pill gray">INPUT</div>
+    <div class="arrow-sep">→</div>
+    <div class="node-pill purple">classify_log</div>
+    <div class="arrow-sep">⤵</div>
+    <div class="node-pill coral">enrich_threat</div>
+    <div class="arrow-sep">→</div>
+    <div class="node-pill teal">generate_report</div>
+    <div class="arrow-sep">→</div>
+    <div class="node-pill gray">END</div>
+  </div>
+  <p style="font-size:13px;color:var(--muted);margin-top:-8px">Benign logs skip <code>enrich_threat</code> and branch directly to <code>generate_report</code>.</p>
+
+  <!-- SVG GRAPH -->
+  <div class="graph-wrap">
+    <svg class="graph-svg" width="640" viewBox="0 0 640 440" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#4b5563" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+        <marker id="arr-accent" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#00e5a0" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+        <marker id="arr-warn" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#ff9d3d" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </marker>
+      </defs>
+
+      <!-- Input -->
+      <rect x="220" y="20" width="200" height="40" rx="8" fill="#1a1f2a" stroke="#2d3748" stroke-width="1"/>
+      <text x="320" y="45" text-anchor="middle" font-family="Space Mono" font-size="12" fill="#6b7280">raw log input</text>
+
+      <!-- Arrow input → classify -->
+      <line x1="320" y1="60" x2="320" y2="98" stroke="#2d3748" stroke-width="1.5" marker-end="url(#arr)"/>
+
+      <!-- classify_log -->
+      <rect x="180" y="98" width="280" height="52" rx="8" fill="rgba(139,92,246,0.12)" stroke="rgba(139,92,246,0.45)" stroke-width="1"/>
+      <text x="320" y="118" text-anchor="middle" font-family="Space Mono" font-size="13" font-weight="700" fill="#a78bfa">classify_log</text>
+      <text x="320" y="136" text-anchor="middle" font-family="Space Mono" font-size="10" fill="#7c6fbd">LLM classifies severity</text>
+
+      <!-- router label -->
+      <text x="320" y="168" text-anchor="middle" font-family="Space Mono" font-size="10" fill="#4b5563">route_by_severity()</text>
+
+      <!-- Left branch: suspicious/critical → enrich_threat -->
+      <path d="M220 150 L100 150 L100 248" fill="none" stroke="#ff9d3d" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#arr-warn)"/>
+      <text x="62" y="196" text-anchor="middle" font-family="Space Mono" font-size="9" fill="#ff9d3d">suspicious</text>
+      <text x="62" y="208" text-anchor="middle" font-family="Space Mono" font-size="9" fill="#ff9d3d">/ critical</text>
+
+      <!-- Right branch: benign → generate_report -->
+      <path d="M420 150 L540 150 L540 320" fill="none" stroke="#00e5a0" stroke-width="1.5" stroke-dasharray="5 3" marker-end="url(#arr-accent)"/>
+      <text x="572" y="234" text-anchor="middle" font-family="Space Mono" font-size="9" fill="#00e5a0">benign</text>
+
+      <!-- enrich_threat -->
+      <rect x="20" y="248" width="200" height="52" rx="8" fill="rgba(255,77,106,0.1)" stroke="rgba(255,77,106,0.35)" stroke-width="1"/>
+      <text x="120" y="268" text-anchor="middle" font-family="Space Mono" font-size="13" font-weight="700" fill="#fb7185">enrich_threat</text>
+      <text x="120" y="286" text-anchor="middle" font-family="Space Mono" font-size="10" fill="#b06070">LLM adds threat context</text>
+
+      <!-- enrich → generate -->
+      <path d="M120 300 L120 346 L220 346" fill="none" stroke="#4b5563" stroke-width="1.5" marker-end="url(#arr)"/>
+
+      <!-- generate_report -->
+      <rect x="220" y="320" width="280" height="52" rx="8" fill="rgba(0,229,160,0.08)" stroke="rgba(0,229,160,0.3)" stroke-width="1"/>
+      <text x="360" y="340" text-anchor="middle" font-family="Space Mono" font-size="13" font-weight="700" fill="#00e5a0">generate_report</text>
+      <text x="360" y="358" text-anchor="middle" font-family="Space Mono" font-size="10" fill="#2a8060">Builds structured report</text>
+
+      <!-- benign join -->
+      <path d="M540 320 L502 320 L502 346 L500 346" fill="none" stroke="#4b5563" stroke-width="1.5" marker-end="url(#arr)"/>
+
+      <!-- generate → END -->
+      <line x1="360" y1="372" x2="360" y2="410" stroke="#2d3748" stroke-width="1.5" marker-end="url(#arr)"/>
+
+      <!-- END -->
+      <rect x="260" y="410" width="200" height="38" rx="8" fill="#1a1f2a" stroke="#2d3748" stroke-width="1"/>
+      <text x="360" y="434" text-anchor="middle" font-family="Space Mono" font-size="12" fill="#4b5563">END</text>
+    </svg>
+  </div>
+
+  <h3>State Schema</h3>
+  <p>The shared state object passed between all nodes is defined as a <code>TypedDict</code>:</p>
+  <pre><span class="kw">class</span> <span class="ty">LogState</span>(TypedDict):
+    raw_log:        <span class="ty">str</span>   <span class="cm"># input log line</span>
+    severity:       <span class="ty">str</span>   <span class="cm"># "benign" | "suspicious" | "critical"</span>
+    threat_context: <span class="ty">str</span>   <span class="cm"># enrichment from LLM (empty if benign)</span>
+    report:         <span class="ty">str</span>   <span class="cm"># final formatted incident report</span></pre>
+</section>
+
+<!-- IMPLEMENTATION -->
+<section>
+  <div class="section-label">04 — Implementation</div>
+  <h2>Node Descriptions</h2>
+
+  <h3>Node 1 — classify_log</h3>
+  <p>The entry node. Passes the raw log to the LLM with a structured prompt and parses the single-word response (<code>benign</code>, <code>suspicious</code>, or <code>critical</code>). Falls back to <code>suspicious</code> if the model produces an unexpected response.</p>
+
+  <h3>Node 2 — enrich_threat (conditional)</h3>
+  <p>Only executed for <code>suspicious</code> or <code>critical</code> logs. Asks the LLM to provide a 2–3 sentence threat context covering: what attack is occurring, the attacker's goal, and recommended immediate action.</p>
+
+  <h3>Node 3 — generate_report</h3>
+  <p>The terminal node for all paths. Assembles the final structured incident report from the accumulated state fields. Benign logs receive an N/A threat context section.</p>
+
+  <h3>Routing Function</h3>
+  <pre><span class="kw">def</span> <span class="fn">route_by_severity</span>(state: <span class="ty">LogState</span>) -&gt; Literal[<span class="str">"enrich_threat"</span>, <span class="str">"generate_report"</span>]:
+    <span class="kw">if</span> state[<span class="str">"severity"</span>] <span class="kw">in</span> (<span class="str">"suspicious"</span>, <span class="str">"critical"</span>):
+        <span class="kw">return</span> <span class="str">"enrich_threat"</span>
+    <span class="kw">return</span> <span class="str">"generate_report"</span></pre>
+
+  <h3>Graph Construction</h3>
+  <pre>graph = <span class="fn">StateGraph</span>(<span class="ty">LogState</span>)
+
+graph.<span class="fn">add_node</span>(<span class="str">"classify_log"</span>,    classify_log)
+graph.<span class="fn">add_node</span>(<span class="str">"enrich_threat"</span>,   enrich_threat)
+graph.<span class="fn">add_node</span>(<span class="str">"generate_report"</span>, generate_report)
+
+graph.<span class="fn">set_entry_point</span>(<span class="str">"classify_log"</span>)
+
+graph.<span class="fn">add_conditional_edges</span>(
+    <span class="str">"classify_log"</span>,
+    route_by_severity,
+    {<span class="str">"enrich_threat"</span>: <span class="str">"enrich_threat"</span>, <span class="str">"generate_report"</span>: <span class="str">"generate_report"</span>}
+)
+graph.<span class="fn">add_edge</span>(<span class="str">"enrich_threat"</span>,   <span class="str">"generate_report"</span>)
+graph.<span class="fn">add_edge</span>(<span class="str">"generate_report"</span>, END)</pre>
+</section>
+
+<!-- PROMPT ENGINEERING -->
+<section>
+  <div class="section-label">05 — Prompt Engineering</div>
+  <h2>Classifier Prompt Refinement</h2>
+  <p>The initial classifier prompt caused a misclassification: <code>sudo ... COMMAND=/bin/bash</code> was labelled <strong style="color:var(--accent)">benign</strong> because the 3.2B model treated it as routine admin activity. The prompt was refined to include explicit red-flag rules.</p>
+
+  <div class="callout warn">
+    Test 2 (Privilege Escalation) failed on the first run. The fix demonstrates that real agentic systems require iterative prompt engineering — the LLM's reasoning must be guided, not assumed.
+  </div>
+
+  <div class="diff-grid">
+    <div class="diff-box before">
+      <div class="diff-title">❌ Before (v1 — caused failure)</div>
+<span class="diff-rem">You are a cybersecurity analyst.
+Classify this log line.
+Reply with EXACTLY one word:
+benign, suspicious, or critical.
+
+Log: {raw_log}
+
+Classification:</span>
+    </div>
+    <div class="diff-box after">
+      <div class="diff-title">✅ After (v2 — all tests pass)</div>
+<span class="diff-add">Rules:
+- benign: routine events (cron, systemd)
+- suspicious: unusual activity (sudo
+  to shell, brute force)
+- critical: confirmed attack (uid=0
+  shell, EXECVE /bin/sh)
+
+Red flags — ALWAYS suspicious/critical:
+- sudo launching /bin/bash or /bin/sh
+- repeated failed passwords
+- uid=0 shell execution
+- EXECVE with /bin/sh or /bin/bash</span>
+    </div>
+  </div>
+</section>
+
+<!-- TEST RESULTS -->
+<section>
+  <div class="section-label">06 — Test Results</div>
+  <h2>Harness Output</h2>
+  <p>Five test cases were run covering three attack types and two benign events. The harness asserts that each log routes to the correct severity tier.</p>
+
+  <div class="result-box">
+    <div class="result-stat"><div class="num green">5</div><div class="desc">Tests passed</div></div>
+    <div class="result-divider"></div>
+    <div class="result-stat"><div class="num" style="color:var(--muted)">0</div><div class="desc">Tests failed</div></div>
+    <div class="result-divider"></div>
+    <div class="result-stat"><div class="num" style="color:var(--accent2);font-size:28px">100%</div><div class="desc">Pass rate (final)</div></div>
+    <div class="result-divider"></div>
+    <div class="result-stat"><div class="num" style="color:var(--warn);font-size:28px">2</div><div class="desc">Prompt iterations</div></div>
+  </div>
+
+  <table class="test-table">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Test Case</th>
+        <th>Log Snippet</th>
+        <th>Severity</th>
+        <th>Result</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="font-family:var(--mono);color:var(--muted)">1</td>
+        <td>SSH Brute Force</td>
+        <td style="font-family:var(--mono);font-size:11px">Failed password for root … (attempt 47)</td>
+        <td><span class="badge suspicious">SUSPICIOUS</span></td>
+        <td><span class="badge pass">✓ PASS</span></td>
+      </tr>
+      <tr>
+        <td style="font-family:var(--mono);color:var(--muted)">2</td>
+        <td>Privilege Escalation</td>
+        <td style="font-family:var(--mono);font-size:11px">sudo: james … COMMAND=/bin/bash</td>
+        <td><span class="badge suspicious">SUSPICIOUS</span></td>
+        <td><span class="badge pass">✓ PASS</span></td>
+      </tr>
+      <tr>
+        <td style="font-family:var(--mono);color:var(--muted)">3</td>
+        <td>Benign Cron Job</td>
+        <td style="font-family:var(--mono);font-size:11px">CRON[12481]: (root) CMD (run-crons)</td>
+        <td><span class="badge benign">BENIGN</span></td>
+        <td><span class="badge pass">✓ PASS</span></td>
+      </tr>
+      <tr>
+        <td style="font-family:var(--mono);color:var(--muted)">4</td>
+        <td>Benign System Boot</td>
+        <td style="font-family:var(--mono);font-size:11px">systemd[1]: Started Session 4 of www-data</td>
+        <td><span class="badge benign">BENIGN</span></td>
+        <td><span class="badge pass">✓ PASS</span></td>
+      </tr>
+      <tr>
+        <td style="font-family:var(--mono);color:var(--muted)">5</td>
+        <td>Root Shell Spawned</td>
+        <td style="font-family:var(--mono);font-size:11px">EXECVE … a0=/bin/sh a1=-i uid=0</td>
+        <td><span class="badge critical">CRITICAL</span></td>
+        <td><span class="badge pass">✓ PASS</span></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout">
+    Test 5 (Root Shell Spawned) was initially classified as <strong>SUSPICIOUS</strong> in the first run and upgraded to <strong>CRITICAL</strong> after prompt refinement — demonstrating that improved prompts benefit multiple cases simultaneously.
+  </div>
+</section>
+
+<!-- REFLECTION -->
+<section>
+  <div class="section-label">07 — Reflection</div>
+  <h2>Key Observations</h2>
+
+  <h3>Autonomous Decision-Making</h3>
+  <p>The agent's routing behavior is fully driven by LLM output — there are no hardcoded keyword matches. The same log processed by a weaker prompt yielded a different route, demonstrating that prompt engineering is a first-class concern in agentic system design.</p>
+
+  <h3>Prompt Engineering as Debugging</h3>
+  <p>Test 2 failing on the first run was a meaningful result, not just an error. It showed that small models (3.2B) need explicit categorical rules and worked examples — implicit reasoning about "unusual" behavior is insufficient. The fix added a red-flag list that guided the model without removing its generative capability.</p>
+
+  <h3>LangGraph vs. Simple Pipelines</h3>
+  <p>A standard Python function pipeline could achieve the same output for a fixed input. LangGraph adds value through its <code>StateGraph</code> abstraction: the state is explicitly typed, each node is independently testable, and conditional edges make routing logic inspectable and extensible without rewriting the execution engine.</p>
+
+  <h3>Limitations</h3>
+  <p>The current agent processes one log at a time and does not retain memory across invocations. A production extension would include batch processing, confidence scoring, and a feedback loop where low-confidence classifications are re-evaluated with a stricter prompt before routing.</p>
+</section>
+
+<!-- FILES -->
+<section style="border-bottom:none">
+  <div class="section-label">08 — Deliverables</div>
+  <h2>Submitted Files</h2>
+  <pre>~/aia7000_agent/
+├── agent.py          <span class="cm"># LangGraph agent — state, nodes, graph</span>
+└── test_agent.py     <span class="cm"># Test harness — 5 cases, assertions</span></pre>
+  <p style="margin-top:16px">Both files are runnable with: <code style="background:#0d1117;padding:2px 8px;border-radius:4px;font-family:var(--mono);font-size:12px">python test_agent.py</code> inside the <code>rl_hw3</code> conda environment on the H200 server.</p>
+</section>
+
+</div><!-- /container -->
+
+<footer>
+  AIA7000 Agentic Workflow &nbsp;·&nbsp; R13921031 James Christian &nbsp;·&nbsp; NTU GINM
+</footer>
+
+</body>
+</html>
