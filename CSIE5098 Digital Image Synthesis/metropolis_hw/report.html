@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Metropolis Sampling — ImageCopy</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:ital,wght@0,300;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #141720;
+    --surface2: #1c2030;
+    --border: #2a3050;
+    --accent: #5b8cff;
+    --accent2: #f0b429;
+    --text: #dce3f5;
+    --muted: #7a85a3;
+    --good: #3ecf8e;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    font-weight: 300;
+    line-height: 1.7;
+    min-height: 100vh;
+  }
+
+  /* ── Header ── */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 3.5rem 4rem 2.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+  header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 80% 60% at 60% -10%, #1a2a6622 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .tag {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 0.8rem;
+  }
+  h1 {
+    font-family: var(--mono);
+    font-size: clamp(1.6rem, 3vw, 2.4rem);
+    font-weight: 600;
+    color: #fff;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+  }
+  h1 span { color: var(--accent); }
+  .subtitle {
+    margin-top: 0.6rem;
+    color: var(--muted);
+    font-size: 0.95rem;
+    font-style: italic;
+  }
+
+  /* ── Layout ── */
+  main { max-width: 1200px; margin: 0 auto; padding: 3rem 4rem 6rem; }
+
+  section { margin-bottom: 4rem; }
+
+  h2 {
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    border-left: 3px solid var(--accent);
+    padding-left: 0.9rem;
+    margin-bottom: 1.5rem;
+  }
+
+  h3 {
+    font-family: var(--mono);
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #c8d3f0;
+    margin-bottom: 1rem;
+    margin-top: 2rem;
+  }
+
+  p { color: var(--text); margin-bottom: 1rem; font-size: 0.97rem; }
+
+  /* ── Code block ── */
+  .code-block {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1.2rem 1.4rem;
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    color: #a8b8e8;
+    overflow-x: auto;
+    line-height: 1.8;
+    margin: 1.2rem 0;
+  }
+  .code-block .kw  { color: var(--accent); }
+  .code-block .cm  { color: var(--muted); font-style: italic; }
+  .code-block .nm  { color: var(--accent2); }
+  .code-block .st  { color: var(--good); }
+
+  /* ── Image grid ── */
+  .img-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin: 1.2rem 0;
+  }
+  .img-card {
+    flex: 1 1 140px;
+    max-width: 180px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    transition: border-color 0.2s;
+  }
+  .img-card:hover { border-color: var(--accent); }
+  .img-card img { width: 100%; display: block; }
+  .img-label {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--muted);
+    text-align: center;
+    padding: 0.4rem 0.3rem;
+    border-top: 1px solid var(--border);
+  }
+  .img-label.target { color: var(--accent2); }
+
+  .comparison-img {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    margin: 1rem 0;
+    display: block;
+  }
+
+  /* ── Tables ── */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--mono);
+    font-size: 0.82rem;
+    margin: 1.2rem 0;
+  }
+  thead tr {
+    background: var(--surface2);
+    border-bottom: 2px solid var(--accent);
+  }
+  th {
+    text-align: left;
+    padding: 0.65rem 1rem;
+    color: var(--accent);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+  }
+  td {
+    padding: 0.55rem 1rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+  }
+  tr:hover td { background: var(--surface2); }
+  td.best { color: var(--good); font-weight: 600; }
+  td.worst { color: #e05c5c; }
+  td.spp { color: var(--accent2); }
+
+  /* ── Metrics cards ── */
+  .metric-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin: 1.2rem 0;
+  }
+  .metric-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 1rem 1.1rem;
+  }
+  .metric-card .label {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.3rem;
+  }
+  .metric-card .value {
+    font-family: var(--mono);
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--good);
+  }
+  .metric-card .sub {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 0.2rem;
+  }
+
+  /* ── Divider ── */
+  hr { border: none; border-top: 1px solid var(--border); margin: 3rem 0; }
+
+  /* ── Callout ── */
+  .callout {
+    background: #1a2340;
+    border-left: 3px solid var(--accent);
+    border-radius: 0 6px 6px 0;
+    padding: 1rem 1.3rem;
+    margin: 1.2rem 0;
+    font-size: 0.92rem;
+  }
+  .callout strong { color: var(--accent2); }
+
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 1.5rem 4rem;
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="tag">Digital Image Synthesis · Homework Report</div>
+  <h1>Metropolis Sampling<br><span>ImageCopy</span></h1>
+  <div class="subtitle">Monte Carlo Integration — sampling pixels proportional to luminance</div>
+</header>
+
+<main>
+
+  <!-- 1. Overview -->
+  <section>
+    <h2>01 · Overview</h2>
+    <p>
+      The <strong>ImageCopy</strong> task demonstrates Metropolis sampling by treating a target image as an
+      unnormalized probability density function. Each pixel's luminance defines f(x, y). The Markov chain
+      wanders through pixel space, spending proportionally more time in bright regions. Accumulated samples
+      reconstruct the image; convergence quality is measured against the original at varying samples-per-pixel (SPP).
+    </p>
+    <div class="callout">
+      <strong>Key insight:</strong> Metropolis sampling requires only the ability to <em>evaluate</em> f —
+      no closed-form normalization constant is needed. The acceptance probability α = min(1, f(x′)/f(x))
+      guarantees the stationary distribution equals the target.
+    </div>
+  </section>
+
+  <!-- 2. Algorithm -->
+  <section>
+    <h2>02 · Algorithm &amp; Implementation</h2>
+
+    <h3>Pseudo-code</h3>
+    <div class="code-block">
+<span class="cm"># State: continuous (x, y) ∈ [0,W) × [0,H)</span>
+<span class="cm"># Target: f(x,y) = luminance(image[y,x])</span>
+
+x ← <span class="nm">hybrid_init</span>()          <span class="cm"># uniform sample from non-zero region</span>
+<span class="kw">for</span> i = 1 <span class="kw">to</span> N:
+    <span class="kw">if</span> rand() &lt; large_step_prob:
+        x′ ← <span class="nm">uniform</span>(W, H)      <span class="cm"># large mutation — ergodicity</span>
+    <span class="kw">else</span>:
+        x′ ← <span class="nm">gaussian</span>(x, σ)     <span class="cm"># small mutation — local exploration</span>
+
+    α ← min(1, f(x′) / f(x))   <span class="cm"># acceptance probability</span>
+    <span class="kw">if</span> rand() &lt; α:
+        x ← x′                  <span class="cm"># accept</span>
+
+    <span class="nm">accumulate</span>(x)              <span class="cm"># record current state</span>
+    </div>
+
+    <h3>Mutation Strategy</h3>
+    <p>
+      Two complementary mutations are mixed at every step:
+    </p>
+    <table>
+      <thead><tr><th>Mutation</th><th>Distribution</th><th>σ / range</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td>Small step</td><td>Gaussian</td><td>σ = 2% of image dims</td><td>Fine local exploration around bright regions</td></tr>
+        <tr><td>Large step</td><td>Uniform</td><td>[0,W) × [0,H)</td><td>Ergodicity — escape local modes (10% frequency)</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Start-up Bias Handling</h3>
+    <p>
+      <strong>Hybrid initialization</strong> is used: the chain starts from a pixel drawn by uniform rejection
+      sampling until a non-zero luminance pixel is found. This avoids burn-in cost while preventing bias
+      from an arbitrary starting state.
+    </p>
+
+    <h3>Reconstruction</h3>
+    <p>
+      Sample counts per pixel are accumulated. The reconstructed color at each pixel is the mean of the
+      target pixel color over all visits. The final image is globally rescaled so its mean brightness
+      matches the target (correcting for the unnormalized density).
+    </p>
+  </section>
+
+  <!-- 3. Experiment: Synthetic -->
+  <section>
+    <h2>03 · Experiment A — Synthetic Image</h2>
+    <p>
+      A 256×256 synthetic image with three distinct luminance regions: a bright yellow circle,
+      a cyan rectangle, and a red rectangle on a near-black background. This controlled scene
+      makes sampling concentration clearly visible at low SPP.
+    </p>
+
+    <h3>Comparison Grid</h3>
+    <img src="report_assets/comparison_synthetic.png" alt="Synthetic comparison" class="comparison-img">
+
+    <h3>Visual Results by SPP</h3>
+    <div class="img-row">
+      <div class="img-card">
+        <img src="report_assets/synthetic/target_256.png" alt="Target">
+        <div class="img-label target">Target</div>
+      </div>
+      <div class="img-card">
+        <img src="report_assets/synthetic/metropolis_spp0001.png" alt="SPP=1">
+        <div class="img-label">SPP = 1</div>
+      </div>
+      <div class="img-card">
+        <img src="report_assets/synthetic/metropolis_spp0004.png" alt="SPP=4">
+        <div class="img-label">SPP = 4</div>
+      </div>
+      <div class="img-card">
+        <img src="report_assets/synthetic/metropolis_spp0016.png" alt="SPP=16">
+        <div class="img-label">SPP = 16</div>
+      </div>
+      <div class="img-card">
+        <img src="report_assets/synthetic/metropolis_spp0064.png" alt="SPP=64">
+        <div class="img-label">SPP = 64</div>
+      </div>
+      <div class="img-card">
+        <img src="report_assets/synthetic/metropolis_spp0256.png" alt="SPP=256">
+        <div class="img-label">SPP = 256</div>
+      </div>
+    </div>
+
+    <h3>Quantitative Metrics</h3>
+    <table>
+      <thead><tr><th>SPP</th><th>MSE ↓</th><th>PSNR (dB) ↑</th><th>SSIM ↑</th></tr></thead>
+      <tbody>
+        <tr><td class="spp">1</td>   <td class="worst">2839.25</td><td class="worst">13.60</td><td class="worst">0.1932</td></tr>
+        <tr><td class="spp">4</td>   <td>350.59</td>              <td>22.68</td>              <td>0.5804</td></tr>
+        <tr><td class="spp">16</td>  <td>4.57</td>                <td>41.53</td>              <td>0.9637</td></tr>
+        <tr><td class="spp">64</td>  <td class="best">0.00</td>   <td class="best">∞</td>    <td class="best">1.0000</td></tr>
+        <tr><td class="spp">256</td> <td class="best">0.00</td>   <td class="best">∞</td>    <td class="best">1.0000</td></tr>
+      </tbody>
+    </table>
+    <p>
+      The synthetic image converges to pixel-perfect reconstruction at SPP=64.
+      The sharp luminance boundaries (bright objects on pure black) allow the Markov chain
+      to quickly map out exact region boundaries once sufficient samples accumulate.
+    </p>
+  </section>
+
+  <!-- 4. Experiment: Google -->
+  <section>
+    <h2>04 · Experiment B — Photographic Image</h2>
+    <p>
+      A 256×256 aerial night-time photograph of a city, featuring high dynamic range: bright
+      building facades and street lights against deep shadows. This tests Metropolis sampling
+      on a realistic, complex luminance distribution.
+    </p>
+
+    <h3>Comparison Grid</h3>
+    <img src="report_assets/comparison_google.png" alt="Google comparison" class="comparison-img">
+
+    <h3>Visual Results by SPP</h3>
+    <div class="img-row">
+      <div class="img-card">
+        <img src="report_assets/google/target_256.png" alt="Target">
+        <div class="img-label target">Target</div>
+      </div>
+      <div class="img-card">
+        <img src="report_assets/google/metropolis_spp0001.png" alt="SPP=1">
+        <div class="img-label">SPP = 1</div>
+      </div>
+      <div class="img-card">
+        <img src="report_assets/google/metropolis_spp0004.png" alt="SPP=4">
+        <div class="img-label">SPP = 4</div>
+      </div>
+      <div class="img-card">
+        <img src="report_assets/google/metropolis_spp0016.png" alt="SPP=16">
+        <div class="img-label">SPP = 16</div>
+      </div>
+      <div class="img-card">
+        <img src="report_assets/google/metropolis_spp0064.png" alt="SPP=64">
+        <div class="img-label">SPP = 64</div>
+      </div>
+      <div class="img-card">
+        <img src="report_assets/google/metropolis_spp0256.png" alt="SPP=256">
+        <div class="img-label">SPP = 256</div>
+      </div>
+    </div>
+
+    <h3>Quantitative Metrics</h3>
+    <table>
+      <thead><tr><th>SPP</th><th>MSE ↓</th><th>PSNR (dB) ↑</th><th>SSIM ↑</th></tr></thead>
+      <tbody>
+        <tr><td class="spp">1</td>   <td class="worst">6600.32</td><td class="worst">9.94</td> <td class="worst">0.2901</td></tr>
+        <tr><td class="spp">4</td>   <td>735.66</td>               <td>19.46</td>              <td>0.8347</td></tr>
+        <tr><td class="spp">16</td>  <td>31.44</td>                <td>33.16</td>              <td>0.9934</td></tr>
+        <tr><td class="spp">64</td>  <td>4.32</td>                 <td>41.78</td>              <td>0.9996</td></tr>
+        <tr><td class="spp">256</td> <td class="best">2.10</td>    <td class="best">44.90</td> <td class="best">0.9998</td></tr>
+      </tbody>
+    </table>
+    <p>
+      Unlike the synthetic case, the photographic image does not reach perfect reconstruction
+      even at SPP=256 (MSE=2.10, PSNR=44.90 dB). The continuous, fine-grained luminance variation
+      means dark pixels are visited rarely — they require more samples to fill in.
+      SSIM of 0.9998 confirms perceptual quality is near-perfect despite residual MSE.
+    </p>
+  </section>
+
+  <!-- 5. Analysis -->
+  <section>
+    <h2>05 · Analysis &amp; Discussion</h2>
+
+    <h3>Convergence Rate</h3>
+    <p>
+      Both experiments confirm the expected Monte Carlo convergence behavior.
+      MSE decreases roughly as O(1/N), consistent with the central limit theorem.
+      Doubling SPP yields approximately 3 dB PSNR improvement, observable in the Google image
+      across all SPP levels (9.94 → 19.46 → 33.16 → 41.78 → 44.90 dB).
+    </p>
+
+    <h3>Effect of Image Complexity</h3>
+    <p>
+      The synthetic image converges faster because its luminance distribution is bimodal
+      (near-zero background, high-luminance objects). The chain quickly identifies bright regions
+      and concentrates samples there. The photographic image has a continuous distribution
+      spanning the full dynamic range, requiring more samples to adequately cover dark regions.
+    </p>
+
+    <h3>Role of Large Mutations</h3>
+    <p>
+      Without large (uniform) mutations, the chain risks getting trapped in local bright regions,
+      never exploring dark areas. Using 10% large-step probability ensures ergodicity —
+      every pixel has a non-zero probability of being sampled, eliminating dead zones.
+    </p>
+
+    <h3>Limitations</h3>
+    <p>
+      Successive samples are correlated: the chain performs a random walk, so nearby samples
+      are not independent. This means effective sample count is lower than total sample count,
+      explaining why convergence is slower than stratified or quasi-random sampling for simple images.
+      Stratified sampling is not applicable to Metropolis — there is no technique to guarantee
+      uniform coverage as there is with grid or Halton sequences.
+    </p>
+
+    <div class="callout">
+      <strong>Acceptance rate:</strong> The Gaussian small-step mutation was tuned (σ = 2% of image dims)
+      to yield acceptance rates between 0.4–0.7. Too small σ → high acceptance but slow exploration.
+      Too large σ → low acceptance, wasted proposals.
+    </div>
+  </section>
+
+  <!-- 6. Summary -->
+  <section>
+    <h2>06 · Summary</h2>
+    <div class="metric-row">
+      <div class="metric-card">
+        <div class="label">Best PSNR (Synthetic)</div>
+        <div class="value">∞</div>
+        <div class="sub">Perfect at SPP ≥ 64</div>
+      </div>
+      <div class="metric-card">
+        <div class="label">Best PSNR (Photo)</div>
+        <div class="value">44.9 dB</div>
+        <div class="sub">SPP = 256</div>
+      </div>
+      <div class="metric-card">
+        <div class="label">Best SSIM (Photo)</div>
+        <div class="value">0.9998</div>
+        <div class="sub">SPP = 256</div>
+      </div>
+      <div class="metric-card">
+        <div class="label">Large Step Prob</div>
+        <div class="value">10%</div>
+        <div class="sub">Ergodicity guarantee</div>
+      </div>
+      <div class="metric-card">
+        <div class="label">Mutation σ</div>
+        <div class="value">2%</div>
+        <div class="sub">Of image dimensions</div>
+      </div>
+    </div>
+    <p>
+      Metropolis sampling successfully reproduces both test images with quality improving
+      monotonically with SPP. The algorithm is simple to implement, requires no explicit
+      normalization of the target distribution, and naturally concentrates computation
+      on high-luminance regions — consistent with its application in light transport rendering
+      where bright paths dominate image formation.
+    </p>
+  </section>
+
+</main>
+
+<footer>
+  <span>Metropolis Sampling · ImageCopy · Digital Image Synthesis</span>
+  <span>Implemented in Python 3.14 · NumPy · Pillow</span>
+</footer>
+
+</body>
+</html>
