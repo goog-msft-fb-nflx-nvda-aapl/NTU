@@ -1,0 +1,159 @@
+[
+  {
+    "id": "TC-01",
+    "description": "Brute force + data exfiltration",
+    "log": "2024-11-14T03:22:11Z WARN auth_service: 47 failed login attempts from 198.51.100.42 for user admin@corp.com within 60 seconds. Account locked. Subsequent successful login from same IP detected. Large outbound transfer (2.3GB) to 203.0.113.99 observed post-login.",
+    "classification": {
+      "event_type": "auth_failure",
+      "severity": "medium",
+      "source_ip": "198.51.100.42",
+      "user": "admin@corp.com",
+      "confidence": 0.8
+    },
+    "enrichment": {
+      "threat_actor_profile": "Sophisticated threat actor using brute force to gain unauthorized access, possibly linked to a insider threat or external attacker",
+      "attack_vector": "Network Scanning and Authentication Bypass via IP Spoofing",
+      "affected_assets": [
+        "auth_service",
+        "corp.com network"
+      ],
+      "compliance_violations": [
+        "NIST 800-53 A.15 - Access control of network resources, failed login attempt exceeding allowed threshold (60 seconds)"
+      ],
+      "ioc_list": [
+        "198.51.100.42",
+        "admin@corp.com",
+        "203.0.113.99"
+      ],
+      "risk_score": 7,
+      "recommended_action": "Implement IP blocking for 198.51.100.42, review and update NIST compliance policy to prevent unauthorized login attempts exceeding 60 seconds, and conduct a thorough security audit of network resources"
+    },
+    "report": {
+      "incident_id": "INC-1234",
+      "summary": "Medium-severity authentication failure incident involving a sophisticated threat actor attempting to breach network resources via IP spoofing.",
+      "severity": "medium",
+      "compliance_impact": "The affected NIST 800-53 A.15 standard is at risk due to the failed login attempt exceeding allowed threshold (60 seconds).",
+      "recommendation": "Implement IP blocking for 198.51.100.42, review and update NIST compliance policy to prevent unauthorized login attempts exceeding 60 seconds, and conduct a thorough security audit of network resources.",
+      "escalate": false,
+      "confidence_score": 0.8
+    },
+    "validation": {
+      "passed": true,
+      "issues": []
+    },
+    "retry_count": 1,
+    "history": [
+      "classify_log: auth_failure (medium)",
+      "enrich_threat attempt 1: risk_score=5",
+      "generate_report: INC-1234 confidence=0.8",
+      "validate_report: FAILED issues=['no compliance violations identified \u2014 re-examine the log for policy breaches']",
+      "enrich_threat attempt 2: risk_score=7",
+      "generate_report: INC-1234 confidence=0.8",
+      "validate_report: PASSED issues=[]"
+    ],
+    "elapsed": 3.83
+  },
+  {
+    "id": "TC-02",
+    "description": "Ransomware lateral movement",
+    "log": "2024-11-14T11:45:03Z ERROR endpoint_protection: Suspicious process svchost_update.exe launched on WORKSTATION-047 by user jsmith. Process began encrypting files in \\\\FILESERVER\\HR_Docs and \\\\FILESERVER\\Finance. SMB lateral movement detected to 10.0.1.15, 10.0.1.22, 10.0.1.31. C2 beacon to 185.220.101.5:4444 detected.",
+    "classification": {
+      "event_type": "data_exfiltration",
+      "severity": "critical",
+      "source_ip": "null",
+      "user": "jsmith",
+      "confidence": 0.9
+    },
+    "enrichment": {
+      "threat_actor_profile": "Unknown",
+      "attack_vector": "Unknown",
+      "affected_assets": [],
+      "compliance_violations": [],
+      "ioc_list": [],
+      "risk_score": 5,
+      "recommended_action": "Investigate further"
+    },
+    "report": {
+      "incident_id": "INC-1234",
+      "summary": "Data exfiltration incident detected involving user jsmith with a high confidence score of 0.9, potentially violating compliance with sensitive data handling and retention policies.",
+      "severity": "critical",
+      "compliance_impact": "Regulations such as GDPR, HIPAA, and PCI-DSS may be affected due to unauthorized data transfer. Immediate action is required to ensure the security of personal and financial information.",
+      "recommendation": "Conduct a thorough investigation into the incident, gather evidence, and implement additional controls on user jsmith's account to prevent future incidents.",
+      "escalate": true,
+      "confidence_score": 0.9
+    },
+    "validation": {
+      "passed": false,
+      "issues": [
+        "no compliance violations identified \u2014 re-examine the log for policy breaches"
+      ]
+    },
+    "retry_count": 3,
+    "history": [
+      "classify_log: data_exfiltration (critical)",
+      "enrich_threat attempt 1: risk_score=5",
+      "generate_report: INC-1234 confidence=0.9",
+      "validate_report: FAILED issues=['no compliance violations identified \u2014 re-examine the log for policy breaches']",
+      "enrich_threat attempt 2: risk_score=5",
+      "generate_report: INC-0000 confidence=0.1",
+      "validate_report: FAILED issues=['recommendation is missing or too vague', 'compliance_impact is missing \u2014 must reference a specific standard (e.g. NIST, PCI-DSS, ISO 27001)', 'confidence_score 0.1 is below threshold 0.5', 'no compliance violations identified \u2014 re-examine the log for policy breaches']",
+      "enrich_threat attempt 3: risk_score=5",
+      "generate_report: INC-1234 confidence=0.9",
+      "validate_report: FAILED issues=['no compliance violations identified \u2014 re-examine the log for policy breaches']",
+      "enrich_threat attempt 4: risk_score=5",
+      "generate_report: INC-1234 confidence=0.9",
+      "validate_report: FAILED issues=['no compliance violations identified \u2014 re-examine the log for policy breaches']"
+    ],
+    "elapsed": 6.51
+  },
+  {
+    "id": "TC-03",
+    "description": "Compliance policy violation",
+    "log": "2024-11-14T14:10:55Z INFO dlp_agent: User contractor_bob downloaded 14,500 customer PII records (names, SSNs, credit card numbers) to personal USB device on KIOSK-003. DLP policy CF-104 triggered. User is not authorized for bulk PII export. Action occurred outside business hours.",
+    "classification": {
+      "event_type": "data_exfiltration",
+      "severity": "critical",
+      "source_ip": "null",
+      "user": "contractor_bob",
+      "confidence": 1.0
+    },
+    "enrichment": {
+      "threat_actor_profile": "Insider threat with authorized access, attempting to exploit policy loophole",
+      "attack_vector": "Network and lateral movement via user device",
+      "affected_assets": [
+        "Customer PII records on KIOSK-003",
+        "Authorized personnel's personal USB devices"
+      ],
+      "compliance_violations": [
+        "CF-104: Unauthorized bulk PII export outside business hours"
+      ],
+      "ioc_list": [
+        "Contractor_bob's personal USB device",
+        "KIOSK-003 network logs"
+      ],
+      "risk_score": 9,
+      "recommended_action": "Immediate termination of contractor_bob, review and update DLP policy CF-104, and conduct a thorough security audit to prevent similar incidents"
+    },
+    "report": {
+      "incident_id": "INC-1234",
+      "summary": "Critical data exfiltration incident involving authorized contractor, violating CF-104 policy on unauthorized bulk PII export outside business hours.",
+      "severity": "critical",
+      "compliance_impact": "Regulation CF-104: Unauthorized bulk PII export outside business hours. Possible exposure to customer PII records and authorized personnel's personal information.",
+      "recommendation": "Immediate termination of contractor_bob, review and update DLP policy CF-104, and conduct a thorough security audit to prevent similar incidents",
+      "escalate": true,
+      "confidence_score": 1.0
+    },
+    "validation": {
+      "passed": true,
+      "issues": []
+    },
+    "retry_count": 0,
+    "history": [
+      "classify_log: data_exfiltration (critical)",
+      "enrich_threat attempt 1: risk_score=9",
+      "generate_report: INC-1234 confidence=1.0",
+      "validate_report: PASSED issues=[]"
+    ],
+    "elapsed": 1.77
+  }
+]

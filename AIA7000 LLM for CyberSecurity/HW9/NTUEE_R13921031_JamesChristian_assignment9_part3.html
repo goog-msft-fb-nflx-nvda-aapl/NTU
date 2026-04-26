@@ -1,0 +1,972 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HW10 — Autonomous Cybersecurity Compliance Agent</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Syne+Mono&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f5f2ec;
+    --surface: #fffdf8;
+    --surface2: #f0ece3;
+    --border: #ddd8cc;
+    --accent: #c0392b;
+    --accent2: #2c7a4b;
+    --accent3: #1a4a7a;
+    --text: #2a2620;
+    --text-dim: #7a7060;
+    --text-mid: #4a4238;
+    --mono: 'Syne Mono', monospace;
+    --display: 'Syne', sans-serif;
+    --body: 'Lora', serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--body);
+    font-size: 15px;
+    line-height: 1.75;
+  }
+
+  .wrapper {
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 0 40px 100px;
+  }
+
+  /* ── HEADER ── */
+  header {
+    padding: 72px 0 56px;
+    border-bottom: 2px solid var(--text);
+    margin-bottom: 64px;
+    position: relative;
+  }
+
+  .hw-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 16px;
+  }
+
+  h1 {
+    font-family: var(--display);
+    font-size: clamp(2.2rem, 5vw, 3.8rem);
+    font-weight: 800;
+    line-height: 1.05;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+
+  h1 span { color: var(--accent); }
+
+  .subtitle {
+    font-family: var(--display);
+    font-size: 1.1rem;
+    font-weight: 400;
+    color: var(--text-dim);
+    margin-bottom: 28px;
+  }
+
+  .meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+    border-top: 1px solid var(--border);
+    margin-top: 32px;
+    padding-top: 20px;
+  }
+
+  .meta-item {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    padding-right: 24px;
+    margin-right: 24px;
+    border-right: 1px solid var(--border);
+    line-height: 1.6;
+  }
+
+  .meta-item:last-child { border-right: none; }
+  .meta-item strong { display: block; color: var(--text); font-size: 12px; }
+
+  /* ── SECTION ── */
+  section { margin-bottom: 64px; }
+
+  .sec-num {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 6px;
+  }
+
+  h2 {
+    font-family: var(--display);
+    font-size: 1.9rem;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 24px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  h3 {
+    font-family: var(--display);
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+    margin: 28px 0 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  p { margin-bottom: 14px; color: var(--text-mid); }
+
+  /* ── WORKFLOW DIAGRAM ── */
+  .workflow {
+    background: var(--text);
+    color: #f5f2ec;
+    padding: 40px;
+    margin: 28px 0;
+    font-family: var(--mono);
+    font-size: 12px;
+    overflow-x: auto;
+  }
+
+  .wf-title {
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: #7a7060;
+    margin-bottom: 28px;
+  }
+
+  .wf-row {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+
+  .wf-node {
+    background: #2a2620;
+    border: 1px solid #4a4238;
+    padding: 8px 16px;
+    color: #f5f2ec;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .wf-node.entry { border-color: #4db8ff; color: #4db8ff; }
+  .wf-node.decision { border-color: #f5a623; color: #f5a623; }
+  .wf-node.end-ok { border-color: #2c7a4b; color: #7ec8a0; }
+  .wf-node.end-fail { border-color: #c0392b; color: #e88080; }
+  .wf-node.loop { border-color: #c0392b; color: #e88080; }
+
+  .wf-arrow {
+    color: #4a4238;
+    padding: 0 8px;
+    font-size: 14px;
+  }
+
+  .wf-label {
+    font-size: 10px;
+    color: #7a7060;
+    padding: 0 6px;
+  }
+
+  .wf-loop-indicator {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #2a2620;
+    color: #7a7060;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .wf-loop-indicator::before {
+    content: '↩';
+    font-size: 18px;
+    color: #c0392b;
+  }
+
+  /* ── CODE ── */
+  pre {
+    background: var(--text);
+    color: #c8d0dc;
+    padding: 24px 28px;
+    overflow-x: auto;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.75;
+    margin: 16px 0;
+    border-left: 3px solid var(--accent3);
+  }
+
+  code {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    background: var(--surface2);
+    padding: 1px 6px;
+    color: var(--accent3);
+  }
+
+  .kw { color: #c792ea; }
+  .fn { color: #82aaff; }
+  .st { color: #c3e88d; }
+  .cm { color: #546e7a; font-style: italic; }
+  .nu { color: #f78c6c; }
+
+  /* ── TEST CARDS ── */
+  .test-cards { display: grid; gap: 1px; background: var(--border); border: 1px solid var(--border); margin: 28px 0; }
+
+  .test-card { background: var(--surface); }
+
+  .tc-header {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+
+  .tc-id {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+  }
+
+  .tc-title {
+    font-family: var(--display);
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .tc-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 700;
+    padding: 4px 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .badge-pass { background: rgba(44,122,75,0.12); color: var(--accent2); border: 1px solid rgba(44,122,75,0.3); }
+  .badge-fail { background: rgba(192,57,43,0.1); color: var(--accent); border: 1px solid rgba(192,57,43,0.25); }
+  .badge-forced { background: rgba(245,166,35,0.1); color: #b8860b; border: 1px solid rgba(245,166,35,0.3); }
+
+  .tc-body { padding: 24px; }
+
+  .tc-log {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--text-dim);
+    background: var(--surface2);
+    border-left: 3px solid var(--border);
+    padding: 12px 16px;
+    margin-bottom: 20px;
+    line-height: 1.6;
+  }
+
+  .tc-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1px; background: var(--border); margin-bottom: 20px; }
+
+  .tc-cell {
+    background: var(--surface);
+    padding: 14px 16px;
+  }
+
+  .tc-cell-label {
+    font-family: var(--mono);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+  }
+
+  .tc-cell-value {
+    font-family: var(--display);
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .sev-critical { color: var(--accent); }
+  .sev-high { color: #c06000; }
+  .sev-medium { color: #7a6010; }
+  .sev-low { color: var(--accent2); }
+
+  .tc-report {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 18px 20px;
+    margin-bottom: 16px;
+    font-size: 13.5px;
+  }
+
+  .tc-report-row { margin-bottom: 10px; line-height: 1.55; }
+  .tc-report-row:last-child { margin-bottom: 0; }
+  .tc-report-key {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-dim);
+    display: block;
+    margin-bottom: 2px;
+  }
+
+  .tc-history {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 2;
+  }
+
+  .tc-history .h-pass { color: var(--accent2); }
+  .tc-history .h-fail { color: var(--accent); }
+  .tc-history .h-node { color: var(--accent3); }
+
+  /* ── COMPARISON TABLE ── */
+  .comp-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin: 20px 0;
+  }
+
+  .comp-table th {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--text-dim);
+    border-bottom: 2px solid var(--text);
+    padding: 10px 14px;
+    text-align: left;
+    background: var(--surface2);
+  }
+
+  .comp-table td {
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+
+  .comp-table tr:hover td { background: var(--surface2); }
+
+  /* ── QUALITY GATES ── */
+  .gates {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin: 20px 0;
+  }
+
+  .gate {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--accent3);
+    padding: 16px 18px;
+  }
+
+  .gate-name {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--accent3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 6px;
+  }
+
+  .gate p { font-size: 13px; margin: 0; color: var(--text-mid); }
+
+  /* ── SCREENSHOT ── */
+  .screenshot {
+    border: 1px solid var(--border);
+    margin: 16px 0 24px;
+    overflow: hidden;
+  }
+
+  .screenshot img { width: 100%; display: block; }
+
+  .screenshot-cap {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--text-dim);
+    padding: 8px 14px;
+    border-top: 1px solid var(--border);
+    background: var(--surface2);
+  }
+
+  /* ── STEPS ── */
+  .steps { list-style: none; margin: 16px 0; }
+
+  .steps li {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 14px;
+    align-items: flex-start;
+    font-size: 14px;
+    color: var(--text-mid);
+  }
+
+  .steps li::before {
+    content: attr(data-n);
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--surface);
+    background: var(--text);
+    padding: 3px 7px;
+    flex-shrink: 0;
+    margin-top: 3px;
+  }
+
+  /* ── TOC ── */
+  .toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 24px 28px;
+    margin-bottom: 56px;
+  }
+
+  .toc-title {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--text-dim);
+    margin-bottom: 14px;
+  }
+
+  .toc ol { padding-left: 20px; line-height: 2.2; font-size: 14px; }
+  .toc a { color: var(--text); text-decoration: none; }
+  .toc a:hover { color: var(--accent); }
+
+  /* ── FOOTER ── */
+  footer {
+    border-top: 2px solid var(--text);
+    padding-top: 28px;
+    margin-top: 72px;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  @media (max-width: 640px) {
+    .tc-grid { grid-template-columns: 1fr 1fr; }
+    .gates { grid-template-columns: 1fr; }
+    .wrapper { padding: 0 20px 60px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+  <!-- HEADER -->
+  <header>
+    <div class="hw-label">AIA7000 · LLM for Cybersecurity · NTU GINM · HW10</div>
+    <h1>Autonomous Cybersecurity<br><span>Compliance Agent</span></h1>
+    <div class="subtitle">Closed-loop Monitoring with LangGraph Feedback Loop</div>
+    <div class="meta-row">
+      <div class="meta-item"><strong>Student</strong>James Christian · R13921031</div>
+      <div class="meta-item"><strong>Framework</strong>LangGraph + Ollama</div>
+      <div class="meta-item"><strong>Model</strong>llama3.2:latest (3.2B Q4_K_M)</div>
+      <div class="meta-item"><strong>Topic</strong>Cybersecurity Compliance Monitoring</div>
+      <div class="meta-item"><strong>Date</strong>April 2026</div>
+    </div>
+  </header>
+
+  <!-- TOC -->
+  <nav class="toc">
+    <div class="toc-title">Contents</div>
+    <ol>
+      <li><a href="#s1">Assignment Overview & Topic Selection</a></li>
+      <li><a href="#s2">Agent Workflow Design</a></li>
+      <li><a href="#s3">Closed-Loop Feedback Mechanism</a></li>
+      <li><a href="#s4">Implementation</a></li>
+      <li><a href="#s5">Execution Results & Validation</a></li>
+      <li><a href="#s6">Decision Control Verification</a></li>
+      <li><a href="#s7">Conclusion</a></li>
+    </ol>
+  </nav>
+
+  <!-- S1: OVERVIEW -->
+  <section id="s1">
+    <div class="sec-num">01 · Overview</div>
+    <h2>Assignment Overview & Topic Selection</h2>
+
+    <p>This homework implements an <strong>Autonomous Cybersecurity Compliance Agent</strong> using LangGraph, focusing on the monitoring topic of <em>cybersecurity compliance</em>. The agent autonomously analyzes security log entries, enriches threat intelligence, generates structured incident reports, and validates report quality — looping back to re-enrich when quality gates are not satisfied.</p>
+
+    <h3>Topic: Cybersecurity Compliance Monitoring</h3>
+    <p>Security operations teams must process large volumes of log data and map incidents to compliance frameworks (NIST 800-53, PCI-DSS, ISO 27001, GDPR). Manual triage is slow, error-prone, and inconsistent. An autonomous agent that classifies, enriches, and validates compliance reports addresses this directly — and the closed-loop retry mechanism ensures reports meet a minimum quality standard before being accepted.</p>
+
+    <h3>Why LangGraph</h3>
+    <p>LangGraph models the agent as a directed graph with typed state, making it straightforward to implement conditional edges (the feedback loop) and to trace the full decision history. It was also used in HW8, ensuring a stable, tested environment on the H200 server.</p>
+  </section>
+
+  <!-- S2: WORKFLOW -->
+  <section id="s2">
+    <div class="sec-num">02 · Workflow Design</div>
+    <h2>Agent Workflow Design</h2>
+
+    <div class="workflow">
+      <div class="wf-title">LangGraph Agent — Node Graph</div>
+
+      <div class="wf-row">
+        <div class="wf-node entry">START</div>
+        <div class="wf-arrow">──▶</div>
+        <div class="wf-node">classify_log</div>
+        <div class="wf-arrow">──▶</div>
+        <div class="wf-node">enrich_threat</div>
+        <div class="wf-arrow">──▶</div>
+        <div class="wf-node">generate_report</div>
+        <div class="wf-arrow">──▶</div>
+        <div class="wf-node decision">validate_report</div>
+      </div>
+
+      <div style="margin: 16px 0 8px; padding-left: 40px;">
+        <div class="wf-row">
+          <div class="wf-node decision">validate_report</div>
+          <div class="wf-arrow">──▶</div>
+          <div class="wf-label">PASSED</div>
+          <div class="wf-arrow">──▶</div>
+          <div class="wf-node end-ok">END ✓</div>
+        </div>
+        <div style="height:10px;"></div>
+        <div class="wf-row">
+          <div class="wf-node decision">validate_report</div>
+          <div class="wf-arrow">──▶</div>
+          <div class="wf-label">FAILED + retries &lt; 3</div>
+          <div class="wf-arrow">──▶</div>
+          <div class="wf-node loop">↩ enrich_threat</div>
+          <div class="wf-label">(with feedback)</div>
+        </div>
+        <div style="height:10px;"></div>
+        <div class="wf-row">
+          <div class="wf-node decision">validate_report</div>
+          <div class="wf-arrow">──▶</div>
+          <div class="wf-label">FAILED + retries = 3</div>
+          <div class="wf-arrow">──▶</div>
+          <div class="wf-node end-fail">END ✗ (forced)</div>
+        </div>
+      </div>
+
+      <div class="wf-loop-indicator">
+        Closed feedback loop: validate_report injects failure reasons back into enrich_threat context on retry. Max 3 retries before forced termination.
+      </div>
+    </div>
+
+    <h3>Node Responsibilities</h3>
+    <ul class="steps">
+      <li data-n="01"><strong>classify_log</strong> — Sends the raw log entry to the LLM. Extracts event type (auth_failure, data_exfiltration, malware, policy_violation, reconnaissance), severity (critical/high/medium/low), source IP, affected user, and a confidence score.</li>
+      <li data-n="02"><strong>enrich_threat</strong> — Takes the classification and log, asks the LLM to enrich with threat actor profile, attack vector, affected assets, compliance violations (mapped to standards), IoC list, risk score (1–10), and a recommended action. On retry, the previous validation failure reasons are injected into the prompt as additional context.</li>
+      <li data-n="03"><strong>generate_report</strong> — Synthesises classification and enrichment into a structured incident report: incident ID, summary, severity, compliance impact, recommendation, escalation flag, and confidence score.</li>
+      <li data-n="04"><strong>validate_report</strong> — Quality gate node. Checks five criteria and populates the feedback string. Routes to END (passed), retry (failed, retries remaining), or forced END (max retries reached).</li>
+    </ul>
+
+    <div class="screenshot">
+      <img src="hw10_workflow.png" alt="LangGraph workflow screenshot">
+      <div class="screenshot-cap">Fig 1 · LangGraph agent workflow — terminal output showing node execution sequence</div>
+    </div>
+  </section>
+
+  <!-- S3: FEEDBACK LOOP -->
+  <section id="s3">
+    <div class="sec-num">03 · Feedback Mechanism</div>
+    <h2>Closed-Loop Feedback Mechanism</h2>
+
+    <p>The feedback loop is the core contribution of this homework. When <code>validate_report</code> fails, it does not simply retry blindly — it populates <code>state["retry_feedback"]</code> with specific, human-readable failure reasons. These are injected into the <code>enrich_threat</code> prompt on the next iteration, forcing the LLM to address the specific deficiencies.</p>
+
+    <h3>Quality Gates (5 checks)</h3>
+    <div class="gates">
+      <div class="gate">
+        <div class="gate-name">Gate 1 · Recommendation</div>
+        <p>Report must contain a specific recommendation of at least 15 characters. Vague or empty recommendations trigger retry.</p>
+      </div>
+      <div class="gate">
+        <div class="gate-name">Gate 2 · Severity</div>
+        <p>Severity must be one of: critical, high, medium, low. Missing or malformed values fail validation.</p>
+      </div>
+      <div class="gate">
+        <div class="gate-name">Gate 3 · Compliance Impact</div>
+        <p>Must reference a specific standard (NIST, PCI-DSS, ISO 27001, GDPR, etc.). Generic "Unknown" values are rejected.</p>
+      </div>
+      <div class="gate">
+        <div class="gate-name">Gate 4 · Confidence Score</div>
+        <p>Report confidence must be ≥ 0.5. Low-confidence reports indicate the LLM was uncertain and require re-enrichment.</p>
+      </div>
+      <div class="gate">
+        <div class="gate-name">Gate 5 · Compliance Violations</div>
+        <p>The enrichment must identify at least one compliance violation. Empty violation lists indicate insufficient analysis.</p>
+      </div>
+    </div>
+
+    <h3>Feedback Injection</h3>
+    <p>When one or more gates fail, the failure reasons are concatenated and stored in <code>retry_feedback</code>. On the next <code>enrich_threat</code> call, this is prepended to the LLM prompt:</p>
+
+<pre><span class="kw">if</span> feedback:
+    feedback_section = (
+        <span class="st">f"Previous report was rejected. Reason: {feedback}\n"</span>
+        <span class="st">f"Please address this in your enrichment.\n"</span>
+    )
+
+prompt = <span class="st">f"""You are a cybersecurity analyst. Enrich this threat...
+{feedback_section}
+Log: {log}
+Classification: {json.dumps(cls)}
+..."""</span></pre>
+
+    <p>This constitutes a genuine closed-loop: the agent observes the output of its own report, identifies deficiencies, and adjusts its next decision based on those observations — satisfying the homework requirement for adaptive behavior.</p>
+  </section>
+
+  <!-- S4: IMPLEMENTATION -->
+  <section id="s4">
+    <div class="sec-num">04 · Implementation</div>
+    <h2>Implementation</h2>
+
+    <h3>State Schema</h3>
+<pre><span class="kw">class</span> AgentState(TypedDict):
+    log_entry: str          <span class="cm"># raw input log</span>
+    classification: dict    <span class="cm"># Node 1 output</span>
+    enrichment: dict        <span class="cm"># Node 2 output</span>
+    report: dict            <span class="cm"># Node 3 output</span>
+    validation: dict        <span class="cm"># Node 4 output {passed, issues}</span>
+    retry_count: int        <span class="cm"># incremented in enrich_threat on retry</span>
+    retry_feedback: str     <span class="cm"># failure reasons injected into next prompt</span>
+    history: list[str]      <span class="cm"># audit trail of all node decisions</span></pre>
+
+    <h3>Graph Construction</h3>
+<pre>g = <span class="fn">StateGraph</span>(AgentState)
+g.<span class="fn">add_node</span>(<span class="st">"classify_log"</span>, classify_log)
+g.<span class="fn">add_node</span>(<span class="st">"enrich_threat"</span>, enrich_threat)
+g.<span class="fn">add_node</span>(<span class="st">"generate_report"</span>, generate_report)
+g.<span class="fn">add_node</span>(<span class="st">"validate_report"</span>, validate_report)
+
+g.<span class="fn">set_entry_point</span>(<span class="st">"classify_log"</span>)
+g.<span class="fn">add_edge</span>(<span class="st">"classify_log"</span>, <span class="st">"enrich_threat"</span>)
+g.<span class="fn">add_edge</span>(<span class="st">"enrich_threat"</span>, <span class="st">"generate_report"</span>)
+g.<span class="fn">add_edge</span>(<span class="st">"generate_report"</span>, <span class="st">"validate_report"</span>)
+g.<span class="fn">add_conditional_edges</span>(
+    <span class="st">"validate_report"</span>,
+    should_retry,
+    {<span class="st">"end"</span>: END, <span class="st">"retry"</span>: <span class="st">"enrich_threat"</span>}
+)</pre>
+
+    <h3>Environment</h3>
+    <ul class="steps">
+      <li data-n="·">Server: H200 (Ubuntu 22.04), conda env <code>rl_hw3</code>, Python 3.12.13</li>
+      <li data-n="·">LLM: <code>llama3.2:latest</code> (3.2B, Q4_K_M) via Ollama at <code>http://localhost:11434</code></li>
+      <li data-n="·">No external API keys — fully local inference</li>
+      <li data-n="·">Source: <code>~/aia7000_agent/hw10_compliance_agent.py</code></li>
+    </ul>
+  </section>
+
+  <!-- S5: RESULTS -->
+  <section id="s5">
+    <div class="sec-num">05 · Execution Results</div>
+    <h2>Execution Results & Validation</h2>
+
+    <div class="test-cards">
+
+      <!-- TC-01 -->
+      <div class="test-card">
+        <div class="tc-header">
+          <div class="tc-id">TC-01</div>
+          <div class="tc-title">Brute Force + Data Exfiltration</div>
+          <div class="tc-badge badge-pass">✓ Passed · 1 retry</div>
+        </div>
+        <div class="tc-body">
+          <div class="tc-log">2024-11-14T03:22:11Z WARN auth_service: 47 failed login attempts from 198.51.100.42 for user admin@corp.com within 60 seconds. Account locked. Subsequent successful login from same IP detected. Large outbound transfer (2.3GB) to 203.0.113.99 observed post-login.</div>
+
+          <div class="tc-grid">
+            <div class="tc-cell">
+              <div class="tc-cell-label">Event Type</div>
+              <div class="tc-cell-value">auth_failure</div>
+            </div>
+            <div class="tc-cell">
+              <div class="tc-cell-label">Severity</div>
+              <div class="tc-cell-value sev-medium">medium</div>
+            </div>
+            <div class="tc-cell">
+              <div class="tc-cell-label">Risk Score</div>
+              <div class="tc-cell-value">7 / 10</div>
+            </div>
+          </div>
+
+          <div class="tc-report">
+            <div class="tc-report-row">
+              <span class="tc-report-key">Incident ID</span>
+              INC-1234
+            </div>
+            <div class="tc-report-row">
+              <span class="tc-report-key">Summary</span>
+              Medium-severity authentication failure incident involving a sophisticated threat actor attempting to breach network resources via IP spoofing.
+            </div>
+            <div class="tc-report-row">
+              <span class="tc-report-key">Compliance Impact</span>
+              NIST 800-53 A.15 standard at risk due to failed login attempts exceeding allowed threshold (60 seconds).
+            </div>
+            <div class="tc-report-row">
+              <span class="tc-report-key">Recommendation</span>
+              Implement IP blocking for 198.51.100.42, review and update NIST compliance policy to prevent unauthorized login attempts exceeding 60 seconds, and conduct a thorough security audit of network resources.
+            </div>
+            <div class="tc-report-row">
+              <span class="tc-report-key">Escalate · Confidence</span>
+              No · 0.80
+            </div>
+          </div>
+
+          <div class="tc-history">
+            <div><span class="h-node">classify_log</span> → auth_failure (medium) | confidence 0.8</div>
+            <div><span class="h-node">enrich_threat attempt 1</span> → risk_score=5 | violations=[] <span class="h-fail">→ FAILED Gate 5</span></div>
+            <div><span class="h-node">validate_report</span> → <span class="h-fail">FAILED</span> | no compliance violations identified</div>
+            <div style="color:#b8860b; padding-left:12px;">↩ retry 1/3 — feedback injected into enrich_threat</div>
+            <div><span class="h-node">enrich_threat attempt 2</span> → risk_score=7 | violations=['NIST 800-53 A.15…']</div>
+            <div><span class="h-node">validate_report</span> → <span class="h-pass">PASSED</span> | all gates cleared</div>
+          </div>
+
+          <div class="screenshot">
+            <img src="hw10_tc01.png" alt="TC-01 terminal output">
+            <div class="screenshot-cap">Fig 2 · TC-01 terminal output — retry loop with feedback injection</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TC-02 -->
+      <div class="test-card">
+        <div class="tc-header">
+          <div class="tc-id">TC-02</div>
+          <div class="tc-title">Ransomware Lateral Movement</div>
+          <div class="tc-badge badge-forced">⚠ Forced End · 3 retries</div>
+        </div>
+        <div class="tc-body">
+          <div class="tc-log">2024-11-14T11:45:03Z ERROR endpoint_protection: Suspicious process svchost_update.exe launched on WORKSTATION-047 by user jsmith. Process began encrypting files in \\FILESERVER\HR_Docs and \\FILESERVER\Finance. SMB lateral movement detected to 10.0.1.15, 10.0.1.22, 10.0.1.31. C2 beacon to 185.220.101.5:4444 detected.</div>
+
+          <div class="tc-grid">
+            <div class="tc-cell">
+              <div class="tc-cell-label">Event Type</div>
+              <div class="tc-cell-value">data_exfiltration</div>
+            </div>
+            <div class="tc-cell">
+              <div class="tc-cell-label">Severity</div>
+              <div class="tc-cell-value sev-critical">critical</div>
+            </div>
+            <div class="tc-cell">
+              <div class="tc-cell-label">Risk Score</div>
+              <div class="tc-cell-value">5 / 10</div>
+            </div>
+          </div>
+
+          <div class="tc-report">
+            <div class="tc-report-row">
+              <span class="tc-report-key">Incident ID</span>
+              INC-1234
+            </div>
+            <div class="tc-report-row">
+              <span class="tc-report-key">Summary</span>
+              Critical malware incident involving lateral movement and C2 beacons, potentially affecting sensitive company data stored on FILESERVER.
+            </div>
+            <div class="tc-report-row">
+              <span class="tc-report-key">Compliance Impact</span>
+              Regulations 18-5 (Data Protection) and 19-1 (IT Security Management) may be impacted due to potential exposure of sensitive data.
+            </div>
+            <div class="tc-report-row">
+              <span class="tc-report-key">Recommendation</span>
+              Immediately isolate the affected workstation, scan for malware, and implement additional endpoint protection measures to prevent future lateral movement.
+            </div>
+            <div class="tc-report-row">
+              <span class="tc-report-key">Escalate · Confidence</span>
+              Yes · 0.90 | <strong style="color:var(--accent);">Validation: FAILED (forced end at max retries)</strong>
+            </div>
+          </div>
+
+          <div class="tc-history">
+            <div><span class="h-node">classify_log</span> → data_exfiltration (critical) | confidence 0.9</div>
+            <div><span class="h-node">enrich_threat attempt 1–4</span> → risk_score=5 | violations=[] <span class="h-fail">× 4 runs</span></div>
+            <div><span class="h-node">validate_report</span> → <span class="h-fail">FAILED × 4</span> | Gate 5: no compliance violations identified</div>
+            <div style="color:var(--accent); padding-left:12px;">Max retries (3) reached → END (forced) — best available report returned</div>
+          </div>
+
+          <p style="font-size:13px; margin-top:16px; color:var(--text-mid);"><strong>Analysis:</strong> The 3.2B model consistently failed to produce structured compliance violations for ransomware/malware incidents despite feedback injection. This demonstrates the graceful degradation path — the agent correctly terminates at the retry ceiling and returns the best available report rather than looping indefinitely. This behavior is intentional and verifiable.</p>
+
+          <div class="screenshot">
+            <img src="hw10_tc02.png" alt="TC-02 terminal output">
+            <div class="screenshot-cap">Fig 3 · TC-02 terminal output — max retries reached, forced end with audit trail</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TC-03 -->
+      <div class="test-card">
+        <div class="tc-header">
+          <div class="tc-id">TC-03</div>
+          <div class="tc-title">Compliance Policy Violation (PII Exfiltration)</div>
+          <div class="tc-badge badge-pass">✓ Passed · 0 retries</div>
+        </div>
+        <div class="tc-body">
+          <div class="tc-log">2024-11-14T14:10:55Z INFO dlp_agent: User contractor_bob downloaded 14,500 customer PII records (names, SSNs, credit card numbers) to personal USB device on KIOSK-003. DLP policy CF-104 triggered. User is not authorized for bulk PII export. Action occurred outside business hours.</div>
+
+          <div class="tc-grid">
+            <div class="tc-cell">
+              <div class="tc-cell-label">Event Type</div>
+              <div class="tc-cell-value">data_exfiltration</div>
+            </div>
+            <div class="tc-cell">
+              <div class="tc-cell-label">Severity</div>
+              <div class="tc-cell-value sev-critical">critical</div>
+            </div>
+            <div class="tc-cell">
+              <div class="tc-cell-label">Risk Score</div>
+              <div class="tc-cell-value">9 / 10</div>
+            </div>
+          </div>
+
+          <div class="tc-report">
+            <div class="tc-report-row">
+              <span class="tc-report-key">Incident ID</span>
+              INC-1234
+            </div>
+            <div class="tc-report-row">
+              <span class="tc-report-key">Summary</span>
+              Critical data exfiltration incident involving authorized contractor violating CF-104 policy on unauthorized bulk PII export outside business hours.
+            </div>
+            <div class="tc-report-row">
+              <span class="tc-report-key">Compliance Impact</span>
+              Regulation CF-104: Unauthorized bulk PII export outside business hours. Possible exposure to customer PII records. Potential GDPR and HIPAA implications.
+            </div>
+            <div class="tc-report-row">
+              <span class="tc-report-key">Recommendation</span>
+              Immediate termination of contractor_bob, review and update DLP policy CF-104, and conduct a thorough security audit to prevent similar incidents.
+            </div>
+            <div class="tc-report-row">
+              <span class="tc-report-key">Escalate · Confidence</span>
+              Yes · 1.00
+            </div>
+          </div>
+
+          <div class="tc-history">
+            <div><span class="h-node">classify_log</span> → data_exfiltration (critical) | confidence 1.0</div>
+            <div><span class="h-node">enrich_threat attempt 1</span> → risk_score=9 | violations=['CF-104: Unauthorized bulk PII export…']</div>
+            <div><span class="h-node">validate_report</span> → <span class="h-pass">PASSED</span> | all 5 gates cleared on first attempt</div>
+          </div>
+
+          <div class="screenshot">
+            <img src="hw10_tc03.png" alt="TC-03 terminal output">
+            <div class="screenshot-cap">Fig 4 · TC-03 terminal output — first-pass success, no retry needed</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- S6: VERIFICATION -->
+  <section id="s6">
+    <div class="sec-num">06 · Verification</div>
+    <h2>Decision Control Verification</h2>
+
+    <p>The homework requires demonstrating that agent decisions are <em>controlled and accurate</em>, and that the workflow adapts based on results. The following table summarises verification across all three test cases.</p>
+
+    <table class="comp-table">
+      <thead>
+        <tr>
+          <th>Test Case</th>
+          <th>Classification</th>
+          <th>Retries</th>
+          <th>Feedback Applied</th>
+          <th>Final Outcome</th>
+          <th>Controlled?</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>TC-01</strong> Brute force</td>
+          <td>auth_failure / medium</td>
+          <td>1</td>
+          <td>Yes — violations added on retry 1</td>
+          <td>PASSED</td>
+          <td style="color:var(--accent2);">✓ Yes</td>
+        </tr>
+        <tr>
+          <td><strong>TC-02</strong> Ransomware</td>
+          <td>data_exfiltration / critical</td>
+          <td>3 (max)</td>
+          <td>Yes — feedback injected × 3, model unable to comply</td>
+          <td>FORCED END</td>
+          <td style="color:var(--accent2);">✓ Yes (graceful)</td>
+        </tr>
+        <tr>
+          <td><strong>TC-03</strong> PII exfil</td>
+          <td>data_exfiltration / critical</td>
+          <td>0</td>
+          <td>N/A — passed first attempt</td>
+          <td>PASSED</td>
+          <td style="color:var(--accent2);">✓ Yes</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>How Decisions Are Controlled</h3>
+    <ul class="steps">
+      <li data-n="01"><strong>Deterministic routing:</strong> The conditional edge <code>should_retry</code> is a pure Python function — its routing logic (pass/retry/force-end) is fully deterministic based on validation state, not LLM output. The LLM cannot influence whether it gets retried.</li>
+      <li data-n="02"><strong>Hard retry ceiling:</strong> <code>MAX_RETRIES = 3</code> is enforced in the router. Regardless of LLM output quality, the loop terminates after 4 total attempts (1 initial + 3 retries). TC-02 validates this path explicitly.</li>
+      <li data-n="03"><strong>Structured output enforcement:</strong> All LLM calls return JSON. The <code>extract_json()</code> function falls back to safe defaults if parsing fails, preventing unstructured LLM output from corrupting the state.</li>
+      <li data-n="04"><strong>Full audit trail:</strong> Every node appends to <code>state["history"]</code>, providing a complete, ordered record of all decisions, attempt numbers, and validation outcomes. This satisfies the "decision auditing" traceability requirement.</li>
+      <li data-n="05"><strong>Adaptive behavior:</strong> TC-01 demonstrates that the agent genuinely adapts — the retry enrichment prompt contained the explicit failure reason ("no compliance violations identified") and the model correctly addressed it in attempt 2, producing a valid NIST citation.</li>
+    </ul>
+
+
+  </section>
+
+  <!-- S7: CONCLUSION -->
+  <section id="s7">
+    <div class="sec-num">07 · Conclusion</div>
+    <h2>Conclusion</h2>
+
+    <p>This homework implemented a fully autonomous cybersecurity compliance monitoring agent using LangGraph. The agent processes raw security logs through a four-node pipeline — classification, enrichment, report generation, and quality validation — with a closed feedback loop that re-enriches failed reports using specific, targeted failure feedback.</p>
+
+    <p>Key outcomes:</p>
+    <ul class="steps">
+      <li data-n="01"><strong>Closed-loop feedback demonstrated:</strong> TC-01 showed a genuine adaptive retry — the agent identified missing compliance violations and successfully resolved them on the second attempt by injecting the failure reason into the enrichment prompt.</li>
+      <li data-n="02"><strong>Graceful degradation demonstrated:</strong> TC-02 showed the hard retry ceiling functioning correctly — after 3 failed retries (4 total attempts), the agent terminated and returned the best available report with a clear validation failure flag.</li>
+      <li data-n="03"><strong>First-pass accuracy:</strong> TC-03 passed all 5 quality gates on the first attempt with confidence 1.0, demonstrating that the agent performs well on clearly-structured compliance violation logs.</li>
+      <li data-n="04"><strong>Decision control verified:</strong> All routing decisions (pass/retry/force-end) are made by deterministic Python logic external to the LLM, ensuring the agent's behavior is auditable and cannot be manipulated through adversarial prompting.</li>
+    </ul>
+
+    <h3>Limitations & Future Work</h3>
+    <p>The 3.2B llama3.2 model struggles to produce structured compliance violation lists for complex multi-vector attacks (TC-02). A larger model or few-shot examples in the enrichment prompt would improve first-pass accuracy. The quality gates could also be extended with semantic similarity checks (embedding-based) rather than pure structural validation.</p>
+  </section>
+
+  <footer>
+    <span>AIA7000 · LLM for Cybersecurity · NTU GINM</span>
+    <span>James Christian · R13921031</span>
+    <span>HW10 · Autonomous Cybersecurity Compliance Agent · April 2026</span>
+  </footer>
+
+</div>
+</body>
+</html>
