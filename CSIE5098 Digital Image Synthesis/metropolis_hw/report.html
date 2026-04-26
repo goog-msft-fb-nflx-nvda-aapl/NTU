@@ -108,6 +108,7 @@
     overflow-x: auto;
     line-height: 1.8;
     margin: 1.2rem 0;
+    white-space: pre;
   }
   .code-block .kw  { color: var(--accent); }
   .code-block .cm  { color: var(--muted); font-style: italic; }
@@ -271,21 +272,21 @@
 
     <h3>Pseudo-code</h3>
     <div class="code-block">
-<span class="cm"># State: continuous (x, y) ∈ [0,W) × [0,H)</span>
-<span class="cm"># Target: f(x,y) = luminance(image[y,x])</span>
-
-x ← <span class="nm">hybrid_init</span>()          <span class="cm"># uniform sample from non-zero region</span>
-<span class="kw">for</span> i = 1 <span class="kw">to</span> N:
-    <span class="kw">if</span> rand() &lt; large_step_prob:
-        x′ ← <span class="nm">uniform</span>(W, H)      <span class="cm"># large mutation — ergodicity</span>
-    <span class="kw">else</span>:
-        x′ ← <span class="nm">gaussian</span>(x, σ)     <span class="cm"># small mutation — local exploration</span>
-
-    α ← min(1, f(x′) / f(x))   <span class="cm"># acceptance probability</span>
-    <span class="kw">if</span> rand() &lt; α:
-        x ← x′                  <span class="cm"># accept</span>
-
-    <span class="nm">accumulate</span>(x)              <span class="cm"># record current state</span>
+<span class="cm"># State: continuous (x, y) ∈ [0,W) × [0,H)</span><br>
+<span class="cm"># Target: f(x,y) = luminance(image[y,x])</span><br>
+<br>
+x ← <span class="nm">hybrid_init</span>()&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># uniform sample from non-zero region</span><br>
+<span class="kw">for</span> i = 1 <span class="kw">to</span> N:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">if</span> rand() &lt; large_step_prob:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;x′ ← <span class="nm">uniform</span>(W, H)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># large mutation — ergodicity</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">else</span>:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;x′ ← <span class="nm">gaussian</span>(x, σ)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># small mutation — local exploration</span><br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;α ← min(1, f(x′) / f(x))&nbsp;&nbsp;&nbsp;<span class="cm"># acceptance probability</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">if</span> rand() &lt; α:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;x ← x′&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># accept</span><br>
+<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="nm">accumulate</span>(x)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm"># record current state</span>
     </div>
 
     <h3>Mutation Strategy</h3>
