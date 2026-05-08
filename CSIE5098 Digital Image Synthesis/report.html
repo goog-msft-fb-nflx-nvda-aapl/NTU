@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Uniform Grid Acceleration Structure — pbrt v4</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c0f;
+    --surface: #111318;
+    --border: #1e2330;
+    --accent: #00e5ff;
+    --accent2: #ff6b35;
+    --accent3: #7fff6b;
+    --text: #cdd6e0;
+    --muted: #566070;
+    --heading: #eef2f7;
+    --mono: 'IBM Plex Mono', monospace;
+    --sans: 'IBM Plex Sans', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); font-size: 15px; line-height: 1.7; }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0;
+    background-image:
+      linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+  }
+
+  .wrap { max-width: 960px; margin: 0 auto; padding: 0 32px; position: relative; z-index: 1; }
+
+  /* Header */
+  header { padding: 72px 0 48px; border-bottom: 1px solid var(--border); }
+  .tag { font-family: var(--mono); font-size: 11px; letter-spacing: 0.15em; color: var(--accent); text-transform: uppercase; margin-bottom: 16px; }
+  h1 { font-size: 42px; font-weight: 300; color: var(--heading); line-height: 1.15; letter-spacing: -0.02em; }
+  h1 span { color: var(--accent); font-weight: 600; }
+  .subtitle { margin-top: 12px; color: var(--muted); font-size: 14px; font-family: var(--mono); }
+
+  /* Nav */
+  nav { display: flex; gap: 24px; padding: 20px 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  nav a { font-family: var(--mono); font-size: 12px; color: var(--muted); text-decoration: none; letter-spacing: 0.08em; transition: color 0.2s; }
+  nav a:hover { color: var(--accent); }
+
+  /* Sections */
+  section { padding: 56px 0; border-bottom: 1px solid var(--border); }
+  section:last-child { border-bottom: none; }
+  h2 { font-size: 11px; font-family: var(--mono); letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent); margin-bottom: 24px; }
+  h3 { font-size: 20px; font-weight: 600; color: var(--heading); margin: 32px 0 12px; }
+  p { margin-bottom: 14px; color: var(--text); }
+
+  /* Code blocks */
+  pre {
+    background: var(--surface); border: 1px solid var(--border);
+    border-left: 3px solid var(--accent);
+    padding: 20px; border-radius: 4px;
+    font-family: var(--mono); font-size: 12.5px; line-height: 1.6;
+    overflow-x: auto; margin: 20px 0; color: #a8bbd0;
+  }
+  code { font-family: var(--mono); font-size: 12.5px; color: var(--accent); background: rgba(0,229,255,0.07); padding: 2px 6px; border-radius: 3px; }
+
+  /* Tables */
+  .tbl-wrap { overflow-x: auto; margin: 24px 0; }
+  table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 13px; }
+  thead tr { border-bottom: 2px solid var(--accent); }
+  thead th { padding: 10px 16px; text-align: left; color: var(--accent); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+  tbody tr:hover { background: rgba(0,229,255,0.03); }
+  td { padding: 10px 16px; color: var(--text); }
+  td.num { text-align: right; }
+  .best { color: var(--accent3); font-weight: 600; }
+  .worst { color: var(--accent2); }
+  .scene-label { color: var(--muted); font-size: 11px; }
+
+  /* Bar charts */
+  .chart { margin: 28px 0; }
+  .chart-title { font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 16px; }
+  .bar-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .bar-label { font-family: var(--mono); font-size: 12px; color: var(--muted); width: 110px; flex-shrink: 0; }
+  .bar-track { flex: 1; height: 22px; background: var(--surface); border: 1px solid var(--border); border-radius: 2px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 2px; transition: width 1s cubic-bezier(.22,1,.36,1); display: flex; align-items: center; padding-left: 8px; font-family: var(--mono); font-size: 11px; color: rgba(0,0,0,0.8); font-weight: 600; }
+  .bar-bvh { background: var(--accent); }
+  .bar-kd { background: var(--accent2); }
+  .bar-ug { background: #a78bfa; }
+  .bar-tl { background: var(--accent3); }
+
+  /* Cards */
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin: 24px 0; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 20px; }
+  .card-val { font-family: var(--mono); font-size: 28px; font-weight: 600; color: var(--accent); line-height: 1; margin-bottom: 6px; }
+  .card-label { font-size: 12px; color: var(--muted); }
+
+  /* Highlight boxes */
+  .callout { background: rgba(0,229,255,0.05); border: 1px solid rgba(0,229,255,0.2); border-radius: 6px; padding: 20px 24px; margin: 20px 0; }
+  .callout.orange { background: rgba(255,107,53,0.05); border-color: rgba(255,107,53,0.25); }
+  .callout.green { background: rgba(127,255,107,0.05); border-color: rgba(127,255,107,0.25); }
+  .callout strong { color: var(--heading); }
+
+  /* Scene tabs */
+  .scene-section { margin: 24px 0; }
+  .scene-header { font-family: var(--mono); font-size: 13px; color: var(--heading); background: var(--surface); border: 1px solid var(--border); padding: 10px 16px; border-radius: 4px 4px 0 0; border-bottom: none; }
+  .scene-body { border: 1px solid var(--border); border-radius: 0 4px 4px 4px; padding: 0; }
+
+  footer { padding: 40px 0; text-align: center; font-family: var(--mono); font-size: 11px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="tag">pbrt v4 · Acceleration Structures</div>
+  <h1>Uniform Grid &amp;<br><span>Two-Level Grid</span></h1>
+  <div class="subtitle">Implementation &amp; Performance Analysis · May 2026</div>
+</header>
+
+<nav>
+  <a href="#overview">Overview</a>
+  <a href="#impl">Implementation</a>
+  <a href="#twolevel">Two-Level Grid (Bonus)</a>
+  <a href="#results">Results</a>
+  <a href="#analysis">Analysis</a>
+</nav>
+
+<!-- OVERVIEW -->
+<section id="overview">
+  <h2>01 · Overview</h2>
+  <p>This report documents the implementation of a <strong style="color:var(--heading)">Uniform Grid</strong> acceleration structure in pbrt v4, along with a bonus <strong style="color:var(--heading)">Two-Level Grid</strong> extension. Both structures were integrated into pbrt v4's existing accelerator framework alongside BVH and KdTree, and evaluated across three production scenes.</p>
+
+  <div class="cards">
+    <div class="card">
+      <div class="card-val">3</div>
+      <div class="card-label">Test scenes</div>
+    </div>
+    <div class="card">
+      <div class="card-val">4</div>
+      <div class="card-label">Accelerators compared</div>
+    </div>
+    <div class="card">
+      <div class="card-val">4.3M</div>
+      <div class="card-label">Max primitives (Ganesha)</div>
+    </div>
+    <div class="card">
+      <div class="card-val">2×</div>
+      <div class="card-label">Two-level speedup vs uniform</div>
+    </div>
+  </div>
+
+  <p>The scenes used are <strong style="color:var(--heading)">BMW M6</strong> (792K prims), <strong style="color:var(--heading)">Ganesha</strong> (4.3M prims), and <strong style="color:var(--heading)">Sportscar</strong> (3.6M prims). All benchmarks use 200×200 resolution, 4 samples/pixel, and 256 threads.</p>
+</section>
+
+<!-- IMPLEMENTATION -->
+<section id="impl">
+  <h2>02 · Uniform Grid Implementation</h2>
+
+  <h3>Files Modified</h3>
+  <p>The implementation required changes to three files in the pbrt v4 source:</p>
+  <ul style="margin: 0 0 16px 20px; color: var(--text);">
+    <li><code>src/pbrt/cpu/aggregates.h</code> — class declaration</li>
+    <li><code>src/pbrt/cpu/aggregates.cpp</code> — constructor, Intersect, IntersectP, Create</li>
+    <li><code>src/pbrt/cpu/primitive.h</code> — register in TaggedPointer type list</li>
+  </ul>
+
+  <h3>Grid Construction</h3>
+  <p>The grid resolution is determined by the cube-root heuristic from pbrt v2: the voxel size is set so that the number of voxels along each axis is proportional to the scene's primitive count.</p>
+  <pre>Float cubeRoot = std::cbrt((Float)prims.size());
+Float voxelSize = MaxComponentValue(diag) / cubeRoot;
+for (int i = 0; i &lt; 3; ++i) {
+    nVoxels[i] = std::max(1, (int)std::ceil(diag[i] / voxelSize));
+    invWidth[i] = (diag[i] &gt; 0) ? (nVoxels[i] / diag[i]) : 0;
+}</pre>
+  <p>Each primitive is inserted into all overlapping voxels using its bounding box. This may cause duplicates, but guarantees no intersection misses.</p>
+
+  <h3>Ray Traversal (3D DDA)</h3>
+  <p>Ray traversal uses the <strong style="color:var(--heading)">3D Digital Differential Analyzer (DDA)</strong> algorithm — the same slab-stepping method used in voxel engines. For each axis, we precompute the parametric distances to the next voxel boundary (<code>tNext</code>) and the step size (<code>tDelta</code>). At each iteration, we advance along the axis with the smallest <code>tNext</code>.</p>
+  <pre>int axis = (tNext[0] &lt; tNext[1]) ? ((tNext[0] &lt; tNext[2]) ? 0 : 2)
+                                  : ((tNext[1] &lt; tNext[2]) ? 1 : 2);
+if (tNext[axis] &gt; tMax) break;
+voxel[axis] += step[axis];
+if (voxel[axis] == out[axis]) break;
+tNext[axis] += tDelta[axis];</pre>
+
+  <p>This ensures each voxel is visited at most once per ray, and traversal stops as soon as a closer hit is found.</p>
+
+  <h3>TaggedPointer Registration</h3>
+  <p>pbrt v4 uses a tagged-pointer variant type for <code>Primitive</code>. Adding a new aggregate requires registering it in <code>primitive.h</code>:</p>
+  <pre>class UniformGridAggregate;
+// ...
+: public TaggedPointer&lt;SimplePrimitive, GeometricPrimitive, TransformedPrimitive,
+                       AnimatedPrimitive, BVHAggregate, KdTreeAggregate,
+                       UniformGridAggregate&gt; {</pre>
+  <p>And in <code>CreateAccelerator()</code>:</p>
+  <pre>else if (name == "uniformgrid")
+    accel = UniformGridAggregate::Create(std::move(prims), parameters);</pre>
+  <p>The accelerator can then be selected in any scene file with <code>Accelerator "uniformgrid"</code>.</p>
+</section>
+
+<!-- TWO-LEVEL GRID -->
+<section id="twolevel">
+  <h2>03 · Two-Level Grid (Bonus)</h2>
+
+  <p>The basic uniform grid suffers from <strong style="color:var(--heading)">mailboxing</strong> — when primitives are large relative to voxel size, they are inserted into many voxels and tested repeatedly. The two-level grid addresses this by adding a second layer of spatial subdivision for dense cells.</p>
+
+  <h3>Design</h3>
+  <p>The top-level grid uses the same cube-root resolution heuristic. Each cell is classified at construction time:</p>
+  <ul style="margin: 0 0 16px 20px; color: var(--text);">
+    <li>Cells with <strong style="color:var(--heading)">≤ 8 primitives</strong> store them directly (flat list)</li>
+    <li>Cells with <strong style="color:var(--heading)">&gt; 8 primitives</strong> build a <code>UniformGridAggregate</code> sub-grid</li>
+  </ul>
+
+  <pre>struct TopCell {
+    std::vector&lt;Primitive&gt; prims;            // sparse: direct list
+    std::unique_ptr&lt;UniformGridAggregate&gt; subgrid; // dense: sub-grid
+};</pre>
+
+  <h3>Ray Traversal</h3>
+  <p>The outer traversal is identical to the uniform grid DDA. At each cell, rays are dispatched to either the sub-grid or the flat list:</p>
+  <pre>if (cell.subgrid) {
+    auto hit = cell.subgrid-&gt;Intersect(ray, tMax);
+    if (hit) { si = hit; tMax = hit-&gt;tHit; }
+} else {
+    for (auto &amp;prim : cell.prims) { ... }
+}</pre>
+
+  <div class="callout green">
+    <strong>Result:</strong> The two-level grid achieves <strong>rendering times close to BVH</strong> on all tested scenes, while maintaining construction times far below KdTree. On the Sportscar scene, it renders 7.5× faster than the flat uniform grid.
+  </div>
+</section>
+
+<!-- RESULTS -->
+<section id="results">
+  <h2>04 · Benchmark Results</h2>
+  <p>All measurements: 200×200 px, 4 spp, 256 threads. Times from <code>/usr/bin/time -v</code>. Construction time from <code>fprintf</code> instrumentation in constructors.</p>
+
+  <!-- BMW M6 -->
+  <div class="scene-section">
+    <div class="scene-header">🚗 BMW M6 — 792,746 primitives</div>
+    <div class="scene-body">
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Accelerator</th><th>Construction</th><th>Render Time</th><th>Total</th><th>Memory</th><th>Grid/Nodes</th></tr></thead>
+          <tbody>
+            <tr><td>BVH</td><td class="num">248 ms</td><td class="num">~0 s</td><td class="num best">0.90 s</td><td class="num">386 MB</td><td class="scene-label">1,434,303 nodes</td></tr>
+            <tr><td>KdTree</td><td class="num worst">3,441 ms</td><td class="num">0.1 s</td><td class="num worst">4.09 s</td><td class="num">515 MB</td><td class="scene-label">—</td></tr>
+            <tr><td>Uniform Grid</td><td class="num">26 ms</td><td class="num">0.6 s</td><td class="num">1.16 s</td><td class="num best">276 MB</td><td class="scene-label">85×26×93</td></tr>
+            <tr><td>Two-Level Grid</td><td class="num">71 ms</td><td class="num">0.3 s</td><td class="num">0.92 s</td><td class="num">298 MB</td><td class="scene-label">85×26×93, 2793 subgrids</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="chart">
+        <div class="chart-title">Total wall time (lower is better)</div>
+        <div class="bar-row"><div class="bar-label">BVH</div><div class="bar-track"><div class="bar-fill bar-bvh" style="width:22%">0.90s</div></div></div>
+        <div class="bar-row"><div class="bar-label">KdTree</div><div class="bar-track"><div class="bar-fill bar-kd" style="width:100%">4.09s</div></div></div>
+        <div class="bar-row"><div class="bar-label">Uniform Grid</div><div class="bar-track"><div class="bar-fill bar-ug" style="width:28%">1.16s</div></div></div>
+        <div class="bar-row"><div class="bar-label">Two-Level</div><div class="bar-track"><div class="bar-fill bar-tl" style="width:22.5%">0.92s</div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Ganesha -->
+  <div class="scene-section" style="margin-top:32px">
+    <div class="scene-header">🐘 Ganesha — 4,323,664 primitives</div>
+    <div class="scene-body">
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Accelerator</th><th>Construction</th><th>Render Time</th><th>Total</th><th>Memory</th><th>Grid/Nodes</th></tr></thead>
+          <tbody>
+            <tr><td>BVH</td><td class="num">1,237 ms</td><td class="num">~0 s</td><td class="num best">3.05 s</td><td class="num">1,160 MB</td><td class="scene-label">8,304,449 nodes</td></tr>
+            <tr><td>KdTree</td><td class="num worst">16,059 ms</td><td class="num">0.1 s</td><td class="num worst">17.88 s</td><td class="num worst">1,774 MB</td><td class="scene-label">—</td></tr>
+            <tr><td>Uniform Grid</td><td class="num best">198 ms</td><td class="num">3.3 s</td><td class="num">5.20 s</td><td class="num best">503 MB</td><td class="scene-label">163×23×163</td></tr>
+            <tr><td>Two-Level Grid</td><td class="num">439 ms</td><td class="num">0.7 s</td><td class="num">2.70 s</td><td class="num">605 MB</td><td class="scene-label">163×23×163, 179 subgrids</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="chart">
+        <div class="chart-title">Total wall time (lower is better)</div>
+        <div class="bar-row"><div class="bar-label">BVH</div><div class="bar-track"><div class="bar-fill bar-bvh" style="width:17%">3.05s</div></div></div>
+        <div class="bar-row"><div class="bar-label">KdTree</div><div class="bar-track"><div class="bar-fill bar-kd" style="width:100%">17.88s</div></div></div>
+        <div class="bar-row"><div class="bar-label">Uniform Grid</div><div class="bar-track"><div class="bar-fill bar-ug" style="width:29%">5.20s</div></div></div>
+        <div class="bar-row"><div class="bar-label">Two-Level</div><div class="bar-track"><div class="bar-fill bar-tl" style="width:15%">2.70s</div></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sportscar -->
+  <div class="scene-section" style="margin-top:32px">
+    <div class="scene-header">🏎 Sportscar — 3,578,632 primitives</div>
+    <div class="scene-body">
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Accelerator</th><th>Construction</th><th>Render Time</th><th>Total</th><th>Memory</th><th>Grid/Nodes</th></tr></thead>
+          <tbody>
+            <tr><td>BVH</td><td class="num">865 ms</td><td class="num">~0 s</td><td class="num">1.53 s</td><td class="num">1,304 MB</td><td class="scene-label">6,969,851 nodes</td></tr>
+            <tr><td>KdTree</td><td class="num worst">15,246 ms</td><td class="num">0.1 s</td><td class="num worst">15.97 s</td><td class="num worst">1,808 MB</td><td class="scene-label">—</td></tr>
+            <tr><td>Uniform Grid</td><td class="num best">81 ms</td><td class="num">1.5 s</td><td class="num">2.03 s</td><td class="num best">771 MB</td><td class="scene-label">60×153×19</td></tr>
+            <tr><td>Two-Level Grid</td><td class="num">302 ms</td><td class="num best">0.2 s</td><td class="num best">0.96 s</td><td class="num">895 MB</td><td class="scene-label">60×153×19, 1204 subgrids</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="chart">
+        <div class="chart-title">Total wall time (lower is better)</div>
+        <div class="bar-row"><div class="bar-label">BVH</div><div class="bar-track"><div class="bar-fill bar-bvh" style="width:9.6%">1.53s</div></div></div>
+        <div class="bar-row"><div class="bar-label">KdTree</div><div class="bar-track"><div class="bar-fill bar-kd" style="width:100%">15.97s</div></div></div>
+        <div class="bar-row"><div class="bar-label">Uniform Grid</div><div class="bar-track"><div class="bar-fill bar-ug" style="width:12.7%">2.03s</div></div></div>
+        <div class="bar-row"><div class="bar-label">Two-Level</div><div class="bar-track"><div class="bar-fill bar-tl" style="width:6%">0.96s</div></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ANALYSIS -->
+<section id="analysis">
+  <h2>05 · Analysis</h2>
+
+  <h3>Construction Time</h3>
+  <p>Uniform grid construction is dramatically faster than both BVH and KdTree. On Ganesha (4.3M prims), the grid constructs in <strong style="color:var(--accent)">198 ms</strong> vs <strong style="color:var(--accent2)">16 seconds</strong> for KdTree — an 81× difference. This makes it attractive for scenes that change frequently (e.g., animation frames with deforming geometry).</p>
+
+  <div class="callout">
+    <strong>Why is grid construction so fast?</strong> The algorithm is O(N) — each primitive touches a fixed average number of voxels. BVH uses recursive SAH splitting (O(N log N)) and KdTree is even more expensive due to sweep-based split finding.
+  </div>
+
+  <h3>Rendering Performance</h3>
+  <p>The flat uniform grid is slower than BVH for rendering because it cannot adapt to non-uniform primitive distributions. When many triangles cluster in one region (e.g., Ganesha's intricate carvings), individual voxels become very dense, causing excessive intersection tests per ray.</p>
+
+  <div class="callout orange">
+    <strong>Uniform grid weakness:</strong> Poor handling of non-uniform scenes. The Ganesha scene has an elongated grid (163×23×163) due to its flat base, concentrating primitives into a thin horizontal band of voxels.
+  </div>
+
+  <h3>Two-Level Grid Performance</h3>
+  <p>The two-level grid resolves the density problem. On Sportscar, it is <strong style="color:var(--accent3)">faster than BVH</strong> (0.96s vs 1.53s total). On Ganesha it achieves 2.7s vs BVH's 3.05s. The key insight is that sub-grids localize the primitive search within each dense region, dramatically reducing the average number of intersection tests per ray.</p>
+
+  <div class="callout green">
+    <strong>Two-level grid advantage:</strong> Combines the O(N) construction speed of uniform grids with much better ray traversal performance in non-uniform scenes. Memory usage is higher than a flat grid but lower than BVH.
+  </div>
+
+  <h3>Memory Usage</h3>
+  <p>The uniform grid uses the least memory of all structures because it avoids tree node overhead. BVH requires ~2N nodes (each LinearBVHNode is 32 bytes), while the grid's voxel array has minimal per-cell overhead. The two-level grid uses slightly more memory than the flat grid due to sub-grid metadata.</p>
+
+  <h3>Summary Table</h3>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Property</th><th>BVH</th><th>KdTree</th><th>Uniform Grid</th><th>Two-Level Grid</th></tr></thead>
+      <tbody>
+        <tr><td>Construction</td><td>O(N log N)</td><td class="worst">O(N log² N)</td><td class="best">O(N)</td><td class="best">O(N)</td></tr>
+        <tr><td>Render quality</td><td class="best">Excellent</td><td>Good</td><td>Poor (non-uniform)</td><td>Good–Excellent</td></tr>
+        <tr><td>Memory</td><td>High</td><td class="worst">Highest</td><td class="best">Lowest</td><td>Medium</td></tr>
+        <tr><td>Non-uniform scenes</td><td class="best">✓ Adapts via SAH</td><td class="best">✓ Adapts</td><td class="worst">✗ Fixed grid</td><td>✓ Sub-grids help</td></tr>
+        <tr><td>Best use case</td><td>General purpose</td><td>Legacy</td><td>Fast preview / animation</td><td>Balanced alternative</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<footer>
+  pbrt v4 · Uniform Grid Implementation · 2026
+</footer>
+
+</div>
+
+<script>
+// Animate bars on load
+window.addEventListener('load', () => {
+  document.querySelectorAll('.bar-fill').forEach(bar => {
+    const w = bar.style.width;
+    bar.style.width = '0';
+    setTimeout(() => { bar.style.width = w; }, 200);
+  });
+});
+</script>
+</body>
+</html>
